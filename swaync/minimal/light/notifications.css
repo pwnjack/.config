@@ -1,0 +1,93 @@
+/* Original theme: https://github.com/zDyanTB/HyprNova */
+/* Edited (poorly) by @GeodeArc */
+
+* {
+  color: #000;
+  all: unset;
+  font-size: 10px;
+  font-family: "FiraCode Nerd Font 10";
+}
+
+.notification-row {
+  outline: none;
+  margin: 0;
+  padding: 0px;
+}
+
+.floating-notifications.background .notification-row .notification-background {
+  background: #fff;
+  border: 1px solid @foreground;
+  border-radius: 0px;
+  padding: 0px;
+  color: #000;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification {
+  padding: 0px;
+  border-radius: 0px;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification.critical {
+  border: 2px solid #ff0000;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification .notification-content {
+  margin: 14px;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification > *:last-child > * {
+  min-height: 3.4em;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification > *:last-child > * .notification-action {
+  background-color: #fff;
+  margin: 6px;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification > *:last-child > * .notification-action:hover {
+  background-color: #fff;
+  border: 1px solid @foreground;
+}
+
+.floating-notifications.background .notification-row .notification-background .notification > *:last-child > * .notification-action:active {
+  background-color: #fff;
+  color: #fff;
+}
+
+.image {
+  margin: 10px 20px 10px 0px;
+}
+
+.summary {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.body {
+  font-size: 0.8rem;
+}
+
+.floating-notifications.background .notification-row .notification-background .close-button {
+  margin: 6px;
+  padding: 2px;
+  background-color: transparent;
+}
+
+.floating-notifications.background .notification-row .notification-background .close-button:hover {
+  background-color: @foreground;
+}
+
+.floating-notifications.background .notification-row .notification-background .close-button:active {
+  background-color: @foreground;
+  color: @fff;
+}
+
+.notification.critical progress {
+  background-color: @foreground;
+}
+
+.notification.low progress,
+.notification.normal progress {
+  background-color: @foreground;
+}
+

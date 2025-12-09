@@ -1,0 +1,247 @@
+# ==============================================================================
+# DOTFILES .GITIGNORE
+# Excludes cache, logs, temporary files, and machine-specific data
+# ==============================================================================
+
+# -------------------------------------------------------------------------------
+# BACKUP AND TEMPORARY FILES
+# -------------------------------------------------------------------------------
+*.bak
+*.old
+*.tmp
+*.swp
+*.swo
+*~
+.#*
+\#*#
+
+# -------------------------------------------------------------------------------
+# LOG FILES
+# -------------------------------------------------------------------------------
+*.log
+logs/
+**/logs/
+
+# -------------------------------------------------------------------------------
+# CACHE DIRECTORIES
+# -------------------------------------------------------------------------------
+# General cache patterns
+**/cache/
+**/Cache/
+**/Code Cache/
+**/GPUCache/
+**/ShaderCache/
+**/GrShaderCache/
+**/DawnGraphiteCache/
+**/DawnWebGPUCache/
+**/GraphiteDawnCache/
+
+# Pywal cache
+wal/cache/
+wal/templates/
+**/.cache/wal/
+
+# -------------------------------------------------------------------------------
+# DATABASES AND STATE FILES
+# -------------------------------------------------------------------------------
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.boltdb
+chezmoi/chezmoistate.boltdb
+
+# -------------------------------------------------------------------------------
+# BINARY FILES
+# -------------------------------------------------------------------------------
+*.so
+*.dll
+*.exe
+*.bin
+*.asar
+*.bdic
+*.pb
+*.binarypb
+*.dat
+*.gz
+*.xz
+*.bnk
+*.ldb
+
+# -------------------------------------------------------------------------------
+# APPLICATION-SPECIFIC DATA
+# -------------------------------------------------------------------------------
+
+# Chromium/Electron apps
+**/Local State
+**/Preferences
+**/Cookies
+**/Cookies-journal
+**/Network Persistent State
+**/TransportSecurity
+**/Trust Tokens
+**/Trust Tokens-journal
+**/Conversions
+**/Conversions-journal
+**/DIPS
+**/InterestGroups
+**/Crashpad/
+**/Crash Reports/
+**/First Run
+**/Last Version
+**/Variations
+**/window-state.json
+**/storage.json
+
+# Obsidian
+obsidian/**/workspace.json
+obsidian/**/workspace-mobile.json
+obsidian/**/workspace
+obsidian/**/cache/
+obsidian/**/logs/
+
+# OBS Studio
+obs-studio/**/cache/
+obs-studio/**/logs/
+
+# Heroic
+heroic/**/cache/
+heroic/**/logs/
+heroic/**/*.dll
+
+# Spotify
+spotify/**/*.bnk
+spotify/**/*.pb
+
+# GIMP
+GIMP/**/sessionrc
+GIMP/**/pluginrc
+GIMP/**/parasiterc
+GIMP/**/gimprc
+GIMP/**/toolrc
+GIMP/**/devicerc
+GIMP/**/proxies
+GIMP/**/gimp-*.log
+
+# Micro editor
+micro/**/history/
+micro/**/plugins/
+
+# Fish shell
+fish/fish_variables
+fish/history
+
+# Atuin
+atuin/**/history.db
+atuin/**/session.db
+
+# -------------------------------------------------------------------------------
+# MACHINE-SPECIFIC FILES
+# -------------------------------------------------------------------------------
+
+# User-specific paths and machine identifiers
+dconf/user
+user-dirs.dirs
+user-dirs.locale
+
+# Session files
+session/
+
+# PulseAudio
+pulse/*
+
+# Systemd user services (may contain machine-specific paths)
+systemd/user/
+
+# -------------------------------------------------------------------------------
+# TEMPORARY AND GENERATED FILES
+# -------------------------------------------------------------------------------
+
+# Compiled files
+*.pyc
+*.pyo
+__pycache__/
+*.class
+
+# Editor directories
+.vscode/
+.idea/
+*.sublime-*
+
+# OS/user artifacts
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# -------------------------------------------------------------------------------
+# CONFIG-SPECIFIC EXCLUSIONS (Keep configs, exclude data/backups)
+# -------------------------------------------------------------------------------
+
+# Chromium: keep config, exclude profiles
+chromium/Default/
+chromium/Profile*/
+chromium/*Profile*/
+
+# Waybar/rofi/hypr/kitty/ghostty/gtk/alacritty: keep config, exclude backups
+waybar/**/*.bak
+rofi/**/*.bak
+hypr/**/*.bak
+kitty/**/*.bak
+ghostty/**/*.bak
+gtk-3.0/**/*.bak
+gtk-4.0/**/*.bak
+alacritty/**/*.bak
+
+# -------------------------------------------------------------------------------
+# LOG AND CRASH FILES
+# -------------------------------------------------------------------------------
+
+**/Crash Reports/
+**/crash-reports/
+**/*.crash
+cachyos-hello.json
+
+# -------------------------------------------------------------------------------
+# LOCK FILES
+# -------------------------------------------------------------------------------
+*.lock
+*.pid
+
+# -------------------------------------------------------------------------------
+# BUILD ARTIFACTS
+# -------------------------------------------------------------------------------
+target/
+dist/
+build/
+*.o
+*.a
+
+# -------------------------------------------------------------------------------
+# DOTFILES/DATA FOLDER EXCLUSIONS (ignore entire app/data folders)
+# -------------------------------------------------------------------------------
+BetterDiscord/**
+BetterDiscord Installer/**
+obsidian/**
+obs-studio/**
+heroic/**
+spotify/**
+GIMP/**
+Cursor/**
+net.imput.helium/**
+vesktop/**
+Kvantum/**
+micro/**
+Mullvad VPN/**
+qBittorrent/**
+onlyoffice/**
+CurseForge/**
+cachyos/**
+dolphin/**
+.dmenurc
+alacritty/**
+chromium/**

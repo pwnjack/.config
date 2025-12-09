@@ -1,0 +1,125 @@
+@import "options/font.rasi"
+@import "options/wallpaper.rasi"
+@import "options/colors.rasi"
+
+configuration {
+    hover-select:                false;
+    me-select-entry:             "";
+    me-accept-entry:             "";
+}
+
+* {
+    background:                  #010101;
+    background-alt:              #141414;
+    selected:                    #0A0A0A;
+}
+
+window {
+    transparency:                "real";
+    location:                    center;
+    anchor:                      center;
+    fullscreen:                  false;
+    width:                       800px;
+    enabled:                     true;
+    border:                      1px solid;
+    border-radius:               20px;
+    border-color:                @foreground;
+    background-color:            @background;
+}
+
+mainbox {
+    enabled:                     true;
+    spacing:                     0px;
+    background-color:            transparent;
+    children:                    [ "inputbar", "listbox" ];
+}
+
+inputbar {
+    enabled:                     true;
+    spacing:                     10px;
+    padding:                     35px 50px;
+    background-color:            transparent;
+    background-image:            @wallpaper;
+    children:                    [ "textbox-prompt-colon", "entry" ];
+}
+
+textbox-prompt-colon {
+    enabled:                     true;
+    expand:                      false;
+    str:                         "Keybinds";
+    padding:                     10px 16px;
+    border-radius:               8px;
+    text-color:                  @foreground;
+    background-color:            @background-alt;
+    font: "CaskaydiaCove Nerd Font 10";
+}
+
+entry {
+    enabled:                     true;
+    expand:                      true;
+    padding:                     10px 16px;
+    border-radius:               8px;
+    text-color:                  @foreground;
+    background-color:            @background-alt;
+    cursor:                      text;
+    placeholder:                 "Search keybinds...";
+    placeholder-color:           @foreground;
+    font: "CaskaydiaCove Nerd Font 10";
+}
+
+listbox {
+    enabled:                     true;
+    spacing:                     0px;
+    padding:                     25px 30px;
+    background-color:            transparent;
+    children:                    [ "listview" ];
+}
+
+listview {
+    enabled:                     true;
+    columns:                     1;
+    lines:                       24;
+    cycle:                       false;
+    dynamic:                     false;
+    scrollbar:                   true;
+    layout:                      vertical;
+    spacing:                     1px;
+    background-color:            transparent;
+    fixed-height:                true;
+    fixed-columns:               true;
+}
+
+element {
+    enabled:                     true;
+    padding:                     8px 12px;
+    border-radius:               0px;
+    background-color:            transparent;
+    text-color:                  @foreground;
+    cursor:                      default;
+}
+
+element normal.normal {
+    background-color:            transparent;
+    text-color:                  @foreground;
+}
+
+element selected.normal {
+    background-color:            @selected;
+    text-color:                  @foreground;
+}
+
+element-text {
+    font: "CaskaydiaCove Nerd Font 10";
+    background-color:            transparent;
+    text-color:                  inherit;
+    vertical-align:              0.5;
+    horizontal-align:            0.0;
+}
+
+scrollbar {
+    handle-width:                4px;
+    handle-color:                @selected;
+    background-color:            @background-alt;
+    border-radius:               2px;
+}
+

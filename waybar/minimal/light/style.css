@@ -1,0 +1,66 @@
+@import "colors.css";
+
+* {
+  font-family: JetBrainsMono Nerd Font;
+  font-size: 14px;
+  border-radius: 0px;
+  min-height: 0px;
+}
+
+window#waybar {
+  background-color: #fff;
+  color: #000;
+  opacity: 1;
+}
+
+#workspaces {
+  padding-right: 5px;
+}
+
+#workspaces button {
+  padding: 0 5px;
+	color: #000;
+}
+
+#workspaces button.active {
+  background-color: @foreground;
+}
+
+#window {
+  margin: 0 10px;
+}
+
+#pulseaudio,
+#cpu,
+#memory,
+#disk,
+#battery,
+#clock,
+#custom-icon {
+  background-color: transparent;
+  color: #000;
+  margin: 2px;
+}
+
+#tray {
+  padding: 5px
+}
+
+#custom-sidebar {
+  padding: 0 10px;
+  padding-right: 15px;
+}
+
+#custom-wallpaper,
+#custom-hyprpicker, 
+#custom-nightlight {
+  padding: 0 10px;
+}
+
+.modules-left {
+  padding: 0px 0px 0px 0px;
+}
+
+.modules-right {
+  padding: 0px 0px 0px 0px;
+}
