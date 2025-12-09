@@ -15,7 +15,6 @@ fi
 
 # Append new colors to config
 {
-    echo ""
     echo "# pywal colors start"
     echo "# Automatically generated - do not edit manually"
     # Skip the header comments from pywal's generated file (first 2 lines)

@@ -148,7 +148,7 @@
 
   // Clock
   "clock": {
-    "format": "{:%I:%M %p}",
+    "format": "{:%H:%M}",
     "format-alt": "{:%d-%m-%Y}",
     "on-click-right": "gnome-clocks",
     "tooltip": true,
