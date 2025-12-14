@@ -30,6 +30,7 @@
       "custom/hyprpicker",
       "custom/nightlight",
       "clock",
+      "custom/weather",
       "custom/media"
   ],
 
@@ -172,6 +173,15 @@
                     "on-scroll-down": "shift_up"
                     }
     },
+
+  // Weather
+  "custom/weather": {
+    "format": "{}",
+    "exec": "~/.config/waybar/waybar-weather-wrapper.sh",
+    "return-type": "json",
+    "interval": 600,
+    "tooltip": true
+  },
 
   // CPU
   "cpu": {
