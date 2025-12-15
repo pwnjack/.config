@@ -120,7 +120,7 @@ tooltip label {
     color: @foreground;
     background-color: transparent;
     margin: 4px 0px;
-    padding: 0 10px;
+    padding: 0 10px 0 20px;
 }
 
 /* NETWORK */
