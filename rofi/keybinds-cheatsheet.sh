@@ -13,10 +13,10 @@ printf '%-28s %s\n' \
     "BASE APPS" "" \
     "  Super + Enter" "Terminal" \
     "  Super + E" "File Manager" \
-    "  Super + T" "Text Editor" \
-    "  Super + B" "Browser" \
+    "  Super + N" "Text Editor" \
+    "  Super + B" "Web Browser" \
     "  Super + S" "Screenshot" \
-    "  Super + G" "Cursor" \
+    "  Super + G" "Code Editor" \
     "" "" \
     "WINDOW MANAGEMENT" "" \
     "  Super + Q" "Close window" \

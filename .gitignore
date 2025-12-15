@@ -220,6 +220,8 @@ dist/
 build/
 *.o
 *.a
+go/**
+ow-electron/**
 
 # -------------------------------------------------------------------------------
 # DOTFILES/DATA FOLDER EXCLUSIONS (ignore entire app/data folders)
@@ -245,3 +247,4 @@ dolphin/**
 .dmenurc
 alacritty/**
 chromium/**
+

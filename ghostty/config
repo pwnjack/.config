@@ -64,25 +64,25 @@ keybind = shift+insert=paste_from_clipboard
 # pywal colors start
 # Automatically generated - do not edit manually
 
-background = #0b0c0b
-foreground = #c1b8b2
-cursor-color = #c1b8b2
+background = #05090C
+foreground = #cfddde
+cursor-color = #cfddde
 
-palette = 0=#0b0c0b
-palette = 1=#4A433C
-palette = 2=#3D4040
-palette = 3=#51514D
-palette = 4=#6E6863
-palette = 5=#B14C3F
-palette = 6=#F04935
-palette = 7=#c1b8b2
-palette = 8=#87807c
-palette = 9=#4A433C
-palette = 10=#3D4040
-palette = 11=#51514D
-palette = 12=#6E6863
-palette = 13=#B14C3F
-palette = 14=#F04935
-palette = 15=#c1b8b2
+palette = 0=#05090C
+palette = 1=#2A7789
+palette = 2=#4D7D85
+palette = 3=#318A9B
+palette = 4=#6097A1
+palette = 5=#8DAFB4
+palette = 6=#9ABBC2
+palette = 7=#cfddde
+palette = 8=#909a9b
+palette = 9=#2A7789
+palette = 10=#4D7D85
+palette = 11=#318A9B
+palette = 12=#6097A1
+palette = 13=#8DAFB4
+palette = 14=#9ABBC2
+palette = 15=#cfddde
 
 # pywal colors end

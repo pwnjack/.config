@@ -1,34 +1,32 @@
+/* Global GTK 3 overrides
+ *
+ * Static customizations can live here.
+ *
+ * Dynamic Thunar colors are generated automatically between the
+ * "thunar pywal start/end" markers by:
+ *   ~/.config/Thunar/apply_wal_colors.sh
+ */
+
+
+/* thunar pywal start */
+/* Automatically generated - do not edit manually */
 .thunar,
-.thunar .view, 
+.thunar .view,
 .thunar toolbar,
 .thunar scrolledwindow.sidebar treeview.view {
-    background-color: #0a0a0d;
+    background-color: #05090C;
+    color: #cfddde;
 }
 
 .thunar .view widget:selected,
-.thunar treeview *:selected
-{
-    background-color: #9ea1b9;
+.thunar treeview *:selected {
+    background-color: #8DAFB4;
+    color: #05090C;
 }
 
-
-.thunar .view .rubberband, 
+.thunar .view .rubberband,
 .thunar treeview rubberband,
 .thunar scrolledwindow.sidebar treeview.view .rubberband {
-    background-color: rgba(10, 10, 13, 0.9);
+    background-color: #2A7789;
 }
-
-
-/* #lutris .titlebar,
-#lutris .frame .lutris-sidebar,
-#lutrs .horizontal .vertical .view,
-#lutrs .horizontal 
-{
-    background-color: #0a0a0d ;
-} */
-
-
-/* 
-rubberband{
-  border: 1px solid #7cabab;
-  background-color: rgba(255, 0, 0, 1); } */
+/* thunar pywal end */

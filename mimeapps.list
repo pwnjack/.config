@@ -24,6 +24,19 @@ application/x-extension-shtml=zen.desktop
 application/xhtml+xml=zen.desktop
 application/x-extension-xhtml=zen.desktop
 application/x-extension-xht=zen.desktop
+image/jpeg=org.gnome.Shotwell-Viewer.desktop
+image/png=org.gnome.Shotwell-Viewer.desktop
+image/gif=org.gnome.Shotwell-Viewer.desktop
+image/bmp=org.gnome.Shotwell-Viewer.desktop
+image/tiff=org.gnome.Shotwell-Viewer.desktop
+image/x-bmp=org.gnome.Shotwell-Viewer.desktop
+image/x-png=org.gnome.Shotwell-Viewer.desktop
+image/x-xbitmap=org.gnome.Shotwell-Viewer.desktop
+image/x-tiff=org.gnome.Shotwell-Viewer.desktop
+image/x-portable-bitmap=org.gnome.Shotwell-Viewer.desktop
+image/x-portable-graymap=org.gnome.Shotwell-Viewer.desktop
+image/x-portable-pixmap=org.gnome.Shotwell-Viewer.desktop
+image/x-psd=org.gnome.Shotwell-Viewer.desktop
 
 [Added Associations]
 x-scheme-handler/mailto=userapp-Thunderbird-2A5NF3.desktop;
@@ -46,3 +59,4 @@ application/x-extension-shtml=zen.desktop;
 application/xhtml+xml=zen.desktop;
 application/x-extension-xhtml=zen.desktop;
 application/x-extension-xht=zen.desktop;
+image/jpeg=org.gnome.Shotwell-Viewer.desktop;
