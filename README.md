@@ -157,12 +157,15 @@ Default keybindings (see `hypr/config/software/keybinds.conf` for full list):
 |-----------|--------|
 | `SUPER + ENTER` | Open terminal (ghostty) |
 | `SUPER + Q` | Close window |
-| `SUPER + D` | Application launcher (rofi) |
+| `SUPER + SPACE` | Application launcher (rofi) |
 | `SUPER + E` | File manager (thunar) |
+| `SUPER + N` | Text editor (neovim) |
+| `SUPER + B` | Web browser (zen) |
 | `SUPER + L` | Lock screen |
 | `SUPER + F` | Toggle fullscreen |
 | `SUPER + V` | Toggle floating |
-| `SUPER + SHIFT + E` | Power menu |
+| `SUPER + SHIFT + L` | Power menu |
+| `SUPER + H` | Keybinds cheatsheet |
 | `SUPER + [1-9]` | Switch to workspace |
 | `SUPER + SHIFT + [1-9]` | Move window to workspace |
 | `SUPER + Mouse drag` | Move window |

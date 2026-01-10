@@ -6,9 +6,9 @@
 ## Adapted by : @GeodeArc
 ##
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
-launcher="$(cat $HOME/Dots/Options/launchertype)"
+stlconf="$(cat $HOME/.config/options/style)"
+thmconf="$(cat $HOME/.config/options/theme)"
+launcher="$(cat $HOME/.config/options/launchertype)"
 
 config="$stlconf"
 theme="$thmconf"

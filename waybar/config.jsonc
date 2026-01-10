@@ -34,7 +34,7 @@
       "custom/media"
   ],
 
-  // Modules Right    
+  // Modules Right
   "modules-right": [
       "network",
       "bluetooth",
@@ -131,7 +131,7 @@
   // Settings
   "custom/settings": {
     "format": "",
-    "on-click": "kitty $HOME/Dots/Scripts/Settings/settings.sh",
+    "on-click": "kitty $HOME/.config/scripts/Settings/settings.sh",
     "tooltip-format": "Settings"
   },
 
@@ -289,10 +289,11 @@
   "custom/media": {
     "interval": 1,
     "max-length": 40,
-    "exec": "~/Dots/Scripts/Hyprland/mediaexec.sh",
-    "on-click": "~/Dots/Scripts/Hyprland/mediatoggle.sh"
+    "exec": "~/.config/scripts/hyprland/mediaexec.sh",
+    "on-click": "~/.config/scripts/hyprland/mediatoggle.sh"
   },
-  
+
+
   "custom/power": {
       "format": "󰐥",
       "tooltip-format": "Power Menu",

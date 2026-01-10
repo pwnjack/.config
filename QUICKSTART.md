@@ -20,13 +20,17 @@ wal -i ~/Pictures/Wallpapers/wall1.jpg
 ## Essential Commands
 
 ### Window Manager
-- `SUPER + ENTER` - Open terminal
+- `SUPER + ENTER` - Open terminal (Ghostty)
 - `SUPER + Q` - Close window
-- `SUPER + D` - App launcher
+- `SUPER + SPACE` - App launcher
 - `SUPER + L` - Lock screen
 - `SUPER + F` - Fullscreen
 - `SUPER + V` - Toggle float
-- `SUPER + SHIFT + E` - Power menu
+- `SUPER + SHIFT + L` - Power menu
+
+### UI & Notifications
+- `SUPER + H` - Keybinds cheatsheet
+- `SUPER + SHIFT + B` - Toggle Waybar
 
 ### Workspaces
 - `SUPER + [1-9]` - Switch workspace

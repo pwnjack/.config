@@ -1,11 +1,46 @@
-max-visible=10
-layer=top
-font=Sarasa UI SC 10
-background-color=#4c566add
-text-color=#d8dee9
-border-color=#434c5e
-border-radius=7
-max-icon-size=48
-default-timeout=10000
+# Mako Configuration
+# Colors automatically generated from wallpaper via pywal
+# Last updated: sab 10 gen 2026, 14:30:08, CET
+
+# Appearance
+font=JetBrains Mono 11
+background-color=#05090Cdd
+text-color=#cfddde
+border-color=#6097A1
+border-size=2
+border-radius=10
+max-icon-size=64
+
+# Behavior
+max-visible=5
+layer=overlay
+default-timeout=5000
+ignore-timeout=0
+
+# Position
 anchor=top-right
 margin=20
+
+# Grouping
+group-by=app-name
+
+# Urgency levels
+[urgency=low]
+border-color=#4D7D85
+default-timeout=3000
+
+[urgency=normal]
+border-color=#6097A1
+default-timeout=5000
+
+[urgency=critical]
+border-color=#2A7789
+background-color=#2A778922
+default-timeout=0
+
+# Application specific (examples)
+[app-name="Spotify"]
+border-color=#8DAFB4
+
+[app-name="Discord"]
+border-color=#9ABBC2

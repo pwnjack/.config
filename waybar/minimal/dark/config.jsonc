@@ -63,12 +63,11 @@
     },
     "custom/spotify": {
 		  "interval": 1,
-		  "exec": "~/Dots/Scripts/Hyprland/mediaexec.sh",
-		  "on-click": "~/Dots/Scripts/Hyprland/mediatoggle.sh"
+		  "exec": "~/.config/scripts/Hyprland/mediaexec.sh",
+		  "on-click": "~/.config/scripts/Hyprland/mediatoggle.sh"
     },
     "custom/sidebar": {
         "format": "󱗼",
         "tooltip-format": "Sidebar",
-        "on-click": "swaync-client -t"
     }
 }

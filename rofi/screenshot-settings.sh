@@ -6,8 +6,8 @@
 ## Adapted by : @GeodeArc
 ##
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
+stlconf="$(cat $HOME/.config/options/style)"
+thmconf="$(cat $HOME/.config/options/theme)"
 
 config="$stlconf"
 theme="$thmconf"
@@ -40,13 +40,13 @@ timer () {
 
 # Freeze screen options
 freeze () {
-	if grep -q "true" "$HOME/Dots/Options/screenshot"; then
+	if grep -q "true" "$HOME/.config/options/screenshot"; then
 		notify-send -i applets-screenshooter-symbolic "Disabled Screenshot Freeze"
-		echo "false" > $HOME/Dots/Options/screenshot
+		echo "false" > $HOME/.config/options/screenshot
 		echo "" > $HOME/.config/rofi/options/screenshot/timer
 	else 
 		notify-send -i applets-screenshooter-symbolic "Enabled Screenshot Freeze" "This may not work on virtual machines"
-		echo "true" > $HOME/Dots/Options/screenshot
+		echo "true" > $HOME/.config/options/screenshot
 		echo "-z" > $HOME/.config/rofi/options/screenshot/timer
 	fi
 	$HOME/.config/rofi/screenshot.sh

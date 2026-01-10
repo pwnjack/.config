@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
+#
+# Hyprland Keybinds Cheatsheet
+# Shows all keyboard shortcuts in a rofi menu
+#
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
+stlconf="$(cat $HOME/.config/options/style 2>/dev/null || echo 'colorful')"
+thmconf="$(cat $HOME/.config/options/theme 2>/dev/null || echo 'dark')"
 
 config="$stlconf"
 theme="$thmconf"
@@ -9,60 +13,75 @@ theme="$thmconf"
 dir="$HOME/.config/rofi/$config/$theme/keybinds"
 mode='main'
 
-printf '%-28s %s\n' \
+printf '%-32s %s\n' \
     "BASE APPS" "" \
-    "  Super + Enter" "Terminal" \
-    "  Super + E" "File Manager" \
-    "  Super + N" "Text Editor" \
-    "  Super + B" "Web Browser" \
-    "  Super + S" "Screenshot" \
-    "  Super + G" "Code Editor" \
+    "  Super + Enter" "Terminal (Ghostty)" \
+    "  Super + E" "File Manager (Thunar)" \
+    "  Super + N" "Text Editor (Neovim TUI)" \
+    "  Super + B" "Web Browser (Zen)" \
+    "  Super + T" "Text Editor (KWrite GUI)" \
+    "  Super + S" "Screenshot (region)" \
+    "  Super + G" "Code Editor (Cursor)" \
     "" "" \
     "WINDOW MANAGEMENT" "" \
     "  Super + Q" "Close window" \
-    "  Super + W" "Close window" \
+    "  Super + W" "Close window (alt)" \
     "  Super + Shift + Q" "Exit Hyprland" \
+    "  Alt + F4" "Close window (alt)" \
     "  Super + V" "Toggle floating" \
     "  Super + F" "Toggle fullscreen" \
-    "  Super + Shift + F" "Fullscreen (all)" \
+    "  Super + Shift + F" "Fullscreen (no gaps)" \
     "  Super + O" "Toggle split" \
-    "  Super + P" "Pseudo" \
-    "  Super + Shift + V" "Pin window" \
+    "  Super + P" "Pseudo tiling" \
+    "  Super + Shift + V" "Pin window (PiP)" \
     "  Super + L" "Lock screen" \
     "" "" \
+    "WAYBAR CONTROLS" "" \
+    "  Super + Shift + B" "Toggle Waybar" \
+    "  Super + Alt + B" "Hide Waybar" \
+    "  Super + Ctrl + B" "Waybar options" \
+    "" "" \
     "ROFI LAUNCHERS" "" \
-    "  Super + Space" "App launcher" \
+    "  Super + Space" "App launcher (Spotlight)" \
     "  Super + M" "Mode menu" \
     "  Super + Shift + L" "Power menu" \
     "  Super + Shift + S" "Screenshot menu" \
-    "  Super + C" "Clipboard" \
+    "  Super + C" "Clipboard history" \
     "  Super + ." "Emoji picker" \
     "" "" \
     "WORKSPACES" "" \
-    "  Super + 1-0,=" "Switch workspace" \
-    "  Super + Shift + 1-0,=" "Move window" \
-    "  Super + Left/Right" "Switch workspace" \
-    "  Super + Shift + Left/Right" "Move window" \
+    "  Super + 1-9,0" "Switch to workspace" \
+    "  Super + Shift + 1-9,0" "Move window to workspace" \
+    "  Super + Left/Right" "Previous/Next workspace" \
+    "  Super + Shift + Left/Right" "Move window & follow" \
+    "  Super + Mouse Scroll" "Cycle workspaces" \
     "" "" \
-    "NAVIGATION" "" \
+    "WINDOW NAVIGATION" "" \
     "  Alt + Arrows" "Move focus" \
-    "  Super + Tab" "Cycle next" \
-    "  Super + Shift + Tab" "Cycle prev" \
-    "  Alt + Ctrl + Arrows" "Resize" \
-    "  Alt + Shift + Arrows" "Move window" \
+    "  Super + Tab" "Cycle next window" \
+    "  Super + Shift + Tab" "Cycle previous" \
+    "  Alt + Ctrl + Arrows" "Resize window" \
+    "  Alt + Shift + Arrows" "Move floating window" \
+    "  Super + Mouse1 Drag" "Move window" \
+    "  Super + Mouse2 Drag" "Resize window" \
     "" "" \
     "UTILITIES" "" \
     "  Super + K" "Calculator" \
-    "  Super + H" "This cheatsheet" \
-    "  Super + I" "Settings" \
-    "  Super + Shift + W" "Waypaper (random)" \
-    "  Super + Ctrl + W" "Waypaper" \
+    "  Super + H" "Keybinds cheatsheet" \
+    "  Super + I" "Settings menu" \
+    "  Super + Shift + W" "Random wallpaper" \
+    "  Super + Ctrl + W" "Waypaper GUI" \
+    "  Ctrl + Shift + Esc" "System monitor" \
     "" "" \
     "MULTIMEDIA" "" \
-    "  XF86Audio*" "Volume controls" \
-    "  XF86MonBrightness*" "Brightness" \
-    "  XF86AudioNext/Prev" "Media" \
-    "  XF86AudioPlay/Pause" "Play/Pause" | \
+    "  XF86AudioRaiseVolume" "Volume up" \
+    "  XF86AudioLowerVolume" "Volume down" \
+    "  XF86AudioMute" "Mute toggle" \
+    "  XF86MonBrightnessUp" "Brightness up" \
+    "  XF86MonBrightnessDown" "Brightness down" \
+    "  XF86AudioNext" "Next track" \
+    "  XF86AudioPrev" "Previous track" \
+    "  XF86AudioPlay" "Play/Pause" | \
 rofi -dmenu \
     -p "Keybinds" \
     -theme ${dir}/${mode}.rasi \

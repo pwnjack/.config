@@ -6,8 +6,8 @@
 ## Adapted by : @GeodeArc
 ##
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
+stlconf="$(cat $HOME/.config/options/style)"
+thmconf="$(cat $HOME/.config/options/theme)"
 
 config="$stlconf"
 theme="$thmconf"
@@ -37,15 +37,15 @@ run_rofi() {
 chosen="$(run_rofi)"
 case ${chosen} in
     $modstl)
-    	$HOME/Dots/Scripts/Themes/s-mod.sh
+    	$HOME/.config/scripts/Themes/s-mod.sh
     	notify-send -i preferences-color-symbolic "Modern Theme Active" "You may need to log out for all settings to apply."
         ;;
     $colstl)
-    	$HOME/Dots/Scripts/Themes/s-col.sh
+    	$HOME/.config/scripts/Themes/s-col.sh
     	notify-send -i preferences-color-symbolic "Colorful Theme Active" "You may need to log out for all settings to apply."
         ;;
     $minstl)
-    	$HOME/Dots/Scripts/Themes/s-min.sh
+    	$HOME/.config/scripts/Themes/s-min.sh
     	notify-send -i preferences-color-symbolic "Minimal Theme Active" "You may need to log out for all settings to apply."
         ;;
 esac

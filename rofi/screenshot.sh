@@ -6,8 +6,8 @@
 ## Adapted by : @GeodeArc
 ##
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
+stlconf="$(cat $HOME/.config/options/style)"
+thmconf="$(cat $HOME/.config/options/theme)"
 
 config="$stlconf"
 theme="$thmconf"

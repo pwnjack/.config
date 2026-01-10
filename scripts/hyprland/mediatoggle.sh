@@ -1,9 +1,9 @@
 #!/bin/bash
 
-CURRENT_PLAYER="$(cat $HOME/Dots/Options/player)"
-PLAYER_PATH="$HOME/Dots/Options/player"
+CURRENT_PLAYER="$(cat $HOME/.config/options/player)"
+PLAYER_PATH="$HOME/.config/options/player"
 
-DEFINED_PLAYER="$(cat $HOME/Dots/Options/mediaplayer)"
+DEFINED_PLAYER="$(cat $HOME/.config/options/mediaplayer)"
 
 if [[ "$CURRENT_PLAYER" == "$DEFINED_PLAYER" ]]; then
     notify-send -i folder-music-symbolic "Media Mode Changed" "Media type is now set to 'All'"

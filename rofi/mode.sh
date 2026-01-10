@@ -6,8 +6,8 @@
 ## Adapted by : @GeodeArc
 ##
 
-stlconf="$(cat $HOME/Dots/Options/style)"
-thmconf="$(cat $HOME/Dots/Options/theme)"
+stlconf="$(cat $HOME/.config/options/style)"
+thmconf="$(cat $HOME/.config/options/theme)"
 
 config="$stlconf"
 theme="$thmconf"
@@ -37,11 +37,11 @@ run_rofi() {
 chosen="$(run_rofi)"
 case ${chosen} in
     $lmode)
-    	$HOME/Dots/Scripts/Themes/t-light.sh
+    	$HOME/.config/scripts/Themes/t-light.sh
     	notify-send -i view-reveal-symbolic "Light Mode Active" "You will need to log out to see cursor theme changes."
         ;;
     $dmode)
-    	$HOME/Dots/Scripts/Themes/t-dark.sh
+    	$HOME/.config/scripts/Themes/t-dark.sh
     	notify-send -i view-reveal-symbolic "Dark Mode Active" "You will need to log out to see cursor theme changes."
         ;;
     $style)
