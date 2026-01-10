@@ -71,7 +71,6 @@ video/quicktime=vlc.desktop
 video/x-ogm+ogg=vlc.desktop
 video/ogg=vlc.desktop
 application/ogg=vlc.desktop
-
 application/x-matroska=vlc.desktop
 application/vnd.rn-realmedia=vlc.desktop
 application/vnd.rn-realmedia-vbr=vlc.desktop
@@ -92,7 +91,6 @@ application/x-extension-mpeg=vlc.desktop
 application/x-extension-3gp=vlc.desktop
 application/x-extension-mov=vlc.desktop
 application/x-extension-qt=vlc.desktop
-
 
 [Added Associations]
 x-scheme-handler/mailto=userapp-Thunderbird-2A5NF3.desktop;
@@ -116,3 +114,4 @@ application/xhtml+xml=zen.desktop;
 application/x-extension-xhtml=zen.desktop;
 application/x-extension-xht=zen.desktop;
 image/jpeg=org.gnome.Shotwell-Viewer.desktop;
+text/plain=org.kde.kwrite.desktop;

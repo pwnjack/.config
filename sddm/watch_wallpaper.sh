@@ -1,7 +1,10 @@
 #!/bin/bash
+#
+# SDDM Wallpaper Sync Script
+# Watches for swww wallpaper changes and updates SDDM automatically
+#
 
-# Watch for swww wallpaper changes and update SDDM automatically
-monitor=$(cat "$HOME/Dots/Options/mainmonitor" 2>/dev/null || echo "eDP-1")
+monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null || echo "eDP-1")
 cache_file="$HOME/.cache/swww/$monitor"
 update_script="$HOME/.config/sddm/update_sddm.sh"
 

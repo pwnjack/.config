@@ -248,5 +248,60 @@ dolphin/**
 alacritty/**
 chromium/**
 vlc/**
-ow-electron/cfiahnpaolfnlgaihhmobmnjdafknjnjdpdabpcm/ow-electron.json
-vlc/vlc-qt-interface.conf
+ow-electron/**
+menus/**
+procps/**
+pulse/**
+Electron/**
+KDE/**
+shotwell/**
+chezmoi/**
+Thunar/**
+xfce4/**
+xdg-desktop-portal/**
+spicetify/**
+nautilus/**
+dconf/**
+hatch/**
+auto_walls/**
+autostart/**
+
+# -------------------------------------------------------------------------------
+# KEEP ESSENTIAL CONFIGS ONLY
+# -------------------------------------------------------------------------------
+# Core window manager and shell
+!hypr/
+!fish/
+!waybar/
+!swaync/
+!hypridle.conf
+!mimeapps.list
+!starship.toml
+
+# Essential tools
+!ghostty/
+!kitty/
+!nvim/
+!rofi/
+!wofi/
+!wlogout/
+!mako/
+!swaylock/
+!sddm/
+
+# Appearance
+!gtk-3.0/
+!gtk-4.0/
+!qt5ct/
+!qt6ct/
+!nwg-look/
+
+# System utilities
+!btop/
+!fastfetch/
+!flameshot/
+
+# Custom directories (newly created)
+!scripts/
+!wallpapers/
+!options/
