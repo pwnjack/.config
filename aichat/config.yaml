@@ -1,0 +1,68 @@
+# aichat configuration
+# https://github.com/sigoden/aichat/blob/main/config.example.yaml
+
+# ---- Model ----
+model: gemini:gemini-2.5-flash
+
+# ---- Behavior ----
+stream: true
+save: true
+keybindings: emacs
+wrap: auto
+wrap_code: false
+
+# ---- Session ----
+save_session: true
+compress_threshold: 4000
+summarize_prompt: 'Summarize the discussion briefly in 200 words or less to use as a prompt for future context.'
+summary_prompt: 'This is a summary of the chat history as a recap: '
+
+# ---- Appearance ----
+highlight: true
+light_theme: false
+left_prompt: '{color.green}{model}{color.cyan}>{color.reset} '
+right_prompt: '{color.purple}{?consume_tokens {consume_tokens}}{color.reset}'
+
+# ---- Misc ----
+save_shell_history: true
+
+# ---- Clients ----
+# Switch models with: .model <provider>:<model-name>
+# List available: .model
+clients:
+# Google Gemini
+- type: gemini
+  api_key: AIzaSyDNgtcT90Fk96fE1yiB0_o1a3pPftl5ask
+  # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
+
+# OpenAI / ChatGPT
+# - type: openai
+#   api_key: sk-xxxxxxxxxxxxxxxxxxxx
+#   # Models: gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini
+
+# Anthropic / Claude
+# - type: claude
+#   api_key: sk-ant-xxxxxxxxxxxxxxxxxxxx
+#   # Models: claude-sonnet-4-20250514, claude-opus-4-20250514, claude-3-5-haiku-20241022
+
+# Groq (fast inference)
+# - type: groq
+#   api_key: gsk_xxxxxxxxxxxxxxxxxxxx
+#   # Models: llama-3.3-70b-versatile, mixtral-8x7b-32768
+
+# Mistral
+# - type: mistral
+#   api_key: xxxxxxxxxxxxxxxxxxxx
+#   # Models: mistral-large-latest, mistral-small-latest, codestral-latest
+
+# OpenRouter (access to many models)
+# - type: openai-compatible
+#   name: openrouter
+#   api_base: https://openrouter.ai/api/v1
+#   api_key: sk-or-xxxxxxxxxxxxxxxxxxxx
+#   # Models: anthropic/claude-3.5-sonnet, openai/gpt-4o, google/gemini-pro-1.5
+
+# Local Ollama
+# - type: ollama
+#   api_base: http://localhost:11434
+#   # Models: llama3, codellama, mistral, phi3

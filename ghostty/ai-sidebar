@@ -1,0 +1,31 @@
+# AI Sidebar - Ghostty Configuration
+# Themed terminal for aichat sidebar
+
+# Inherit pywal colors dynamically
+config-file = ~/.cache/wal/colors-ghostty
+
+# Typography
+font-family = "Fira Code Nerd Font"
+font-size = 11
+
+# Window styling for sidebar aesthetic
+window-padding-x = 16
+window-padding-y = 12
+window-decoration = false
+
+# Cursor
+cursor-style = bar
+cursor-style-blink = true
+
+# Scrollback
+scrollback-limit = 10000
+
+# Disable tabs (single purpose sidebar)
+gtk-tabs-location = hidden
+
+# Clean minimal look
+resize-overlay = never
+mouse-hide-while-typing = true
+
+# Performance
+bold-is-bright = false

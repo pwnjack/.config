@@ -22,6 +22,7 @@ printf '%-32s %s\n' \
     "  Super + T" "Text Editor (KWrite GUI)" \
     "  Super + S" "Screenshot (region)" \
     "  Super + G" "Code Editor (Cursor)" \
+    "  Super + A" "AI Assistant sidebar" \
     "" "" \
     "WINDOW MANAGEMENT" "" \
     "  Super + Q" "Close window" \

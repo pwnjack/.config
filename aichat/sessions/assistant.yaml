@@ -1,0 +1,32 @@
+model: gemini:gemini-2.5-flash
+save_session: true
+messages:
+- role: user
+  content: so tell me a joke
+- role: assistant
+  content: |-
+    Why did the scarecrow win an award?
+
+    Because he was outstanding in his field!
+- role: user
+  content: now another one
+- role: assistant
+  content: |-
+    Okay, here's another one for you:
+
+    What do you call a fish with no eyes?
+
+    Fsh!
+- role: user
+  content: what did u just tell me
+- role: assistant
+  content: |-
+    I told you:
+
+    What do you call a fish with no eyes?
+
+    Fsh!
+- role: user
+  content: come si chiama il dittatore del cile famoso storicamente?
+- role: assistant
+  content: Il dittatore del Cile storicamente più famoso è **Augusto Pinochet**.
