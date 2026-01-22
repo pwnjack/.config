@@ -32,7 +32,7 @@ save_shell_history: true
 clients:
 # Google Gemini
 - type: gemini
-  api_key: AIzaSyDNgtcT90Fk96fE1yiB0_o1a3pPftl5ask
+  api_key: AIzaSyDNgtcT90Fk96fE1yiB0_o1a3pPftl5ask # its revoked, don't bother
   # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
 
 # OpenAI / ChatGPT
