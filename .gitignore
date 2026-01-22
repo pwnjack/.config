@@ -3,6 +3,12 @@
 # Excludes cache, logs, temporary files, and machine-specific data
 # ==============================================================================
 
+zsh/.zsh_history
+aichat/sessions
+kwriterc
+ow-electron.json
+weakauras-companion
+
 # -------------------------------------------------------------------------------
 # BACKUP AND TEMPORARY FILES
 # -------------------------------------------------------------------------------
