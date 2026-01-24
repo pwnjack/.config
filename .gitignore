@@ -311,3 +311,4 @@ autostart/**
 !scripts/
 !wallpapers/
 !options/
+zed/settings.json
