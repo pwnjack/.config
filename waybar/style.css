@@ -104,7 +104,8 @@ tooltip label {
 
 #disk,
 #memory,
-#cpu {
+#cpu,
+#custom-gpu {
     background: transparent;
     margin: 4px 0px;
     color: @foreground;
