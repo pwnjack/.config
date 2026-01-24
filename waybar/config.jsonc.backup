@@ -21,27 +21,27 @@
 
   // Modules Center
   "modules-center": [
-      "custom/cpu-temp", 
+      "cpu", 
       "memory", 
-      "custom/gpu",
-      "custom/disk-temp",
+      "disk",
       "custom/appmenu",
       "hyprland/workspaces",
       "custom/wallpaper",
       "custom/hyprpicker",
       "custom/nightlight",
       "clock",
+      "custom/weather",
       "custom/media"
   ],
 
-  // Modules Right    
+  // Modules Right
   "modules-right": [
       "network",
       "bluetooth",
       "battery",
       "pulseaudio",
       "tray",
-      "custom/sidebar"
+      "custom/power"
   ],
   
 // Workspaces
@@ -49,13 +49,14 @@
     "on-scroll-up": "hyprctl dispatch workspace r-1",
     "on-scroll-down": "hyprctl dispatch workspace r+1",
     "on-click": "activate",
-    "active-only": true,
+    "active-only": false,
     "all-outputs": false,
     "format": "{icon}",
     "format-icons": {
       "urgent": "●",
       "active": "●",
-      "default": "○"
+      "default": "●",
+      "empty": "○"
     },
     "persistent-workspaces": {
       "*": 5
@@ -149,7 +150,7 @@
 
   // Clock
   "clock": {
-    "format": "{:%I:%M %p}",
+    "format": "{:%H:%M}",
     "format-alt": "{:%d-%m-%Y}",
     "on-click-right": "gnome-clocks",
     "tooltip": true,
@@ -165,31 +166,34 @@
                               "weekdays":   "<span color='#FFFFFF'>{}</span>",
                               "today":      "<span color='#FFFFFF'><b>{}</b></span>"
                               }
-  // CPU with Temperature
-  "custom/cpu-temp": {
+                    },
+        "actions":  {
+                    "on-click-middle": "mode",
+                    "on-scroll-up": "shift_down",
+                    "on-scroll-down": "shift_up"
+                    }
+    },
+
+  // Weather
+  "custom/weather": {
+    "format": "{}",
+    "exec": "~/.config/waybar/waybar-weather-wrapper.sh",
+    "return-type": "json",
+    "interval": 600,
+    "tooltip": true
+  },
+
+  // CPU
+  "cpu": {
     "interval": 5,
-    "exec": "cpu_usage=$(top -bn1 | grep 'Cpu(s)' | awk '{print int($2)}'); cpu_temp=$(sensors coretemp-isa-0000 2>/dev/null | awk '/Package id 0:/ {gsub(/[^0-9.]/, \"\", $4); printf \"%.0f\", $4}'); echo \"  ${cpu_usage}% ${cpu_temp}°C \"",
+    "format": "  {usage}% ",
     "on-click": "resources"
   },
 
   // Memory
   "memory": {
     "interval": 5,
-    "format": "-   {}% ",
-    "on-click": "resources"
-  },
-
-  // GPU with Temperature
-  "custom/gpu": {
-    "interval": 5,
-    "exec": "gpu_usage=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | tr -d ' '); gpu_temp=$(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader 2>/dev/null | tr -d ' '); echo \"-  󰢮 ${gpu_usage}% ${gpu_temp}°C \"",
-    "on-click": "resources"
-  },
-
-  // Disk with Temperature
-  "custom/disk-temp": {
-    "interval": 30,
-    "exec": "disk_usage=$(df / --output=pcent | tail -1 | tr -d ' %'); disk_temp=$(sensors nvme-pci-0500 2>/dev/null | awk '/Composite:/ {gsub(/[^0-9.]/, \"\", $2); printf \"%.0f\", $2}'); echo \"-   ${disk_usage}% ${disk_temp}°C \"",
+    "format": "-   {}% ",
     "on-click": "resources"
   },
 
@@ -285,12 +289,14 @@
   "custom/media": {
     "interval": 1,
     "max-length": 40,
-    "exec": "~/.config/scripts/Hyprland/mediaexec.sh",
-    "on-click": "~/.config/scripts/Hyprland/mediatoggle.sh"
+    "exec": "~/.config/scripts/hyprland/mediaexec.sh",
+    "on-click": "~/.config/scripts/hyprland/mediatoggle.sh"
   },
-  
-  "custom/sidebar": {
-      "format": "󱗼",
-      "tooltip-format": "Sidebar",
+
+
+  "custom/power": {
+      "format": "󰐥",
+      "tooltip-format": "Power Menu",
+      "on-click": "~/.config/rofi/powermenu.sh"
   }
 }

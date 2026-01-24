@@ -25,8 +25,8 @@ shutdown='󰐥'
 reboot=''
 lock='󰍁'
 logout='󰈆'
-yes='Y'
-no='X'
+yes=''
+no=''
 
 # Rofi CMD
 rofi_cmd() {
