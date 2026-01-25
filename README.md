@@ -246,12 +246,6 @@ killall waybar && waybar &
 killall hypridle && hypridle &
 ```
 
-## Credits
-
-- [Hyprland](https://hyprland.org)
-- [Pywal](https://github.com/dylanaraps/pywal)
-- Rofi themes adapted from [@adi1090x](https://github.com/adi1090x)
-
 ## License
 
 MIT
@@ -287,4 +281,3 @@ The `.env` file is automatically loaded by:
 - `.env` is git-ignored and never committed
 - Use `.env.example` as a template in your repository
 - Keep your API keys private
-

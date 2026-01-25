@@ -1,9 +1,3 @@
-//
-// Original Author : Aditya Shakya (adi1090x)
-// Original Github : @adi1090x
-// Adapted by : @GeodeArc
-//
-
 @import "options/font.rasi"
 @import "options/wallpaper.rasi"
 @import "options/colors.rasi"
@@ -14,7 +8,7 @@ configuration {
     show-icons:                 true;
     display-drun:               " APPS";
     display-run:                "󰲌 RUN";
-    display-filebrowser:        " FILES"; 
+    display-filebrowser:        " FILES";
     drun-display-format:        "{name}";
     window-format:              "{w} · {c}";
 }
@@ -134,7 +128,7 @@ listview {
     reverse:                     false;
     fixed-height:                true;
     fixed-columns:               true;
-    
+
     spacing:                     10px;
     background-color:            transparent;
     text-color:                  @foreground;
