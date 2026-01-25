@@ -14,7 +14,7 @@ cat > "$HOME/.config/mako/config" << EOF
 # Last updated: $(date)
 
 # Appearance
-font=JetBrains Mono 11
+font=FiraCode Nerd Font 11
 background-color=${background}dd
 text-color=${foreground}
 border-color=${color4}
