@@ -9,10 +9,13 @@
 
 configuration {
     hover-select: true;
-    me-select-entry: "";
+    me-select-entry: "MouseSecondary";
     me-accept-entry: "MousePrimary";
+    me-accept-custom: "";
     drun-display-format: "{name}";
     window-format: "{w} · {c}";
+    kb-cancel: "Escape,Control+g,Control+bracketleft,Super+d";
+    kb-accept-entry: "Return,KP_Enter";
 }
 
 * {

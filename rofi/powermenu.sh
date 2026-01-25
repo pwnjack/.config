@@ -11,11 +11,11 @@ uptime="$(uptime -p | sed -e 's/up //g')"
 
 # Options
 shutdown='󰐥'
-reboot=''
+reboot=''
 lock='󰍁'
 logout='󰈆'
-yes=''
-no=''
+yes=''
+no=''
 
 rofi_cmd() {
     rofi -dmenu \
