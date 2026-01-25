@@ -14,14 +14,14 @@ wrap_code: false
 # ---- Session ----
 save_session: true
 compress_threshold: 4000
-summarize_prompt: 'Summarize the discussion briefly in 200 words or less to use as a prompt for future context.'
-summary_prompt: 'This is a summary of the chat history as a recap: '
+summarize_prompt: "Summarize the discussion briefly in 200 words or less to use as a prompt for future context."
+summary_prompt: "This is a summary of the chat history as a recap: "
 
 # ---- Appearance ----
 highlight: true
 light_theme: false
-left_prompt: '{color.green}{model}{color.cyan}>{color.reset} '
-right_prompt: '{color.purple}{?consume_tokens {consume_tokens}}{color.reset}'
+left_prompt: "{color.green}{model}{color.cyan}>{color.reset} "
+right_prompt: "{color.purple}{?consume_tokens {consume_tokens}}{color.reset}"
 
 # ---- Misc ----
 save_shell_history: true
@@ -30,10 +30,10 @@ save_shell_history: true
 # Switch models with: .model <provider>:<model-name>
 # List available: .model
 clients:
-# Google Gemini
-- type: gemini
-  api_key: AIzaSyDNgtcT90Fk96fE1yiB0_o1a3pPftl5ask # its revoked, don't bother
-  # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
+  # Google Gemini
+  - type: gemini
+    api_key: AIzaSyB1lKoRQpHCPupEnMtiD5lZ1FmtjwE5ej4
+    # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
 
 # OpenAI / ChatGPT
 # - type: openai
