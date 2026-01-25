@@ -17,7 +17,8 @@ A clean, production-ready Hyprland setup featuring:
 
 ## Screenshots
 
-*Your desktop here - take a screenshot with `Super + S`*
+![Desktop1](https://imgur.com/OqSx6KL.jpeg)
+![Desktop2](https://imgur.com/qKGcFvr.jpeg)
 
 ## Core Stack
 
