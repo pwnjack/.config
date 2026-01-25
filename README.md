@@ -18,7 +18,8 @@ A clean, production-ready Hyprland setup featuring:
 ## Screenshots
 
 ![Desktop1](https://imgur.com/OqSx6KL.jpeg)
-![Desktop2](https://imgur.com/qKGcFvr.jpeg)
+![Desktop2](https://imgur.com/hMMpKv0,jpeg)
+![Desktop3](https://imgur.com/qKGcFvr.jpeg)
 
 ## Core Stack
 
