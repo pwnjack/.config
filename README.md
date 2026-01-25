@@ -1,307 +1,255 @@
 # Hyprland Dotfiles
 
-A clean, modern Hyprland configuration for CachyOS/Arch Linux with dynamic theming via pywal.
+Modern, minimal Hyprland configuration for Arch Linux / CachyOS with dynamic pywal theming.
+
+![Hyprland](https://img.shields.io/badge/Hyprland-0.53+-blue)
+![Arch](https://img.shields.io/badge/Arch_Linux-CachyOS-1793D1)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 ## Overview
 
-This is a streamlined, production-ready Hyprland setup focused on aesthetics and usability. The configuration uses a modern dark theme with rounded corners, blur effects, and dynamic colors generated from your wallpaper.
+A clean, production-ready Hyprland setup featuring:
 
-### Features
+- Modern dark aesthetic with blur and rounded corners
+- Dynamic color theming via pywal (colors generated from wallpaper)
+- Modular configuration structure for easy customization
+- macOS-inspired keybindings
 
-- **Window Manager**: Hyprland with smooth animations and blur effects
-- **Status Bar**: Waybar with weather, media controls, and system monitoring
-- **Terminal**: Ghostty (primary), kitty (fallback)
-- **Shell**: Fish with zoxide and starship prompt
-- **Launcher**: Rofi with modern styling
-- **Notifications**: SwayNC control center
-- **Lock Screen**: Hyprlock with fingerprint support
-- **Color Scheme**: Pywal dynamic theming from wallpaper
+## Screenshots
 
-## Directory Structure
+*Your desktop here - take a screenshot with `Super + S`*
+
+## Core Stack
+
+| Component | Application |
+|-----------|-------------|
+| Window Manager | Hyprland |
+| Status Bar | Waybar |
+| Launcher | Rofi |
+| Terminal | Ghostty |
+| Notifications | SwayNC |
+| Lock Screen | Hyprlock |
+| File Manager | Thunar / Yazi |
+| Browser | Zen Browser |
+| Editor | Neovim |
+| Shell | Fish + Starship |
+
+## Structure
 
 ```
 ~/.config/
-├── hypr/                       # Hyprland configuration
-│   ├── hyprland.conf          # Main config manifest
-│   ├── hyprlock.conf          # Lock screen
-│   ├── hypridle.conf          # Idle management
-│   └── config/                # Modular configuration
-│       ├── colors.conf        # Pywal colors (symlink)
-│       ├── apptype.conf       # Default applications
-│       ├── cursortheme.conf   # Cursor theme
-│       ├── hardware/          # Monitor and input settings
-│       │   ├── monitor.conf
-│       │   └── input.conf
-│       ├── looks/             # Visual appearance
-│       │   ├── decor.conf     # Borders, rounding, blur
-│       │   └── animations.conf
-│       ├── setup/             # Environment and startup
-│       │   ├── envvars.conf
-│       │   └── autostart.conf
-│       └── software/          # Behavior and keybindings
-│           ├── general.conf
-│           ├── keybinds.conf
-│           └── rules.conf
-├── waybar/                    # Status bar
-│   ├── config.jsonc           # Waybar modules
-│   ├── style.css              # Waybar styling
-│   └── colors.css             # Pywal color definitions
-├── rofi/                      # Application launcher
-│   ├── config.rasi            # Main rofi config
-│   ├── launcher.sh            # App launcher script
-│   ├── powermenu.sh           # Power menu script
-│   ├── screenshot.sh          # Screenshot menu
-│   ├── keybinds-cheatsheet.sh # Keybinds reference
-│   ├── options/               # Rofi settings
-│   │   ├── colors.rasi
-│   │   ├── font.rasi
-│   │   └── wallpaper.rasi
-│   └── themes/                # Rofi theme files
-│       ├── launcher/
-│       ├── powermenu/
-│       ├── screenshot/
-│       ├── keybinds/
-│       └── mode/
-├── swaync/                    # Notification center
-│   ├── config.json
-│   ├── style.css
-│   ├── notifications.css
-│   ├── central_control.css
-│   └── scripts/
-├── options/                   # User preferences
-│   ├── browser               # Default browser
-│   ├── terminal              # Default terminal
-│   ├── mainmonitor           # Primary display
-│   ├── launchertype          # Rofi layout (vertical/horizontal)
-│   └── ...
-├── scripts/                   # Utility scripts
-│   ├── hyprland/
-│   ├── waybar/
-│   └── settings/
-├── fish/                      # Fish shell config
-├── ghostty/                   # Ghostty terminal
-├── kitty/                     # Kitty terminal (fallback)
-├── nvim/                      # Neovim configuration
-└── btop/                      # System monitor
+├── hypr/
+│   ├── hyprland.conf           # Main config (sources modules)
+│   ├── hyprlock.conf           # Lock screen
+│   ├── hypridle.conf           # Idle management
+│   └── config/
+│       ├── colors.conf         # Pywal colors (symlink)
+│       ├── apptype.conf        # Default apps
+│       ├── cursortheme.conf    # Cursor theme
+│       ├── hardware/
+│       │   ├── monitor.conf    # Display setup
+│       │   └── input.conf      # Keyboard/mouse
+│       ├── looks/
+│       │   ├── decor.conf      # Borders, blur, rounding
+│       │   └── animations.conf # Window animations
+│       ├── setup/
+│       │   ├── envvars.conf    # Environment variables
+│       │   └── autostart.conf  # Startup applications
+│       └── software/
+│           ├── general.conf    # Misc settings
+│           ├── keybinds.conf   # Keyboard shortcuts
+│           └── rules.conf      # Window rules
+├── waybar/
+│   ├── config.jsonc            # Modules config
+│   ├── style.css               # Styling
+│   └── colors.css              # Pywal colors
+├── rofi/
+│   ├── config.rasi             # Main config
+│   ├── launcher.sh             # App launcher
+│   ├── powermenu.sh            # Power options
+│   ├── screenshot.sh           # Screenshot menu
+│   ├── keybinds-cheatsheet.sh  # Shortcuts reference
+│   └── themes/                 # Rofi theme files
+├── swaync/
+│   ├── config.json             # Notification settings
+│   └── *.css                   # Styling
+├── options/                    # User preferences (text files)
+├── scripts/                    # Utility scripts
+├── fish/                       # Shell config
+├── ghostty/                    # Terminal config
+└── nvim/                       # Editor config
 ```
 
 ## Keybindings
 
+### Essential
+
+| Key | Action |
+|-----|--------|
+| `Super + Enter` | Terminal |
+| `Super + Space` | App Launcher |
+| `Super + Q` | Close Window |
+| `Super + L` | Lock Screen |
+| `Super + H` | Keybinds Cheatsheet |
+
 ### Applications
 
-| Shortcut | Action |
-|----------|--------|
-| `Super + Enter` | Terminal (Ghostty) |
-| `Super + E` | File Manager (Thunar) |
-| `Super + N` | Neovim (TUI) |
-| `Super + T` | KWrite (GUI editor) |
-| `Super + B` | Web Browser (Zen) |
+| Key | Action |
+|-----|--------|
+| `Super + E` | File Manager |
+| `Super + B` | Browser |
+| `Super + N` | Neovim |
 | `Super + G` | Zed Editor |
-| `Super + S` | Screenshot (region) |
 | `Super + K` | Calculator |
 | `Super + A` | AI Assistant |
 
-### Window Management
+### Windows
 
-| Shortcut | Action |
-|----------|--------|
-| `Super + Q` | Close window |
-| `Super + W` | Close window (alt) |
-| `Super + Shift + Q` | Exit Hyprland |
-| `Super + V` | Toggle floating |
-| `Super + F` | Toggle fullscreen |
+| Key | Action |
+|-----|--------|
+| `Super + V` | Toggle Floating |
+| `Super + F` | Fullscreen |
 | `Super + Shift + F` | Fullscreen (no gaps) |
-| `Super + O` | Toggle split |
-| `Super + P` | Pseudo tiling |
-| `Super + Shift + V` | Pin window (PiP) |
-| `Super + L` | Lock screen |
-
-### Rofi Menus
-
-| Shortcut | Action |
-|----------|--------|
-| `Super + Space` | Application launcher |
-| `Super + Shift + L` | Power menu |
-| `Super + Shift + S` | Screenshot menu |
-| `Super + C` | Clipboard history |
-| `Super + .` | Emoji picker |
-| `Super + H` | Keybinds cheatsheet |
+| `Super + O` | Toggle Split |
+| `Super + Shift + V` | Pin Window (PiP) |
+| `Alt + Arrows` | Move Focus |
+| `Alt + Shift + Arrows` | Move Window |
+| `Alt + Ctrl + Arrows` | Resize Window |
+| `Super + Tab` | Cycle Windows |
 
 ### Workspaces
 
-| Shortcut | Action |
-|----------|--------|
-| `Super + 1-9,0` | Switch to workspace |
-| `Super + Shift + 1-9,0` | Move window to workspace |
-| `Super + Left/Right` | Previous/Next workspace |
-| `Super + Shift + Left/Right` | Move window & follow |
-| `Super + Tab` | Cycle windows |
-
-### Window Navigation
-
-| Shortcut | Action |
-|----------|--------|
-| `Alt + Arrows` | Move focus |
-| `Alt + Ctrl + Arrows` | Resize window |
-| `Alt + Shift + Arrows` | Move window |
-| `Super + Mouse Drag` | Move window |
-| `Super + Right-click Drag` | Resize window |
-
-### Waybar
-
-| Shortcut | Action |
-|----------|--------|
-| `Super + Shift + B` | Toggle Waybar |
-| `Super + Alt + B` | Hide Waybar |
-| `Super + Ctrl + B` | Waybar options |
+| Key | Action |
+|-----|--------|
+| `Super + 1-9,0` | Switch Workspace |
+| `Super + Shift + 1-9,0` | Move to Workspace |
+| `Super + Left/Right` | Previous/Next |
+| `Super + Shift + Left/Right` | Move & Follow |
 
 ### Utilities
 
-| Shortcut | Action |
-|----------|--------|
-| `Super + I` | Settings menu |
-| `Super + Shift + W` | Random wallpaper |
-| `Super + Ctrl + W` | Waypaper GUI |
-| `Ctrl + Shift + Esc` | System monitor |
+| Key | Action |
+|-----|--------|
+| `Super + S` | Screenshot (region) |
+| `Super + Shift + S` | Screenshot Menu |
+| `Super + Shift + L` | Power Menu |
+| `Super + C` | Clipboard History |
+| `Super + .` | Emoji Picker |
+| `Super + Shift + W` | Random Wallpaper |
+| `Super + Ctrl + W` | Wallpaper Picker |
+
+### Waybar
+
+| Key | Action |
+|-----|--------|
+| `Super + Shift + B` | Toggle Waybar |
+| `Super + Alt + B` | Hide Waybar |
 
 ## Installation
 
-### Prerequisites
+### Dependencies
 
 ```bash
-# Core packages
+# Core
 sudo pacman -S hyprland hyprlock hypridle waybar swaync swww \
-               rofi-wayland ghostty kitty fish neovim \
-               thunar yazi btop fastfetch playerctl \
-               cliphist wl-clipboard python-pywal \
-               qt5ct qt6ct nwg-look
+               rofi-wayland ghostty fish neovim python-pywal \
+               thunar yazi btop cliphist wl-clipboard playerctl
 
-# AUR packages
-paru -S zen-browser-bin waybar-weather hyprshot
+# AUR
+paru -S zen-browser-bin hyprshot waybar-weather
 ```
 
 ### Setup
 
-1. Clone or copy configuration:
 ```bash
-git clone <repo-url> ~/.config
-```
+# Clone
+git clone <repo> ~/.config
 
-2. Initialize pywal:
-```bash
-wal -i ~/Pictures/Wallpapers/your-wallpaper.jpg -n
+# Initialize pywal
+wal -i ~/Pictures/Wallpapers/your-wallpaper.jpg
 ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
-```
 
-3. Set fish as default shell (optional):
-```bash
+# Set fish as default shell (optional)
 chsh -s $(which fish)
 ```
 
-4. Log out and select Hyprland from your login manager.
+Log out and select Hyprland from your display manager.
 
-## Customization
+## Configuration
+
+### User Preferences
+
+Simple text files in `~/.config/options/`:
+
+```bash
+~/.config/options/
+├── browser      # zen-browser
+├── terminal     # ghostty
+├── launchertype # vertical
+├── mainmonitor  # DP-1
+└── ...
+```
 
 ### Pywal Colors
 
-Colors are dynamically generated from your wallpaper:
+Generate colors from any wallpaper:
 
 ```bash
 wal -i /path/to/wallpaper.jpg
 ```
 
-This updates colors across:
-- Hyprland (borders, accents)
-- Waybar
-- Rofi
-- SwayNC notifications
+Colors automatically apply to Hyprland, Waybar, Rofi, and SwayNC.
 
-### User Preferences
+### Visual Tweaks
 
-Edit text files in `~/.config/options/`:
+**Blur & Rounding:** `~/.config/hypr/config/looks/decor.conf`
+```conf
+decoration {
+    rounding = 18
+    blur {
+        enabled = true
+        size = 6
+        passes = 4
+    }
+}
+```
 
-| File | Purpose | Example |
-|------|---------|---------|
-| `browser` | Default browser | `zen-browser` |
-| `terminal` | Default terminal | `ghostty` |
-| `mainmonitor` | Primary display | `DP-1` |
-| `launchertype` | Rofi layout | `vertical` |
+**Animations:** `~/.config/hypr/config/looks/animations.conf`
 
-### Visual Appearance
+**Window Rules:** `~/.config/hypr/config/software/rules.conf`
 
-- **Blur & Rounding**: `~/.config/hypr/config/looks/decor.conf`
-- **Animations**: `~/.config/hypr/config/looks/animations.conf`
-- **Window Rules**: `~/.config/hypr/config/software/rules.conf`
+### Monitors
 
-### Monitor Setup
-
-Edit `~/.config/hypr/config/hardware/monitor.conf` for display configuration.
+Edit `~/.config/hypr/config/hardware/monitor.conf`
 
 ## Troubleshooting
 
-### Colors not updating
-
-Reload Hyprland after running wal:
+**Colors not updating after wal:**
 ```bash
 hyprctl reload
 ```
 
-### Pywal symlink broken
-
-Recreate the symlink:
+**Pywal symlink broken:**
 ```bash
 ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
 ```
 
-### Waybar not starting
-
-Check for errors:
-```bash
-waybar &
-```
-
-Restart waybar:
+**Waybar issues:**
 ```bash
 killall waybar && waybar &
 ```
 
-### Lock screen issues
-
-Restart hypridle:
+**Lock screen not working:**
 ```bash
 killall hypridle && hypridle &
 ```
 
-## Dependencies
-
-### Core
-
-- hyprland, hyprlock, hypridle
-- waybar, swaync
-- swww (wallpaper daemon)
-- rofi-wayland
-- python-pywal
-
-### Applications
-
-- ghostty, kitty
-- fish, neovim
-- thunar, yazi
-- btop, fastfetch
-
-### Utilities
-
-- playerctl, cliphist, wl-clipboard
-- hyprshot, brightnessctl
-- qt5ct, qt6ct, nwg-look
-
 ## Credits
 
-- Hyprland: https://hyprland.org
-- Pywal: https://github.com/dylanaraps/pywal
-- Rofi themes adapted from: @adi1090x
-- SwayNC theme based on: HyprNova
+- [Hyprland](https://hyprland.org)
+- [Pywal](https://github.com/dylanaraps/pywal)
+- Rofi themes adapted from [@adi1090x](https://github.com/adi1090x)
 
 ## License
 
-MIT - Feel free to use, modify, and share.
+MIT
