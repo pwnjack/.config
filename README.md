@@ -17,9 +17,15 @@ A clean, production-ready Hyprland setup featuring:
 
 ## Screenshots
 
-![Desktop1](https://imgur.com/OqSx6KL.jpeg)
-![Desktop2](https://imgur.com/hMMpKv0,jpeg)
-![Desktop3](https://imgur.com/qKGcFvr.jpeg)
+Dynamic pywal theming adapts colors from your wallpaper across all components. Here are examples with different wallpapers:
+
+| Desktop | Theme Colors |
+|---------|--------------|
+| ![Space Earth](screenshots/space-earth-1.png) | ![Space Earth Theme](screenshots/space-earth-2.png) |
+| ![Cyborg Girl](screenshots/cyborg-girl-1.png) | ![Cyborg Girl Theme](screenshots/cyborg-girl-2.png) |
+| ![Swordman Dragon](screenshots/swordman-dragon-1.png) | ![Swordman Dragon Theme](screenshots/swordman-dragon-2.png) |
+| ![Violet Anime](screenshots/violet-animegirl-1.png) | ![Violet Anime Theme](screenshots/violet-animegirl-2.png) |
+| ![Anime Girl](screenshots/animegirl-top-1.png) | ![Anime Girl Theme](screenshots/animegirl-top-2.png) |
 
 ## Core Stack
 
