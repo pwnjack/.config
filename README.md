@@ -253,3 +253,36 @@ killall hypridle && hypridle &
 ## License
 
 MIT
+
+## API Keys & Environment Variables
+
+API keys and secrets are stored in `~/.config/.env` (git-ignored).
+
+### Setup
+
+```bash
+# Copy the example file
+cp ~/.config/.env.example ~/.config/.env
+
+# Edit with your API keys
+nano ~/.config/.env
+```
+
+### Supported Keys
+
+- `GEMINI_API_KEY` - Google Gemini AI
+- `OPENAI_API_KEY` - OpenAI/ChatGPT (optional)
+- `ANTHROPIC_API_KEY` - Claude (optional)
+- `GROQ_API_KEY` - Groq (optional)
+- `MISTRAL_API_KEY` - Mistral (optional)
+
+The `.env` file is automatically loaded by:
+- Fish shell (on startup)
+- AI assistant launcher script
+
+### Security
+
+- `.env` is git-ignored and never committed
+- Use `.env.example` as a template in your repository
+- Keep your API keys private
+

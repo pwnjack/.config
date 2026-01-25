@@ -312,3 +312,6 @@ autostart/**
 !wallpapers/
 !options/
 zed/settings.json
+
+# Environment variables (API keys, secrets)
+.env

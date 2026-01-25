@@ -1,6 +1,11 @@
 #!/bin/bash
 # Toggle AI sidebar with aichat in terminal
 
+# Load environment variables from .env file
+if [ -f "$HOME/.config/.env" ]; then
+    export $(grep -v '^#' "$HOME/.config/.env" | grep -v '^$' | xargs)
+fi
+
 # Check if ai_sidebar window exists in special workspace
 WINDOW_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.workspace.name == "special:aichat") | .address' | head -1)
 

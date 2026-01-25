@@ -31,35 +31,35 @@ save_shell_history: true
 # List available: .model
 clients:
   # Google Gemini
+  # API key loaded from GEMINI_API_KEY environment variable
   - type: gemini
-    api_key: AIzaSyB1lKoRQpHCPupEnMtiD5lZ1FmtjwE5ej4
     # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
 
 # OpenAI / ChatGPT
+# Set OPENAI_API_KEY environment variable
 # - type: openai
-#   api_key: sk-xxxxxxxxxxxxxxxxxxxx
 #   # Models: gpt-4o, gpt-4o-mini, gpt-4-turbo, o1, o1-mini
 
 # Anthropic / Claude
+# Set ANTHROPIC_API_KEY environment variable
 # - type: claude
-#   api_key: sk-ant-xxxxxxxxxxxxxxxxxxxx
 #   # Models: claude-sonnet-4-20250514, claude-opus-4-20250514, claude-3-5-haiku-20241022
 
 # Groq (fast inference)
+# Set GROQ_API_KEY environment variable
 # - type: groq
-#   api_key: gsk_xxxxxxxxxxxxxxxxxxxx
 #   # Models: llama-3.3-70b-versatile, mixtral-8x7b-32768
 
 # Mistral
+# Set MISTRAL_API_KEY environment variable
 # - type: mistral
-#   api_key: xxxxxxxxxxxxxxxxxxxx
 #   # Models: mistral-large-latest, mistral-small-latest, codestral-latest
 
 # OpenRouter (access to many models)
+# Set OPENROUTER_API_KEY environment variable
 # - type: openai-compatible
 #   name: openrouter
 #   api_base: https://openrouter.ai/api/v1
-#   api_key: sk-or-xxxxxxxxxxxxxxxxxxxx
 #   # Models: anthropic/claude-3.5-sonnet, openai/gpt-4o, google/gemini-pro-1.5
 
 # Local Ollama
