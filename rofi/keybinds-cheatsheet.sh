@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
 #
-# Hyprland Keybinds Cheatsheet
-# Shows all keyboard shortcuts in a rofi menu
+# Keybinds Cheatsheet
+# Shows all keyboard shortcuts in a searchable rofi menu
 #
 
-stlconf="$(cat $HOME/.config/options/style 2>/dev/null || echo 'colorful')"
-thmconf="$(cat $HOME/.config/options/theme 2>/dev/null || echo 'dark')"
-
-config="$stlconf"
-theme="$thmconf"
-
-dir="$HOME/.config/rofi/$config/$theme/keybinds"
-mode='main'
+dir="$HOME/.config/rofi/themes/keybinds"
 
 printf '%-32s %s\n' \
     "BASE APPS" "" \
@@ -21,7 +14,7 @@ printf '%-32s %s\n' \
     "  Super + B" "Web Browser (Zen)" \
     "  Super + T" "Text Editor (KWrite GUI)" \
     "  Super + S" "Screenshot (region)" \
-    "  Super + G" "Code Editor (Cursor)" \
+    "  Super + G" "Code Editor (Zed)" \
     "  Super + A" "AI Assistant sidebar" \
     "" "" \
     "WINDOW MANAGEMENT" "" \
@@ -44,7 +37,6 @@ printf '%-32s %s\n' \
     "" "" \
     "ROFI LAUNCHERS" "" \
     "  Super + Space" "App launcher (Spotlight)" \
-    "  Super + M" "Mode menu" \
     "  Super + Shift + L" "Power menu" \
     "  Super + Shift + S" "Screenshot menu" \
     "  Super + C" "Clipboard history" \
@@ -85,7 +77,7 @@ printf '%-32s %s\n' \
     "  XF86AudioPlay" "Play/Pause" | \
 rofi -dmenu \
     -p "Keybinds" \
-    -theme ${dir}/${mode}.rasi \
+    -theme ${dir}/main.rasi \
     -i \
     -no-custom \
     -select "" \
@@ -93,4 +85,3 @@ rofi -dmenu \
     -kb-accept-entry "" \
     -kb-accept-alt "" \
     -kb-row-select ""
-

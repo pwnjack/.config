@@ -1,19 +1,9 @@
 #!/usr/bin/env bash
+#
+# Screenshot Timer Selection
+#
 
-##
-## Original Author : Aditya Shakya (adi1090x)
-## Original Github : @adi1090x
-## Adapted by : @GeodeArc
-##
-
-stlconf="$(cat $HOME/.config/options/style)"
-thmconf="$(cat $HOME/.config/options/theme)"
-
-config="$stlconf"
-theme="$thmconf"
-
-dir="$HOME/.config/rofi/$config/$theme/screenshot"
-mode='timer'
+dir="$HOME/.config/rofi/themes/screenshot"
 
 # Options
 option_1="0s"
@@ -22,57 +12,54 @@ option_3="5s"
 option_4="10s"
 option_5="30s"
 
-# Rofi CMD
 rofi_cmd() {
-	rofi -dmenu \
-		-theme ${dir}/${mode}.rasi \
-		-p " $USER"
+    rofi -dmenu \
+        -theme ${dir}/timer.rasi \
+        -p " $USER"
 }
 
-run_rofi () {
-	echo -e "$option_1\n$option_2\n$option_3\n$option_4\n$option_5" | rofi_cmd
-}	
-
-shot () {
-	echo "sleep $seconds" > $HOME/.config/rofi/options/screenshot/timer
+run_rofi() {
+    echo -e "$option_1\n$option_2\n$option_3\n$option_4\n$option_5" | rofi_cmd
 }
 
-# Execute Command
+shot() {
+    echo "sleep $seconds" > $HOME/.config/rofi/options/screenshot/timer
+}
+
 run_cmd() {
-	if [[ "$1" == '--opt1' ]]; then
-		seconds="0"
-		shot 
-	elif [[ "$1" == '--opt2' ]]; then
-		seconds="3"
-		shot 
-	elif [[ "$1" == '--opt3' ]]; then
-		seconds="5"
-		shot 
-	elif [[ "$1" == '--opt4' ]]; then
-		seconds="10"
-		shot 
-	elif [[ "$1" == '--opt5' ]]; then
-		seconds="30"
-		shot 
-	fi
+    if [[ "$1" == '--opt1' ]]; then
+        seconds="0"
+        shot
+    elif [[ "$1" == '--opt2' ]]; then
+        seconds="3"
+        shot
+    elif [[ "$1" == '--opt3' ]]; then
+        seconds="5"
+        shot
+    elif [[ "$1" == '--opt4' ]]; then
+        seconds="10"
+        shot
+    elif [[ "$1" == '--opt5' ]]; then
+        seconds="30"
+        shot
+    fi
 }
 
-# Actions
 chosen="$(run_rofi)"
 case ${chosen} in
     $option_1)
-		run_cmd --opt1
+        run_cmd --opt1
         ;;
     $option_2)
-		run_cmd --opt2
+        run_cmd --opt2
         ;;
     $option_3)
-		run_cmd --opt3
+        run_cmd --opt3
         ;;
     $option_4)
-		run_cmd --opt4
+        run_cmd --opt4
         ;;
     $option_5)
-		run_cmd --opt5
+        run_cmd --opt5
         ;;
 esac

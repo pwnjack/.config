@@ -4,7 +4,7 @@
   "cssPriority": "user",
 
   "control-center-width": 358,
-  "control-center-height": 720, 
+  "control-center-height": 720,
 
   "notification-window-width": 400,
   "notification-icon-size": 48,
@@ -14,7 +14,7 @@
   "timeout": 4,
   "timeout-low": 2,
   "timeout-critical": 6,
-  
+
   "fit-to-screen": false,
   "keyboard-shortcuts": true,
   "image-visibility": "when-available",
@@ -22,10 +22,10 @@
   "hide-on-clear": false,
   "hide-on-action": false,
   "script-fail-notify": true,
-  
+
   "layer-shell": true,
   "layer-shell-cover-screen": true,
-  
+
   "notification-visibility": {
     "example-name": {
       "state": "muted",
@@ -59,20 +59,16 @@
       "step": 5
     },
     "volume": {
-      "label": "   ",
+      "label": "   ",
       "show-per-app": true,
       "show-per-app-label": false,
       "show-per-app-icon": true,
-      "expand-button-label": "  ",
-      "collapse-button-label": "  ",
+      "expand-button-label": "  ",
+      "collapse-button-label": "  ",
       "empty-list-label": "No players"
     },
     "buttons-grid": {
       "actions": [
-        {
-          "label": "🎨",
-          "command": "setsid ~/.config/swaync/scripts/theme.sh >/dev/null 2>&1 & disown"
-        },
         {
           "label": "😀",
           "command": "sh -c '~/.config/swaync/scripts/emoji.sh' &"

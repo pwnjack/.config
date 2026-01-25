@@ -1,22 +1,12 @@
 #!/usr/bin/env bash
+#
+# Application Launcher
+# Uses rofi with vertical layout
+#
 
-##
-## Original Author : Aditya Shakya (adi1090x)
-## Original Github : @adi1090x
-## Adapted by : @GeodeArc
-##
-
-stlconf="$(cat $HOME/.config/options/style)"
-thmconf="$(cat $HOME/.config/options/theme)"
 launcher="$(cat $HOME/.config/options/launchertype)"
+dir="$HOME/.config/rofi/themes/launcher"
 
-config="$stlconf"
-theme="$thmconf"
-
-dir="$HOME/.config/rofi/$config/$theme/launcher"
-mode="$launcher"
-
-## Run
 rofi \
     -show drun \
-    -theme ${dir}/${mode}.rasi
+    -theme ${dir}/${launcher}.rasi

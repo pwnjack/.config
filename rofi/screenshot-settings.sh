@@ -1,83 +1,68 @@
 #!/usr/bin/env bash
+#
+# Screenshot Settings
+# Timer and freeze options
+#
 
-##
-## Original Author : Aditya Shakya (adi1090x)
-## Original Github : @adi1090x
-## Adapted by : @GeodeArc
-##
-
-stlconf="$(cat $HOME/.config/options/style)"
-thmconf="$(cat $HOME/.config/options/theme)"
-
-config="$stlconf"
-theme="$thmconf"
-
-dir="$HOME/.config/rofi/$config/$theme/screenshot"
-mode='settings'
+dir="$HOME/.config/rofi/themes/screenshot"
 
 # Options
-option_1=""
+option_1=""
 option_2="󱎫"
 option_3="󱤳"
 
-# Rofi CMD
 rofi_cmd() {
-	rofi -dmenu \
-		-theme ${dir}/${mode}.rasi \
-		-p " $USER" \
-		-mesg "Back | Toggle Timer | Toggle Freeze" 
+    rofi -dmenu \
+        -theme ${dir}/settings.rasi \
+        -p " $USER" \
+        -mesg "Back | Toggle Timer | Toggle Freeze"
 }
 
-run_rofi () {
-	echo -e "$option_1\n$option_2\n$option_3" | rofi_cmd
-}	
-
-# Add timer
-timer () {
-	$HOME/.config/rofi/screenshot-timer.sh
-	$HOME/.config/rofi/screenshot.sh
+run_rofi() {
+    echo -e "$option_1\n$option_2\n$option_3" | rofi_cmd
 }
 
-# Freeze screen options
-freeze () {
-	if grep -q "true" "$HOME/.config/options/screenshot"; then
-		notify-send -i applets-screenshooter-symbolic "Disabled Screenshot Freeze"
-		echo "false" > $HOME/.config/options/screenshot
-		echo "" > $HOME/.config/rofi/options/screenshot/timer
-	else 
-		notify-send -i applets-screenshooter-symbolic "Enabled Screenshot Freeze" "This may not work on virtual machines"
-		echo "true" > $HOME/.config/options/screenshot
-		echo "-z" > $HOME/.config/rofi/options/screenshot/timer
-	fi
-	$HOME/.config/rofi/screenshot.sh
+timer() {
+    $HOME/.config/rofi/screenshot-timer.sh
+    $HOME/.config/rofi/screenshot.sh
+}
+
+freeze() {
+    if grep -q "true" "$HOME/.config/options/screenshot"; then
+        notify-send -i applets-screenshooter-symbolic "Disabled Screenshot Freeze"
+        echo "false" > $HOME/.config/options/screenshot
+        echo "" > $HOME/.config/rofi/options/screenshot/freeze
+    else
+        notify-send -i applets-screenshooter-symbolic "Enabled Screenshot Freeze" "This may not work on virtual machines"
+        echo "true" > $HOME/.config/options/screenshot
+        echo "-z" > $HOME/.config/rofi/options/screenshot/freeze
+    fi
+    $HOME/.config/rofi/screenshot.sh
 }
 
 back() {
-	$HOME/.config/rofi/screenshot.sh
+    $HOME/.config/rofi/screenshot.sh
 }
 
-
-# Execute Command
 run_cmd() {
-	if [[ "$1" == '--opt1' ]]; then
-		back
-	elif [[ "$1" == '--opt2' ]]; then
-		timer
-	elif [[ "$1" == '--opt3' ]]; then
-		freeze
-	fi
+    if [[ "$1" == '--opt1' ]]; then
+        back
+    elif [[ "$1" == '--opt2' ]]; then
+        timer
+    elif [[ "$1" == '--opt3' ]]; then
+        freeze
+    fi
 }
 
-# Actions
 chosen="$(run_rofi)"
 case ${chosen} in
     $option_1)
-		run_cmd --opt1
+        run_cmd --opt1
         ;;
     $option_2)
-		run_cmd --opt2
+        run_cmd --opt2
         ;;
     $option_3)
-		run_cmd --opt3
+        run_cmd --opt3
         ;;
 esac
