@@ -4,6 +4,7 @@
 # ==============================================================================
 
 zsh/.zsh_history
+zsh/.zshrc
 aichat/sessions
 kwriterc
 ow-electron.json
@@ -250,6 +251,7 @@ onlyoffice/**
 CurseForge/**
 cachyos/**
 dolphin/**
+dolphinrc
 .dmenurc
 alacritty/**
 chromium/**
@@ -271,6 +273,27 @@ dconf/**
 hatch/**
 auto_walls/**
 autostart/**
+faugus-launcher/**
+octopi/**
+sillyfetch/**
+xsettingsd/**
+swaylock/**
+gammastep/**
+eww/**
+sh/**
+htop/**
+QtProject.conf
+katevirc
+pavucontrol.ini
+spotify-launcher.conf
+gtk-3.0/bookmarks
+nvim/LICENSE
+nvim/README.md
+nvim/lazy-lock.json
+MIGRATION_COMPLETE.md
+NOTIFICATION_SYSTEM.md
+SWAYNC_FIX.md
+TODO.md
 
 # -------------------------------------------------------------------------------
 # KEEP ESSENTIAL CONFIGS ONLY
