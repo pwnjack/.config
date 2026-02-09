@@ -18,7 +18,7 @@
 
   // Modules Center
   "modules-center": [
-    "custom/appmenu",
+    // "custom/appmenu",
     // "custom/wallpaper",
     //"custom/nightlight",
     "hyprland/workspaces",
@@ -84,8 +84,8 @@
       "zsh": "  Terminal",
       "class<kitty>": "  Terminal",
 
-      "VLC media player": "󰕼   VLC Media Player",
-      "(.*) - VLC media player": "󰕼   VLC | $1",
+      "VLC media player": "󰕼  VLC Media Player",
+      "(.*) - VLC media player": "󰕼  VLC | $1",
 
       "(.*) - mpv": "  MPV | $1",
 
