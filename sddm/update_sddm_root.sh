@@ -2,7 +2,7 @@
 
 # This version runs as root (via systemd service) and doesn't need sudo
 
-monitor=$(cat /home/pwnjack/Dots/Options/mainmonitor 2>/dev/null || echo "eDP-1")
+monitor=$(cat /home/pwnjack/.config/options/mainmonitor 2>/dev/null || echo "eDP-1")
 cache_file="/home/pwnjack/.cache/swww/$monitor"
 wallpaper=$(grep -v "^Lanczos3" "$cache_file" 2>/dev/null)
 

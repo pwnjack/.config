@@ -1,6 +1,6 @@
 #!/bin/bash
 
-monitor=$(cat "$HOME/Dots/Options/mainmonitor" 2>/dev/null || echo "eDP-1")
+monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null || echo "eDP-1")
 cache_file="$HOME/.cache/swww/$monitor"
 wallpaper=$(grep -v "^Lanczos3" "$cache_file" 2>/dev/null)
 

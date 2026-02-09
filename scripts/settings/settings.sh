@@ -317,12 +317,12 @@ while true; do
     case $choice in
         1)
             clear
-            less $HOME/Dots/Guide/getting-started
+            less $HOME/.config/Guide/getting-started
             clear
             ;;
         2)
             clear
-            less $HOME/Dots/Guide/default-binds
+            less $HOME/.config/Guide/default-binds
             clear   
             ;;
         3)
