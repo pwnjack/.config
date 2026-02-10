@@ -11,9 +11,9 @@
   "notification-body-image-height": 160,
   "notification-body-image-width": 200,
 
-  "timeout": 4,
-  "timeout-low": 2,
-  "timeout-critical": 6,
+  "timeout": 5,
+  "timeout-low": 3,
+  "timeout-critical": 0,
 
   "fit-to-screen": false,
   "keyboard-shortcuts": true,
@@ -35,7 +35,6 @@
   },
   "widgets": [
     "label",
-    "buttons-grid",
     "mpris",
     "backlight",
     "volume",
@@ -66,26 +65,6 @@
       "expand-button-label": "  ",
       "collapse-button-label": "  ",
       "empty-list-label": "No players"
-    },
-    "buttons-grid": {
-      "actions": [
-        {
-          "label": "😀",
-          "command": "sh -c '~/.config/swaync/scripts/emoji.sh' &"
-        },
-        {
-          "label": "📋",
-          "command": "sh -c '~/.config/swaync/scripts/clipboard.sh' &"
-        },
-        {
-          "label": "📸",
-          "command": "sh -c '~/.config/swaync/scripts/screenshot.sh' &"
-        },
-        {
-          "label": "↪️",
-          "command": "sh -c '~/.config/swaync/scripts/pmenu.sh' &"
-        }
-      ]
     }
   }
 }

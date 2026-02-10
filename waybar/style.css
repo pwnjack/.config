@@ -215,7 +215,17 @@ tooltip label {
     color: #fff;
 }
 
-/* NOTIFS */
+/* SIDEBAR / NOTIFICATIONS */
+
+#custom-sidebar {
+    background: transparent;
+    color: @foreground;
+    font-size: 18px;
+    margin: 4px 0px;
+    padding: 0 10px;
+}
+
+/* POWER */
 
 #custom-power {
     background: transparent;

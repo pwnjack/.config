@@ -58,6 +58,9 @@ printf '%-32s %s\n' \
     "  Super + Mouse1 Drag" "Move window" \
     "  Super + Mouse2 Drag" "Resize window" \
     "" "" \
+    "NOTIFICATIONS" "" \
+    "  Super + Shift + N" "Toggle notification sidebar" \
+    "" "" \
     "UTILITIES" "" \
     "  Super + K" "Calculator" \
     "  Super + H" "Keybinds cheatsheet" \

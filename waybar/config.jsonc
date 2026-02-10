@@ -38,6 +38,7 @@
     "battery",
     "pulseaudio",
     "tray",
+    "custom/sidebar",
     "custom/power",
   ],
 
@@ -292,9 +293,19 @@
   },
 
   "custom/sidebar": {
-    "format": "󱗼",
-    "tooltip-format": "Sidebar",
-    "on-click": "swaync-client -t",
+    "tooltip": false,
+    "format": "{icon}",
+    "format-icons": {
+      "notification": "󰂚<sup></sup>",
+      "none": "󰂜",
+      "dnd-notification": "󰂛<sup></sup>",
+      "dnd-none": "󰪑",
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "escape": true,
   },
 
   "custom/power": {

@@ -164,29 +164,6 @@ progressbar {
   border-radius: 5px;
 }
 
-/* Buttons menu */
-.widget-buttons-grid {
-  padding: 4px 2px;
-  margin: 0px 10px 20px 10px;
-  border-radius: 8px;
-  background: alpha(@background, .50);
-}
-
-.widget-buttons-grid>flowbox>flowboxchild>button {
-  margin: 2px 5px;
-  padding: 14px 18px;
-  background: transparent;
-  border-radius: 6px;
-}
-
-.widget-buttons-grid>flowbox>flowboxchild>button:hover {
-  background: @selected;
-}
-
-.widget-buttons-grid button label {
-  font-size: 1.05rem;
-}
-
 
 /* Music player */
 .widget-mpris {

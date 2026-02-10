@@ -56,7 +56,7 @@ hypr/config/
 
 ### Pywal Color Flow
 
-Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, SwayNC, and Mako. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically.
+Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically.
 
 ### User Preferences (`options/`)
 
@@ -83,7 +83,7 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 | Bar | Waybar |
 | Launcher | Rofi |
 | Terminal | Ghostty (primary), Kitty (fallback) |
-| Notifications | SwayNC, Mako (fallback) |
+| Notifications | SwayNC (toast + sidebar) |
 | Shell | Fish + Starship |
 | Editor | Neovim (LazyVim) |
 | Theming | Pywal + GTK3/4 + Qt5/6 + Kvantum |
