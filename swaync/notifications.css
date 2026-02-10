@@ -43,11 +43,11 @@
 }
 
 .floating-notifications.background .notification-row .notification-background .notification .notification-content {
-  margin: 14px;
+  margin: 6px 10px;
 }
 
 .floating-notifications.background .notification-row .notification-background .notification > *:last-child > * {
-  min-height: 3.4em;
+  min-height: 2.4em;
 }
 
 .floating-notifications.background .notification-row .notification-background .notification > *:last-child > * .notification-action {
@@ -73,11 +73,11 @@
 
 .summary {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 .body {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
 }
 
 .floating-notifications.background .notification-row .notification-background .close-button {

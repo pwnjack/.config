@@ -140,7 +140,7 @@ progressbar {
 }
 
 .widget-dnd > switch {
-  background: alpha(@background, .50);
+  background: rgba(0, 0, 0, .35);
   font-size: initial;
   border-radius: 6px;
   padding: 3px;
@@ -238,8 +238,8 @@ trough highlight:hover {
   border-radius: 10px;
 }
 
-.widget-volume > label {
-  font-size: 1.3rem;
+.widget-volume label {
+  font-size: 1.4rem;
 }
 
 .widget-volume trough {
