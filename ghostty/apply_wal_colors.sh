@@ -8,21 +8,25 @@ if [[ ! -f "$wal_colors" ]]; then
     exit 0
 fi
 
-# Remove old pywal-generated colors from config (lines between "# pywal colors start" and "# pywal colors end")
+# Build the complete new config atomically to avoid race conditions
+# where ghostty reads a partial config (no colors) between sed and append
+tmp_config=$(mktemp)
+
+# Get everything before the pywal block (or entire file if no block exists)
 if grep -q "# pywal colors start" "$ghostty_config" 2>/dev/null; then
-    sed -i '/# pywal colors start/,/# pywal colors end/d' "$ghostty_config"
+    sed '/# pywal colors start/,/# pywal colors end/d' "$ghostty_config" > "$tmp_config"
+else
+    cp "$ghostty_config" "$tmp_config"
 fi
 
-# Append new colors to config
+# Append new colors
 {
     echo "# pywal colors start"
     echo "# Automatically generated - do not edit manually"
-    # Skip the header comments from pywal's generated file (first 2 lines)
     tail -n +3 "$wal_colors"
     echo "# pywal colors end"
-} >> "$ghostty_config"
+} >> "$tmp_config"
 
-# Reload ghostty configuration for all running instances
-# Ghostty supports reloading via signal or config file change
-# New windows will automatically use the new colors
+# Atomic replace - single rename operation
+mv "$tmp_config" "$ghostty_config"
 

@@ -27,7 +27,7 @@
 .floating-notifications.background .notification-row .notification-background {
   background: alpha(@background, .85);
   box-shadow: 0 0 8px 0 rgba(0,0,0,.6);
-  border: 2px solid @selected;
+  border: 1px solid @selected;
   border-radius: 10px;
   margin: 8px 20px;
   padding: 0;
@@ -39,7 +39,7 @@
 }
 
 .floating-notifications.background .notification-row .notification-background .notification.critical {
-  border: 2px solid @urgent;
+  border: 1px solid @urgent;
 }
 
 .floating-notifications.background .notification-row .notification-background .notification .notification-content {

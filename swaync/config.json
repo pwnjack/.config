@@ -43,7 +43,7 @@
   ],
   "widget-config": {
     "dnd": {
-      "text": "Do not disturb"
+      "text": "󰂛  Do not disturb"
     },
     "label": {
       "max-lines": 1,
@@ -58,7 +58,7 @@
       "step": 5
     },
     "volume": {
-      "label": "   ",
+      "label": " 󰕾  ",
       "show-per-app": true,
       "show-per-app-label": false,
       "show-per-app-icon": true,

@@ -225,6 +225,10 @@ tooltip label {
     padding: 0 10px;
 }
 
+#custom-sidebar.notification {
+    color: @color4;
+}
+
 /* POWER */
 
 #custom-power {

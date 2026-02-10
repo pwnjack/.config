@@ -238,6 +238,10 @@ trough highlight:hover {
   border-radius: 10px;
 }
 
+.widget-volume > label {
+  font-size: 1.3rem;
+}
+
 .widget-volume trough {
   padding: 3px;
   background: alpha(@background, .50);
