@@ -26,4 +26,5 @@ $HOME/.config/scripts/waybar/waybar.sh &
 notify-send -i preferences-desktop-wallpaper-symbolic "Wallpaper Applied" "New color scheme generated from image:\n$wallname"
 
 
+astal -i settings-panel --quit 2>/dev/null; ags run ~/.config/ags/app.ts &
 eww reload 2>/dev/null

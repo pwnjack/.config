@@ -43,6 +43,10 @@ logs/
 **/DawnWebGPUCache/
 **/GraphiteDawnCache/
 
+# AGS build artifacts
+ags/node_modules/
+ags/@girs/
+
 # Pywal cache
 wal/cache/
 wal/templates/
