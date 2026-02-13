@@ -258,5 +258,7 @@ app.start({
     css,
     main() {
         SettingsPanel()
+        const win = app.get_window("settings-panel")
+        if (win) win.visible = false
     },
 })
