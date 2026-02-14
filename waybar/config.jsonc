@@ -38,6 +38,7 @@
     "battery",
     "pulseaudio",
     "tray",
+    "custom/settings",
     "custom/sidebar",
     "custom/power",
   ],
@@ -122,8 +123,8 @@
 
   // Settings
   "custom/settings": {
-    "format": "",
-    "on-click": "kitty $HOME/.config/scripts/Settings/settings.sh",
+    "format": "󰢻",
+    "on-click": "astal -i settings-panel --toggle-window settings-panel",
     "tooltip-format": "Settings",
   },
 
@@ -293,7 +294,8 @@
   },
 
   "custom/sidebar": {
-    "tooltip": false,
+    "tooltip": true,
+    "tooltip-format": "Notifications",
     "format": "{icon}",
     "format-icons": {
       "notification": "󰂚",

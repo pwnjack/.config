@@ -9,7 +9,7 @@ export interface Category {
 export const CATEGORIES: Category[] = [
     { id: "toggles", label: "Toggles", icon: "emblem-default-symbolic" },
     { id: "appearance", label: "Appearance", icon: "preferences-desktop-display-symbolic" },
-    { id: "animations", label: "Animations", icon: "preferences-desktop-effects-symbolic" },
+    { id: "animations", label: "Animations", icon: "starred-symbolic" },
     { id: "input", label: "Input", icon: "input-mouse-symbolic" },
     { id: "layout", label: "Layout", icon: "view-grid-symbolic" },
     { id: "notifications", label: "Notifications", icon: "preferences-system-notifications-symbolic" },

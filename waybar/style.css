@@ -215,6 +215,16 @@ tooltip label {
     color: #fff;
 }
 
+/* SETTINGS */
+
+#custom-settings {
+    background: transparent;
+    color: @foreground;
+    font-size: 18px;
+    margin: 4px 0px;
+    padding: 0 10px;
+}
+
 /* SIDEBAR / NOTIFICATIONS */
 
 #custom-sidebar {
