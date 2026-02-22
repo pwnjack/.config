@@ -15,7 +15,7 @@ option_5="30s"
 rofi_cmd() {
     rofi -dmenu \
         -theme ${dir}/timer.rasi \
-        -p " $USER"
+		-p " $USER"
 }
 
 run_rofi() {

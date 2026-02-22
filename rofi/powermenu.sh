@@ -19,7 +19,7 @@ no=''
 
 rofi_cmd() {
     rofi -dmenu \
-        -p " $USER" \
+        -p " $USER" \
         -mesg "󰥔 Uptime: $uptime" \
         -theme ${dir}/main.rasi
 }

@@ -11,14 +11,14 @@ freeze="$(cat "$HOME/.config/rofi/options/screenshot/freeze")"
 
 # Options
 option_1="󰹑"
-option_2=""
+option_2=""
 option_3="󱊅"
-option_4=""
+option_4=""
 
 rofi_cmd() {
     rofi -dmenu \
         -theme ${dir}/main.rasi \
-        -p " $USER" \
+        -p " $USER" \
         -mesg "Monitor | Window | Selection | Settings"
 }
 

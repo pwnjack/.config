@@ -7,14 +7,14 @@
 dir="$HOME/.config/rofi/themes/screenshot"
 
 # Options
-option_1=""
+option_1=""
 option_2="󱎫"
 option_3="󱤳"
 
 rofi_cmd() {
     rofi -dmenu \
         -theme ${dir}/settings.rasi \
-        -p " $USER" \
+        -p " $USER" \
         -mesg "Back | Toggle Timer | Toggle Freeze"
 }
 

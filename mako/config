@@ -1,12 +1,12 @@
 # Mako Configuration
 # Colors automatically generated from wallpaper via pywal
-# Last updated: dom 8 feb 2026, 15:21:20, CET
+# Last updated: lun 9 feb 2026, 19:28:44, CET
 
 # Appearance
 font=FiraCode Nerd Font 11
-background-color=#05090Cdd
-text-color=#cfddde
-border-color=#6097A1
+background-color=#0E0E0Edd
+text-color=#dccea8
+border-color=#D9754B
 border-size=2
 border-radius=10
 max-icon-size=64
@@ -26,21 +26,21 @@ group-by=app-name
 
 # Urgency levels
 [urgency=low]
-border-color=#4D7D85
+border-color=#915A3B
 default-timeout=3000
 
 [urgency=normal]
-border-color=#6097A1
+border-color=#D9754B
 default-timeout=5000
 
 [urgency=critical]
-border-color=#2A7789
-background-color=#2A778922
+border-color=#5B7352
+background-color=#5B735222
 default-timeout=0
 
 # Application specific (examples)
 [app-name="Spotify"]
-border-color=#8DAFB4
+border-color=#41815B
 
 [app-name="Discord"]
-border-color=#9ABBC2
+border-color=#5E8D62
