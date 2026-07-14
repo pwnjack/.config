@@ -92,6 +92,7 @@ application/x-extension-3gp=vlc.desktop
 application/x-extension-mov=vlc.desktop
 application/x-extension-qt=vlc.desktop
 text/markdown=dev.zed.Zed.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 
 [Added Associations]
 x-scheme-handler/mailto=userapp-Thunderbird-2A5NF3.desktop;
