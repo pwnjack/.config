@@ -3,7 +3,9 @@
 
 # Load environment variables from .env file
 if [ -f "$HOME/.config/.env" ]; then
-    export $(grep -v '^#' "$HOME/.config/.env" | grep -v '^$' | xargs)
+    set -a
+    source "$HOME/.config/.env"
+    set +a
 fi
 
 # Check if ai_sidebar window exists in special workspace

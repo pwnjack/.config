@@ -2,6 +2,42 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-07-15] - Fresh-Install Hardening
+
+### Fixed
+- **install.sh now deploys**: running from a clone outside `~/.config` copies
+  the dotfiles into place (previously it only installed packages)
+- **Portable symlinks**: `hypr/config/colors.conf` and `options/wallpaper`
+  are committed as relative symlinks instead of absolute `/home/<user>` paths
+- **AUR detection**: `-bin`/`-git` package variants are now recognized as
+  satisfying a dependency
+- **SDDM scripts**: removed hardcoded username/paths; `setup-sudo.sh` now
+  generates the sudoers rule itself (the referenced `sddm-wallpaper-sudoers`
+  file never existed) and grants NOPASSWD only for `update_sddm_root.sh`
+- **settings.sh**: fixed wrong-case script paths, `$cursortheme` variable
+  mismatch, and references to files that don't exist (Guide/, dotsupgrade.sh,
+  waybar/settings/items.jsonc); removed leftover GeoDots upgrade/remove menus
+- **wall.sh**: no longer fails when optional components (Thunar, mako, eww,
+  ags) are missing; all per-app color scripts are existence-checked
+- **fish config**: CachyOS-specific config and zoxide are now optional
+  (vanilla Arch compatible)
+- **Tracked missing runtime deps**: `Thunar/apply_wal_colors.sh` (called by
+  wall.sh but previously git-ignored) and `options/cursortheme`
+
+### Changed
+- **Package list**: single list auto-classified between pacman and AUR at
+  install time; added everything the configs actually reference (hyprshot,
+  hyprpicker, hyprsunset, jq, ffmpeg, inotify-tools, brightnessctl,
+  pavucontrol, blueman, waypaper, aichat, ags/astal, ...)
+- **monitor.conf**: added `monitor=,preferred,auto,1` fallback so unknown
+  displays work out of the box
+- **Docs**: README/QUICKSTART installation flow rewritten to match reality
+
+### Removed
+- `scripts/waybar/waybaropt.sh` and its `Super+Ctrl+B` bind (referenced
+  waybar theme dirs that don't exist in this repo)
+- Empty, unused `waybar/settings.jsonc`
+
 ## [2026-01-10] - Major Restructure
 
 ### Added

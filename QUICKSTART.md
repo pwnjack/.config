@@ -3,18 +3,16 @@
 ## First Time Setup
 
 ```bash
-# 1. Clone your dotfiles (if on a new machine)
-git clone <your-repo> ~/.config
+# 1. Clone your dotfiles anywhere (a fresh ~/.config is never empty,
+#    so clone to a staging directory - install.sh deploys for you)
+git clone <your-repo> ~/dotfiles
 
-# 2. Run installation
-cd ~/.config
+# 2. Run installation (installs packages, deploys to ~/.config,
+#    initializes pywal, sets up symlinks)
+cd ~/dotfiles
 ./install.sh
 
-# 3. Set colors with pywal
-wal -i ~/Pictures/Wallpapers/wall1.jpg
-
-# 4. Reload Hyprland
-# Press SUPER+SHIFT+R or log out/in
+# 3. Log out and select Hyprland from your login manager
 ```
 
 ## Essential Commands
@@ -80,8 +78,6 @@ nvim ~/.config/hypr/config/software/keybinds.conf
 # Reload Hyprland config
 hyprctl reload
 
-# Or press: SUPER + SHIFT + R
-
 # Restart waybar
 killall waybar && waybar &
 
@@ -113,8 +109,8 @@ hyprctl reload
 ## Daily Workflow
 
 ### Screenshots
-- `SUPER + PRINT` - Area selection
-- `SUPER + SHIFT + PRINT` - Full screen
+- `SUPER + S` - Region selection (hyprshot)
+- `SUPER + SHIFT + S` - Screenshot menu (monitor/window/region)
 
 ### Media Controls
 - `Media keys` - Play/pause, next, previous
@@ -145,11 +141,10 @@ windowrulev2 = float, class:^(your-app)$
 ### Waybar Modules
 Edit: `~/.config/waybar/config.jsonc`
 
-### Themes
-```bash
-# Available themes are in hypr/themes/
-# Switch by sourcing different theme files
-```
+### Theming
+Colors are generated from the wallpaper by pywal - there are no static
+theme files. Change the wallpaper (`SUPER + CTRL + W`) and every component
+(Hyprland, Waybar, Rofi, SwayNC, Ghostty) re-themes automatically.
 
 ## Backup & Restore
 

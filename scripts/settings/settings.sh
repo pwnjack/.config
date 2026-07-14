@@ -1,16 +1,18 @@
 #!/bin/bash
+#
+# Dotfiles Settings Menu (TUI)
+# Interactive configuration for Hyprland and the included software
+#
 
 MONITORS=( $(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+') )
-MAINMONITOR="$(cat $HOME/.config/options/mainmonitor)"
-EDITOR="$(cat $HOME/.config/options/editor)"
+MAINMONITOR="$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)"
+EDITOR="$(cat "$HOME/.config/options/editor" 2>/dev/null || echo nano)"
 
 clear
 
 monitorselect() {
     while true; do
-        # add command here that identifies monitors later? 
         echo "Enter the number of your preferred primary (main) monitor."
-        # echo "These have been identified for you" - cant find any non-gui utility for this (yet, nwg-displays works but not well)
         for i in "${!MONITORS[@]}"; do
             echo "$((i+1)) - ${MONITORS[i]}"
         done
@@ -35,31 +37,31 @@ monitorselect() {
 
 hyprland() {
     while true; do
-        echo "-- HYPRLAND SETTINGS --" 
+        echo "-- HYPRLAND SETTINGS --"
         echo "Change settings for Hyprland"
-        echo 
+        echo
         echo "What would you like to do?"
-        echo 
+        echo
         echo "-------------------------------------------------------"
-        echo "1. Manage Monitors (Add/Remove Monitors)             󰍹" 
+        echo "1. Manage Monitors (Add/Remove Monitors)             󰍹"
         echo "2. Set Primary Monitor                                󱋆"
         echo "-------------------------------------------------------"
-        echo "3. Modify General Hyprland Settings                   "
-        echo "4. Modify Input Devices                               "
+        echo "3. Modify General Hyprland Settings                   "
+        echo "4. Modify Input Devices                               "
         echo "5. Modify Keybinds                                    󰌌"
-        echo "6. Modify Window/Layer Rules                          "
+        echo "6. Modify Window/Layer Rules                          "
         echo "-------------------------------------------------------"
-        echo "7. Modify Autostart Apps                              "
-        echo "8. Modify Environment Variables                       "
+        echo "7. Modify Autostart Apps                              "
+        echo "8. Modify Environment Variables                       "
         echo "-------------------------------------------------------"
         echo "Q. Return                                             󰌑"
         echo "-------------------------------------------------------"
-        echo 
+        echo
         read -p " ■ " choice
 
-        case $choice in 
+        case $choice in
             1)
-                $HOME/.config/scripts/Settings/Advanced/monitor.sh
+                "$HOME/.config/scripts/settings/advanced/monitor.sh"
                 clear
                 ;;
             2)
@@ -68,27 +70,27 @@ hyprland() {
                 clear
                 ;;
             3)
-                $EDITOR $HOME/.config/hypr/config/software/general.conf
+                $EDITOR "$HOME/.config/hypr/config/software/general.conf"
                 clear
                 ;;
             4)
-                $EDITOR $HOME/.config/hypr/config/hardware/input.conf
+                $EDITOR "$HOME/.config/hypr/config/hardware/input.conf"
                 clear
                 ;;
             5)
-                $EDITOR $HOME/.config/hypr/config/software/keybinds.conf
+                $EDITOR "$HOME/.config/hypr/config/software/keybinds.conf"
                 clear
                 ;;
             6)
-                $EDITOR $HOME/.config/hypr/config/software/rules.conf
+                $EDITOR "$HOME/.config/hypr/config/software/rules.conf"
                 clear
                 ;;
             7)
-                $EDITOR $HOME/.config/hypr/config/setup/autostart.conf
+                $EDITOR "$HOME/.config/hypr/config/setup/autostart.conf"
                 clear
                 ;;
             8)
-                $EDITOR $HOME/.config/hypr/config/setup/envvars.conf
+                $EDITOR "$HOME/.config/hypr/config/setup/envvars.conf"
                 clear
                 ;;
             [qQ])
@@ -107,42 +109,42 @@ hyprland() {
 customization() {
     while true; do
         echo "-- CUSTOMIZE DOTFILES --"
-        echo "Configure software included with GeoDots"
-        echo 
+        echo "Configure software included with these dotfiles"
+        echo
         echo "What would you like to do?"
-        echo 
+        echo
         echo "-------------------------------------------------------"
-        echo "1. Manage Command Aliases                             "
+        echo "1. Manage Command Aliases                             "
         echo "2. Change Cursor Theme                                󰇀"
         echo "-------------------------------------------------------"
-        echo "3. Change Default Browser                             "
-        echo "4. Change Default Media Player                        "
-        echo "5. Change Default Terminal                            "
-        echo "6. Change Default TUI Editor                          "
+        echo "3. Change Default Browser                             "
+        echo "4. Change Default Media Player                        "
+        echo "5. Change Default Terminal                            "
+        echo "6. Change Default TUI Editor                          "
         echo "-------------------------------------------------------"
-        echo "7. Waybar Monitor Selection                           󱔓"
-        echo "8. Rofi Launcher Type                                 "
-        echo "9. Enable/Disable Desktop Clock                       󰌑"  
+        echo "7. Rofi Launcher Type                                 "
+        echo "8. Enable/Disable Desktop Clock                       󰌑"
         echo "-------------------------------------------------------"
         echo "Q. Return                                             󰌑"
         echo "-------------------------------------------------------"
-        echo 
+        echo
         read -p " ■ " choice
 
-        case $choice in 
+        case $choice in
             1)
-                $EDITOR $HOME/.config/sh/aliases.sh # its obvious enough, shouldnt need advanced config.
+                $EDITOR "$HOME/.config/fish/aliases.fish"
                 clear
                 ;;
             2)
                 clear
                 echo "Enter the exact name of your preferred cursor theme."
                 echo "This will not appear until you restart Hyprland."
-                echo "It will be overwritten if you select another theme (e.g light/dark)."
-                echo 
+                echo
                 read -p "■ " choice
-                echo "\$cursor_theme = $choice" > $HOME/.config/hypr/config/cursortheme.conf
-                gsettings set org.gnome.desktop.interface cursor-theme "$choice"
+                echo "\$cursortheme = $choice" > "$HOME/.config/hypr/config/cursortheme.conf"
+                echo "$choice" > "$HOME/.config/options/cursortheme"
+                command -v gsettings >/dev/null 2>&1 && \
+                    gsettings set org.gnome.desktop.interface cursor-theme "$choice"
                 clear
                 read -p "Finished, press ENTER to continue."
                 clear
@@ -154,7 +156,7 @@ customization() {
                 echo "If you arent sure, its probably the same as the package name (e.g firefox, chromium, etc)."
                 echo
                 read -p "■ " choice
-                echo "$choice" > $HOME/.config/options/browser
+                echo "$choice" > "$HOME/.config/options/browser"
                 clear
                 read -p "Finished, press ENTER to continue."
                 clear
@@ -170,16 +172,16 @@ customization() {
                 playerctl --list-all
                 echo
                 read -p "■ " choice
-                echo "$choice" > $HOME/.config/options/mediaplayer
+                echo "$choice" > "$HOME/.config/options/mediaplayer"
                 clear
                 echo "(Optional) Enter an icon for the media player. This should be short, and preferably from nerdfonts.com."
-                echo "Leave this blank and we will use the default icon:  "
-                echo 
+                echo "Leave this blank and we will use the default icon:  "
+                echo
                 read -p "■ " choice
                 if [[ -z "$choice" ]]; then
-                    echo "" > $HOME/.config/options/mediaicon
+                    echo "" > "$HOME/.config/options/mediaicon"
                 else
-                    echo "$choice" > $HOME/.config/options/mediaicon
+                    echo "$choice" > "$HOME/.config/options/mediaicon"
                 fi
                 clear
                 read -p "Finished, press ENTER to continue."
@@ -192,40 +194,40 @@ customization() {
                 echo "If you arent sure, its probably the same as the package name (e.g kitty, alacritty, etc)."
                 echo
                 echo "It is also important to note that YOU will be responsible for configuring the new terminal emulator."
-                echo 
+                echo
                 read -p "■ " choice
-                echo "$choice" > $HOME/.config/options/terminal
+                echo "$choice" > "$HOME/.config/options/terminal"
                 clear
                 read -p "Finished, press ENTER to continue."
                 clear
                 ;;
-            6) 
+            6)
                 clear
                 echo "Enter the name of the default TUI editor you want to use."
                 echo "This should be the command you use to launch the editor."
                 echo "If you arent sure, its probably the package name, but not always (e.g nano, nvim, micro etc)."
                 echo
                 read -p "■ " choice
-                echo "$choice" > $HOME/.config/options/editor
+                echo "$choice" > "$HOME/.config/options/editor"
                 clear
                 read -p "Finished, press ENTER to continue."
                 clear
                 ;;
             7)
                 clear
-                echo "What would you like to do?"
+                echo "What rofi launcher style would you like to use?"
                 echo
-                echo "1: Make Waybar ONLY appear on the main monitor"
-                echo "2: Make Waybar appear on all monitors"
-                echo 
+                echo "1: Vertical Launcher"
+                echo "2: Horizontal Launcher"
+                echo
                 read -p "■ " choice
 
                 case $choice in
                     1)
-                        echo -e "{\n    \"output\": \"$MAINMONITOR\"\n}" > "$HOME/.config/waybar/settings/items.jsonc"
+                        echo "vertical" > "$HOME/.config/options/launchertype"
                         ;;
                     2)
-                        echo "" > "$HOME/.config/waybar/settings/items.jsonc"
+                        echo "horizontal" > "$HOME/.config/options/launchertype"
                         ;;
                 esac
                 clear
@@ -234,41 +236,20 @@ customization() {
                 ;;
             8)
                 clear
-                echo "What rofi launcher style would you like to use?"
-                echo
-                echo "1: Vertical Launcher"
-                echo "2: Horizontal Launcher"
-                echo 
-                read -p "■ " choice
-
-                case $choice in
-                    1)
-                        echo "vertical" > $HOME/.config/options/launchertype
-                        ;;
-                    2)
-                        echo "horizontal" > $HOME/.config/options/launchertype
-                        ;;
-                esac
-                clear
-                read -p "Finished, press ENTER to continue."
-                clear
-                ;;
-            9) 
-                clear
                 echo "What would you like to do?"
                 echo
                 echo "1: Enable Desktop Clock"
                 echo "2: Disable Desktop Clock"
-                echo 
+                echo
                 read -p "■ " choice
 
                 case $choice in
                     1)
-                        echo "enabled" > $HOME/.config/options/clock
-                        eww open clock &> /dev/null &
+                        echo "enabled" > "$HOME/.config/options/clock"
+                        command -v eww >/dev/null 2>&1 && eww open clock &> /dev/null &
                         ;;
                     2)
-                        echo "disabled" > $HOME/.config/options/clock
+                        echo "disabled" > "$HOME/.config/options/clock"
                         pkill eww
                         ;;
                 esac
@@ -290,7 +271,7 @@ customization() {
 }
 
 while true; do
-    echo ".dP888 888888 888888 888888 88 88b  88  dPPbb8  .dP888 " 
+    echo ".dP888 888888 888888 888888 88 88b  88  dPPbb8  .dP888 "
     echo "Ybo.   88       88     88   88 88Yb 88 dP        Ybo.  "
     echo " Y8b   888888   88     88   88 88 Yb88 Yb   88b   Y8b  "
     echo "   Y8o 88       88     88   88 88  YY8 Yb   P8     Y8o "
@@ -299,15 +280,12 @@ while true; do
     echo "What would you like to do?"
     echo ""
     echo "-------------------------------------------------------"
-    echo "1. Get started with GeoDots                           "
-    echo "2. See Default Keybinds                               󰌌"
+    echo "1. See Default Keybinds                               󰌌"
     echo "-------------------------------------------------------"
-    echo "3. Manage Hyprland Settings                          "
-    echo "4. Customize Dotfiles                                "
+    echo "2. Manage Hyprland Settings                          "
+    echo "3. Customize Dotfiles                                "
     echo "-------------------------------------------------------"
-    echo "5. Upgrade Dotfiles                                   "
-    echo "6. Remove Dotfiles                                    󱔌"
-    echo "7. Update System                                      "
+    echo "4. Update System                                      "
     echo "-------------------------------------------------------"
     echo "Q. Leave                                              󰈆"
     echo "-------------------------------------------------------"
@@ -317,48 +295,27 @@ while true; do
     case $choice in
         1)
             clear
-            less $HOME/.config/Guide/getting-started
+            less "$HOME/.config/hypr/config/software/keybinds.conf"
             clear
             ;;
         2)
             clear
-            less $HOME/.config/Guide/default-binds
-            clear   
-            ;;
-        3)
-        	clear
             hyprland
             clear
             ;;
-        4) 
+        3)
             clear
             customization
             clear
             ;;
-        5)
-        	clear
-            echo "Getting update information, please wait.."
-            curl -o /tmp/pkg-pacman -s https://gdrc.me/GeoDots/data/pkg-pacman
-            curl -o /tmp/pkg-aurs -s https://gdrc.me/GeoDots/data/pkg-aurs
-            curl -o /tmp/pkg-gtk -s https://gdrc.me/GeoDots/data/pkg-gtk
-            curl -o /tmp/pkg-qt -s https://gdrc.me/GeoDots/data/pkg-qt
-            $HOME/.config/scripts/Settings/dotsupgrade.sh    
+        4)
             clear
-            ;;
-        6)
-      	  	clear
-            echo "Getting package list, please wait.."
-            $HOME/.config/scripts/Settings/dotsremove.sh    
-            clear
-            ;;
-        7)
-            clear
-            $HOME/.config/scripts/Settings/update.sh
+            "$HOME/.config/scripts/settings/update.sh"
             clear
             ;;
         [qQ])
-        	echo "Bye bye!"
-        	exit 0
+            echo "Bye bye!"
+            exit 0
             ;;
         *)
             clear

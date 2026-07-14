@@ -2,7 +2,7 @@
 
 Modern, minimal Hyprland configuration for Arch Linux / CachyOS with dynamic pywal theming.
 
-![Hyprland](https://img.shields.io/badge/Hyprland-0.53+-blue)
+![Hyprland](https://img.shields.io/badge/Hyprland-0.54+-blue)
 ![Arch](https://img.shields.io/badge/Arch_Linux-CachyOS-1793D1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -155,33 +155,54 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 
 ## Installation
 
-### Dependencies
+### Automated (recommended)
+
+The install script checks/installs all dependencies, deploys the configs to
+`~/.config`, initializes pywal, and wires up all symlinks:
 
 ```bash
-# Core
-sudo pacman -S hyprland hyprlock hypridle waybar swaync awww \
-               rofi-wayland ghostty fish neovim python-pywal \
-               thunar yazi btop cliphist wl-clipboard playerctl
-
-# AUR
-paru -S zen-browser-bin hyprshot waybar-weather
+# Clone anywhere (a fresh ~/.config is never empty, so use a staging dir)
+git clone <repo> ~/dotfiles
+cd ~/dotfiles
+./install.sh            # interactive; use --dry-run to preview
 ```
 
-### Setup
+Log out and select Hyprland from your display manager.
+
+To keep `~/.config` itself under git afterwards (this repo is designed to
+live there):
 
 ```bash
-# Clone
-git clone <repo> ~/.config
+cd ~/.config
+git init -b main
+git remote add origin <repo>
+git fetch origin
+git reset origin/main   # marks repo files as tracked without touching them
+```
+
+### Manual
+
+```bash
+# Core (official/CachyOS repos)
+sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot \
+               hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
+               wofi wlogout ghostty kitty fish starship neovim thunar yazi \
+               btop fastfetch playerctl cliphist wl-clipboard python-pywal \
+               qt5ct qt6ct nwg-look brightnessctl pavucontrol blueman \
+               jq ffmpeg inotify-tools zoxide ttf-firacode-nerd \
+               ttf-cascadia-mono-nerd noto-fonts noto-fonts-emoji
+
+# AUR / CachyOS-only (paru or yay)
+paru -S zen-browser-bin waybar-weather awww waypaper aichat resources \
+        aylurs-gtk-shell libastal-meta
 
 # Initialize pywal
-wal -i ~/Pictures/Wallpapers/your-wallpaper.jpg
-ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
+wal -i ~/.config/wallpapers/wall1.jpg
+ln -sfn ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
 
 # Set fish as default shell (optional)
 chsh -s $(which fish)
 ```
-
-Log out and select Hyprland from your display manager.
 
 ## Configuration
 

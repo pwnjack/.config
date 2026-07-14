@@ -270,6 +270,7 @@ KDE/**
 shotwell/**
 chezmoi/**
 Thunar/**
+!Thunar/apply_wal_colors.sh
 xfce4/**
 xdg-desktop-portal/**
 spicetify/**

@@ -33,7 +33,6 @@ printf '%-32s %s\n' \
     "WAYBAR CONTROLS" "" \
     "  Super + Shift + B" "Toggle Waybar" \
     "  Super + Alt + B" "Hide Waybar" \
-    "  Super + Ctrl + B" "Waybar options" \
     "" "" \
     "ROFI LAUNCHERS" "" \
     "  Super + Space" "App launcher (Spotlight)" \
