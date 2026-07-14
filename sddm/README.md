@@ -53,7 +53,7 @@ Test the update script manually:
 
 4. **Fallback**: The update script tries multiple sources:
    - First checks the swww cache file (`~/.cache/swww/$monitor`)
-   - If not found, queries swww directly
+   - If not found, queries awww directly
 
 ## Troubleshooting
 

@@ -87,7 +87,7 @@ ESSENTIAL_PACKAGES=(
     "waybar"
     "swaync"
     "swayosd"
-    "swww"
+    "awww"
     "rofi-wayland"
     "wofi"
     "wlogout"
@@ -189,7 +189,7 @@ fi
 # Create necessary directories
 info "Setting up directory structure..."
 execute mkdir -p "$HOME/.cache/wal"
-execute mkdir -p "$HOME/.cache/swww"
+execute mkdir -p "$HOME/.cache/awww"
 execute mkdir -p "$HOME/Pictures/Wallpapers"
 success "Directories created"
 

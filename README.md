@@ -159,7 +159,7 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 
 ```bash
 # Core
-sudo pacman -S hyprland hyprlock hypridle waybar swaync swww \
+sudo pacman -S hyprland hyprlock hypridle waybar swaync awww \
                rofi-wayland ghostty fish neovim python-pywal \
                thunar yazi btop cliphist wl-clipboard playerctl
 

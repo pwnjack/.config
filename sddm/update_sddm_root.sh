@@ -3,15 +3,16 @@
 # This version runs as root (via systemd service) and doesn't need sudo
 
 monitor=$(cat /home/pwnjack/.config/options/mainmonitor 2>/dev/null || echo "eDP-1")
-cache_file="/home/pwnjack/.cache/swww/$monitor"
-wallpaper=$(grep -v "^Lanczos3" "$cache_file" 2>/dev/null)
+# awww cache layout: ~/.cache/awww/<version>/<monitor>, line format: "<crop> <filter> <path>"
+cache_file=$(ls -t /home/pwnjack/.cache/awww/*/"$monitor" 2>/dev/null | head -n1)
+wallpaper=$(grep -oE '/.+$' "$cache_file" 2>/dev/null)
 
-# If cache file doesn't have wallpaper, try querying swww directly (if available)
+# If cache file doesn't have wallpaper, try querying awww directly (if available)
 if [[ -z "$wallpaper" ]] || [[ ! -f "$wallpaper" ]]; then
-    if command -v swww &>/dev/null && [[ -n "$DISPLAY" ]] || [[ -n "$WAYLAND_DISPLAY" ]]; then
-        # Try to get wallpaper from swww (requires XDG_RUNTIME_DIR)
+    if command -v awww &>/dev/null && [[ -n "$DISPLAY" ]] || [[ -n "$WAYLAND_DISPLAY" ]]; then
+        # Try to get wallpaper from awww (requires XDG_RUNTIME_DIR)
         export XDG_RUNTIME_DIR="/run/user/$(id -u pwnjack 2>/dev/null || echo 1000)"
-        wallpaper=$(runuser -l pwnjack -c "swww query 2>/dev/null" | grep "^: $monitor:" | sed 's/.*image: //' | head -n1)
+        wallpaper=$(runuser -l pwnjack -c "awww query 2>/dev/null" | grep "^: $monitor:" | sed 's/.*image: //' | head -n1)
     fi
 fi
 
