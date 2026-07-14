@@ -3,8 +3,9 @@
 # Excludes cache, logs, temporary files, and machine-specific data
 # ==============================================================================
 
-zsh/.zsh_history
-zsh/.zshrc
+zsh/
+create-next-app-nodejs/
+nextjs-nodejs/
 aichat/sessions
 kwriterc
 ow-electron.json
