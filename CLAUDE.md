@@ -56,7 +56,7 @@ hypr/config/
 
 ### Pywal Color Flow
 
-Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. `wall.sh` also writes generated state to `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/mako-config`, `waypaper-config.ini`), and the repo only tracks symlinks pointing at that cache, so wallpaper switches never dirty git.
+Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. Generated state lives under `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/mako-config`, `waypaper-config.ini`); the repo tracks only symlinks to it, so wallpaper switches never dirty git.
 
 ### User Preferences (`options/`)
 

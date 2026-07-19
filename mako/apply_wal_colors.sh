@@ -8,6 +8,7 @@
 source "$HOME/.cache/wal/colors.sh"
 
 main_font="$(cat "$HOME/.config/options/font" 2>/dev/null || echo "FiraCode Nerd Font")"
+main_font=$(echo "$main_font" | sed 's/^"//;s/"$//')
 mkdir -p "$HOME/.cache/wal"
 
 # Create mako config with pywal colors
