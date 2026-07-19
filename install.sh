@@ -270,6 +270,18 @@ if [ -f "$HOME/.cache/wal/colors.sh" ]; then
     execute "$CONFIG_DIR/mako/apply_wal_colors.sh"
 fi
 
+# Render ghostty + thunar colors (cache-backed, included from tracked configs)
+if [ -f "$HOME/.cache/wal/colors-ghostty" ]; then
+    execute "$CONFIG_DIR/ghostty/apply_wal_colors.sh"
+else
+    execute touch "$HOME/.cache/wal/ghostty-colors"
+fi
+if [ -f "$HOME/.cache/wal/colors-waybar.css" ]; then
+    execute "$CONFIG_DIR/Thunar/apply_wal_colors.sh"
+else
+    execute touch "$HOME/.cache/wal/thunar-gtk.css"
+fi
+
 # Seed waypaper config
 if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
     execute cp "$CONFIG_DIR/waypaper/config.ini.template" "$HOME/.cache/waypaper-config.ini"
