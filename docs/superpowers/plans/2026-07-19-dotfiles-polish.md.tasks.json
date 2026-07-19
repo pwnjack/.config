@@ -1,0 +1,32 @@
+{
+  "planPath": "docs/superpowers/plans/2026-07-19-dotfiles-polish.md",
+  "tasks": [
+    {
+      "id": 9,
+      "subject": "Task 1: Remove superseded configs (wofi, wlogout, kitty, placeholder)",
+      "status": "pending",
+      "description": "**Goal:** Delete unused tool configs and every reference to them; docs match reality.\n\n**Files:**\n- Delete: wofi/config, wofi/style.css, wlogout/layout, wlogout/style.css, kitty/kitty.conf, scripts/settings/placeholder.sh\n- Modify: install.sh:96,98,184-185, scripts/hyprland/startup.sh:7-8, scripts/fonts/apply-font.sh:59-69,85-93, scripts/settings/settings.sh:194, .gitignore:202,206,318,321,322, CLAUDE.md:31 + stack table, QUICKSTART.md:65, README.md:189\n\n**Acceptance Criteria:**\n- grep -rniE \"wofi|wlogout|kitty\" --exclude-dir=.git --exclude-dir=docs --exclude=CHANGELOG.md . returns nothing\n- ./install.sh --dry-run completes without error\n- bash -n passes on all four edited scripts\n\n**Verify:** the grep above -> empty; ./install.sh --dry-run -> \"Installation Complete!\" banner\n\n```json:metadata\n{\"files\": [\"wofi/\", \"wlogout/\", \"kitty/kitty.conf\", \"scripts/settings/placeholder.sh\", \"install.sh\", \"scripts/hyprland/startup.sh\", \"scripts/fonts/apply-font.sh\", \"scripts/settings/settings.sh\", \".gitignore\", \"CLAUDE.md\", \"QUICKSTART.md\", \"README.md\"], \"verifyCommand\": \"grep -rniE \\\"wofi|wlogout|kitty\\\" --exclude-dir=.git --exclude-dir=docs --exclude=CHANGELOG.md . ; ./install.sh --dry-run\", \"acceptanceCriteria\": [\"grep for removed tools returns nothing outside CHANGELOG/docs\", \"install.sh --dry-run completes\", \"bash -n passes on edited scripts\"]}\n```"
+    },
+    {
+      "id": 10,
+      "subject": "Task 2: Wallpaper-churn fix — generated state to ~/.cache via tracked symlinks",
+      "status": "pending",
+      "blockedBy": [9],
+      "description": "**Goal:** Wallpaper switches never dirty git; the four churning files become stable tracked symlinks into ~/.cache.\n\n**Files:**\n- Modify: scripts/hyprland/wall.sh:22-24, mako/apply_wal_colors.sh, install.sh:257-266, CLAUDE.md\n- Create: waypaper/config.ini.template\n- Convert to symlinks: options/wallpaper -> ../../.cache/current_wallpaper; rofi/options/wallpaper.rasi -> ../../../.cache/wal/rofi-wallpaper.rasi; mako/config -> ../../.cache/wal/mako-config; waypaper/config.ini -> ../../.cache/waypaper-config.ini\n\n**Acceptance Criteria:**\n- After a wallpaper switch (CLI and GUI): git status --short is empty\n- All four paths are symlinks resolving to existing files\n- Colors propagate (ghostty, waybar, mako, swaync, rofi background)\n- ./install.sh --dry-run still completes\n- Plan B applied to waypaper only if its save replaces the symlink (untrack + config.ini.example)\n\n**Verify:** waypaper --wallpaper <path> then git status --short -> empty; find options/wallpaper rofi/options/wallpaper.rasi mako/config waypaper/config.ini -type l | wc -l -> 4\n\n```json:metadata\n{\"files\": [\"scripts/hyprland/wall.sh\", \"mako/apply_wal_colors.sh\", \"install.sh\", \"waypaper/config.ini.template\", \"options/wallpaper\", \"rofi/options/wallpaper.rasi\", \"mako/config\", \"waypaper/config.ini\", \"CLAUDE.md\"], \"verifyCommand\": \"waypaper --wallpaper ~/Pictures/Wallpapers/earth-planet-space.jpg && sleep 3 && git status --short && find options/wallpaper rofi/options/wallpaper.rasi mako/config waypaper/config.ini -type l | wc -l\", \"acceptanceCriteria\": [\"git status clean after CLI and GUI wallpaper switch\", \"4 symlinks resolve\", \"colors propagate\", \"install.sh --dry-run completes\"]}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 3: Shellcheck cleanup pass",
+      "status": "pending",
+      "blockedBy": [9, 10],
+      "description": "**Goal:** All tracked scripts pass shellcheck at warning level (or carry a justified inline suppression); no behavior changes.\n\n**Files:**\n- Modify: any of the ~30 tracked *.sh files flagged by shellcheck\n\n**Acceptance Criteria:**\n- shellcheck -S warning $(git ls-files '*.sh') exits 0\n- Any '# shellcheck disable=' carries a one-line justification\n- eww lines untouched (eww installed, clock feature active); wall.sh sleep timing untouched\n- bash -n passes on every tracked script\n\n**Verify:** shellcheck -S warning $(git ls-files '*.sh'); echo $? -> 0\n\n```json:metadata\n{\"files\": [\"scripts/\", \"rofi/\", \"swaync/\", \"waybar/\", \"sddm/\", \"ghostty/\", \"mako/\", \"Thunar/\"], \"verifyCommand\": \"shellcheck -S warning $(git ls-files '*.sh'); echo exit=$?\", \"acceptanceCriteria\": [\"shellcheck warning-level exit 0\", \"bash -n passes on all scripts\", \"no behavior changes\"]}\n```"
+    },
+    {
+      "id": 12,
+      "subject": "Task 4: Track .claude/ and paneflow/",
+      "status": "pending",
+      "description": "**Goal:** Claude Code project config and paneflow prefs are tracked; their runtime state is ignored.\n\n**Files:**\n- Modify: .gitignore (add .claude/.paneflow-hook-leases/)\n- Track: .claude/settings.local.json, paneflow/paneflow.json\n\n**Acceptance Criteria:**\n- git status --short shows no ?? entries for .claude/ or paneflow/\n- .claude/.paneflow-hook-leases/ is ignored\n- No secrets in tracked files (verified: hooks + permission allowlists + UI prefs only)\n\n**Verify:** git check-ignore .claude/.paneflow-hook-leases/test && echo ignored -> ignored; git status --short shows no ?? entries\n\n```json:metadata\n{\"files\": [\".gitignore\", \".claude/settings.local.json\", \"paneflow/paneflow.json\"], \"verifyCommand\": \"git check-ignore .claude/.paneflow-hook-leases/test && git status --short\", \"acceptanceCriteria\": [\"no ?? entries for .claude or paneflow\", \"lease dir ignored\", \"no secrets tracked\"]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-07-19T13:45:00+02:00"
+}
