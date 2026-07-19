@@ -56,11 +56,11 @@ hypr/config/
 
 ### Pywal Color Flow
 
-Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically.
+Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. `wall.sh` also writes generated state to `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/mako-config`, `waypaper-config.ini`), and the repo only tracks symlinks pointing at that cache, so wallpaper switches never dirty git.
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `mediaplayer`, `screenshot`, `wallpaper` (symlink to current wallpaper). Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `mediaplayer`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
 
 ### Scripts (`scripts/`)
 

@@ -254,15 +254,25 @@ else
     warning "Pywal colors not generated yet - they will appear after the first 'wal -i' run"
 fi
 
-# Current-wallpaper symlink + rofi background
+# Current-wallpaper state + generated configs (cache-backed, symlinked from the repo)
 if [ -n "$FIRST_WALLPAPER" ]; then
-    execute ln -sfn "$FIRST_WALLPAPER" "$CONFIG_DIR/options/wallpaper"
+    execute ln -sfn "$FIRST_WALLPAPER" "$HOME/.cache/current_wallpaper"
     if [ "$DRY_RUN" = false ]; then
-        echo "* { wallpaper: url(\"$FIRST_WALLPAPER\", width); }" > "$CONFIG_DIR/rofi/options/wallpaper.rasi"
+        echo "* { wallpaper: url(\"$FIRST_WALLPAPER\", width); }" > "$HOME/.cache/wal/rofi-wallpaper.rasi"
     else
-        echo "[DRY RUN] write $CONFIG_DIR/rofi/options/wallpaper.rasi"
+        echo "[DRY RUN] write $HOME/.cache/wal/rofi-wallpaper.rasi"
     fi
-    success "Wallpaper option set"
+    success "Wallpaper state initialized"
+fi
+
+# Render mako config from the pywal palette (wal ran above)
+if [ -f "$HOME/.cache/wal/colors.sh" ]; then
+    execute "$CONFIG_DIR/mako/apply_wal_colors.sh"
+fi
+
+# Seed waypaper config
+if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
+    execute cp "$CONFIG_DIR/waypaper/config.ini.template" "$HOME/.cache/waypaper-config.ini"
 fi
 
 # ------------------------------------------------------------------

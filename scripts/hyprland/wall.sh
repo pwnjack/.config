@@ -19,9 +19,10 @@ fi
 
 wallname=$(basename "$wallpaper")
 
-# Update the current-wallpaper symlink and rofi background
-ln -sfn "$wallpaper" "$HOME/.config/options/wallpaper"
-echo "* { wallpaper: url(\"$wallpaper\", width); }" > "$HOME/.config/rofi/options/wallpaper.rasi"
+# Record the current wallpaper and rofi background in the cache
+mkdir -p "$HOME/.cache/wal"
+ln -sfn "$wallpaper" "$HOME/.cache/current_wallpaper"
+echo "* { wallpaper: url(\"$wallpaper\", width); }" > "$HOME/.cache/wal/rofi-wallpaper.rasi"
 
 wal -q -i "$wallpaper"
 

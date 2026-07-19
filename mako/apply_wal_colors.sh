@@ -7,14 +7,17 @@
 # Source pywal colors
 source "$HOME/.cache/wal/colors.sh"
 
+main_font="$(cat "$HOME/.config/options/font" 2>/dev/null || echo "FiraCode Nerd Font")"
+mkdir -p "$HOME/.cache/wal"
+
 # Create mako config with pywal colors
-cat > "$HOME/.config/mako/config" << EOF
+cat > "$HOME/.cache/wal/mako-config" << EOF
 # Mako Configuration
 # Colors automatically generated from wallpaper via pywal
 # Last updated: $(date)
 
 # Appearance
-font=FiraCode Nerd Font 11
+font=${main_font} 11
 background-color=${background}dd
 text-color=${foreground}
 border-color=${color4}
