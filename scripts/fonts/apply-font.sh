@@ -72,6 +72,16 @@ if [[ -f "$ghostty_conf" ]]; then
     echo "✓ Updated Ghostty font"
 fi
 
+# Update Alacritty font
+alacritty_conf="$HOME/.config/alacritty/alacritty.toml"
+if [[ -f "$alacritty_conf" ]]; then
+    cp "$alacritty_conf" "$alacritty_conf.bak" 2>/dev/null
+    if grep -q 'normal.family =' "$alacritty_conf"; then
+        sed -i "s|normal.family = \".*\"|normal.family = \"$main_font\"|" "$alacritty_conf"
+    fi
+    echo "✓ Updated Alacritty font"
+fi
+
 # Update GTK font
 gtk3_conf="$HOME/.config/gtk-3.0/settings.ini"
 gtk4_conf="$HOME/.config/gtk-4.0/settings.ini"
