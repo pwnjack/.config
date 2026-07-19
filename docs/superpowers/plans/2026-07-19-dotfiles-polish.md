@@ -332,6 +332,29 @@ git commit -m "track claude code project settings and paneflow prefs"
 
 ---
 
+### Task 5: Residual churn fix — ghostty/config and gtk-3.0/gtk.css (added during execution)
+
+**Goal:** Wallpaper switches to differently-colored wallpapers no longer dirty `ghostty/config` or `gtk-3.0/gtk.css` — the generated blocks move to `~/.cache`, reached via includes + tracked relative symlinks.
+
+**Why added:** Task 2's live verification revealed these two tracked files are rewritten by `ghostty/apply_wal_colors.sh` and `Thunar/apply_wal_colors.sh` in wall.sh's fan-out whenever the palette actually changes. Same problem, same approved pattern.
+
+**Files:**
+- Modify: `ghostty/apply_wal_colors.sh`, `Thunar/apply_wal_colors.sh`, `ghostty/config`, `gtk-3.0/gtk.css`, `install.sh`, `CLAUDE.md`
+- Create (tracked symlinks): `ghostty/colors` → `../../.cache/wal/ghostty-colors`; `gtk-3.0/thunar-colors.css` → `../../.cache/wal/thunar-gtk.css`
+
+**Design:**
+- `ghostty/apply_wal_colors.sh`: render `tail -n +3 "$wal_colors"` into `~/.cache/wal/ghostty-colors` instead of splicing `ghostty/config`. `ghostty/config`: pywal marker block (lines 16–40) replaced by a `# pywal colors` comment (kept so `apply-font.sh`'s insert-before-marker logic still anchors) followed by `config-file = ?colors` (`?` = optional, no error when missing); header comment updated. Verify ghostty accepts the include (`ghostty +show-config` or new window).
+- `Thunar/apply_wal_colors.sh`: render the full thunar CSS block into `~/.cache/wal/thunar-gtk.css` (markers no longer needed). `gtk-3.0/gtk.css` becomes its hand-written header + `@import url("thunar-colors.css");`.
+- `install.sh`: alongside the mako render, run both scripts guarded by their wal-input files existing; else `touch "$HOME/.cache/wal/ghostty-colors" "$HOME/.cache/wal/thunar-gtk.css"` so the include/import never dangles.
+- `CLAUDE.md`: add `ghostty-colors` and `thunar-gtk.css` to the cache-state list.
+
+**Acceptance Criteria:**
+- [ ] Wallpaper switch to a differently-colored wallpaper leaves `git status --short` empty
+- [ ] New ghostty window renders pywal colors; `~/.cache/wal/thunar-gtk.css` has the thunar block
+- [ ] `yes n | ./install.sh --dry-run` completes
+
+**Verify:** two wallpaper switches (different palettes) → `git status --short` empty both times; `[ -L ghostty/colors ] && [ -L gtk-3.0/thunar-colors.css ]`
+
 ## Execution notes
 
 - Order: Task 1 → Task 2 → Task 3; Task 4 is independent and can run any time.
