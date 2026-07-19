@@ -5,8 +5,6 @@
 #
 
 mapfile -t MONITORS < <(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+')
-# shellcheck disable=SC2034  # read for informational parity with MONITORS; not currently displayed by this menu
-MAINMONITOR="$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)"
 EDITOR="$(cat "$HOME/.config/options/editor" 2>/dev/null || echo nano)"
 
 clear
