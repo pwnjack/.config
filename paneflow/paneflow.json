@@ -1,0 +1,11 @@
+{
+  "external_editor": "zed",
+  "default_shell": "/usr/bin/fish",
+  "theme_mode": "system",
+  "theme": "One Dark",
+  "agent_panel": {
+    "notify_when_agent_waiting": "PrimaryScreen"
+  },
+  "font_family": "CaskaydiaCove NF",
+  "font_size": 12.0
+}

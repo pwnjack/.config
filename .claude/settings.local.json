@@ -1,0 +1,109 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "_paneflow_managed": true,
+        "hooks": [
+          {
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Notification",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "_paneflow_managed": true,
+        "hooks": [
+          {
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PostToolUse",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "_paneflow_managed": true,
+        "hooks": [
+          {
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PreToolUse",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "_paneflow_managed": true,
+        "hooks": [
+          {
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Stop",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "_paneflow_managed": true,
+        "hooks": [
+          {
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook UserPromptSubmit",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(chmod:*)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(bash -n:*)",
+      "Bash(bash:*)",
+      "Bash(find:*)",
+      "Bash(pgrep:*)",
+      "Bash(grep:*)",
+      "Bash(swaync-client:*)",
+      "Bash(systemctl:*)",
+      "Bash(hyprctl reload:*)",
+      "Bash(hyprctl clients:*)",
+      "Bash(chatbox --version:*)",
+      "Bash(hyprctl keyword:*)",
+      "Bash(hyprctl dispatch:*)",
+      "Bash(pkill:*)",
+      "Bash(xargs:*)",
+      "Bash(~/.config/scripts/hyprland/launch-chatbox.sh)",
+      "Bash(aichat:*)",
+      "Bash(hyprctl workspaces:*)",
+      "Bash(ADDR=\"0x564efdd21830\")",
+      "Bash(ghostty:*)",
+      "Bash(hyprctl getoption:*)",
+      "mcp__acp__Bash",
+      "mcp__acp__Write",
+      "mcp__acp__Edit",
+      "Bash(waybar-weather:*)",
+      "Bash(pacman -Qi:*)",
+      "Bash(paru -Qi:*)",
+      "WebFetch(domain:aylur.github.io)",
+      "Bash(btrfs-assistant:*)",
+      "Skill(update-config)",
+      "WebFetch(domain:github.com)",
+      "Bash(pacman -Qq)",
+      "Bash(/bin/ls ~/.cache/wal/)",
+      "Bash(pacman -Si rofi-emoji swayosd)",
+      "Bash(paru -Q awww aylurs-gtk-shell)"
+    ]
+  }
+}
