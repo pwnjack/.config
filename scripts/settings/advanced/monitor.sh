@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MONITORS=( $(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+') )
+mapfile -t MONITORS < <(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+')
 CONFIG="$HOME/.config/hypr/config/hardware/monitor.conf"
 
 clear

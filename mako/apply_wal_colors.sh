@@ -5,6 +5,7 @@
 #
 
 # Source pywal colors
+# shellcheck disable=SC2154  # background/foreground/colorN come from the sourced pywal colors.sh, generated at runtime
 source "$HOME/.cache/wal/colors.sh"
 
 main_font="$(cat "$HOME/.config/options/font" 2>/dev/null || echo "FiraCode Nerd Font")"

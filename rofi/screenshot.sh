@@ -28,17 +28,17 @@ run_rofi() {
 
 shotscreen() {
     $timer
-    hyprshot -m output -o ~/Pictures/Screenshots -f Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png $freeze
+    hyprshot -m output -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
 }
 
 shotwin() {
     $timer
-    hyprshot -m window -o ~/Pictures/Screenshots -f Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png $freeze
+    hyprshot -m window -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
 }
 
 shotarea() {
     $timer
-    hyprshot -m region -o ~/Pictures/Screenshots -f Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png $freeze
+    hyprshot -m region -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
 }
 
 settings() {
@@ -62,16 +62,16 @@ run_cmd() {
 
 chosen="$(run_rofi)"
 case ${chosen} in
-    $option_1)
+    "$option_1")
         run_cmd --opt1
         ;;
-    $option_2)
+    "$option_2")
         run_cmd --opt2
         ;;
-    $option_3)
+    "$option_3")
         run_cmd --opt3
         ;;
-    $option_4)
+    "$option_4")
         run_cmd --opt4
         ;;
 esac

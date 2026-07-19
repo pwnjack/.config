@@ -61,16 +61,16 @@ run_cmd() {
 
 chosen="$(run_rofi)"
 case ${chosen} in
-    $shutdown)
+    "$shutdown")
         run_cmd --shutdown
         ;;
-    $reboot)
+    "$reboot")
         run_cmd --reboot
         ;;
-    $logout)
+    "$logout")
         run_cmd --logout
         ;;
-    $lock)
+    "$lock")
         hyprlock
         ;;
 esac

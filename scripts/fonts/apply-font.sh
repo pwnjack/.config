@@ -96,7 +96,7 @@ for gtk_conf in "$gtk3_conf" "$gtk4_conf"; do
         else
             echo "gtk-font-name=$gtk_font 11" >> "$gtk_conf"
         fi
-        echo "✓ Updated GTK font: $(basename $(dirname $gtk_conf))"
+        echo "✓ Updated GTK font: $(basename "$(dirname "$gtk_conf")")"
     fi
 done
 

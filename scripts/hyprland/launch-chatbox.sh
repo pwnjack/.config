@@ -30,6 +30,7 @@ else
 	hyprctl dispatch exec "[float;workspace special:aichat] ghostty --config-file=$HOME/.config/ghostty/ai-sidebar -e aichat -s assistant"
 
 	# Wait for window to appear and retry getting the address
+	# shellcheck disable=SC2034  # loop counter only bounds retry attempts; index value itself is unused
 	for i in 1 2 3 4 5; do
 		sleep 0.3
 		WINDOW_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.workspace.name == "special:aichat") | .address' | head -1)
