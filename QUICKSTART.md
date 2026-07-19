@@ -62,7 +62,7 @@ waypaper
 echo "firefox" > ~/.config/options/browser
 
 # Change default terminal
-echo "kitty" > ~/.config/options/terminal
+echo "ghostty" > ~/.config/options/terminal
 
 # Change primary monitor
 echo "HDMI-A-1" > ~/.config/options/mainmonitor

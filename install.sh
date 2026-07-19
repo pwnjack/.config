@@ -93,9 +93,9 @@ PACKAGES=(
     # Bar, notifications, OSD, wallpaper
     "waybar" "swaync" "swayosd" "awww" "waypaper"
     # Launchers and menus
-    "rofi" "rofi-emoji" "wofi" "wlogout"
+    "rofi" "rofi-emoji"
     # Terminals, shell, editors
-    "ghostty" "kitty" "fish" "starship" "neovim" "zed" "kwrite"
+    "ghostty" "fish" "starship" "neovim" "zed" "kwrite"
     # File managers and system tools
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch"
     # Clipboard, screenshots, media
@@ -181,8 +181,8 @@ if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
     execute mkdir -p "$BACKUP_DIR"
 
     CONFIGS_TO_BACKUP=(
-        "hypr" "waybar" "swaync" "rofi" "wofi" "wlogout" "mako"
-        "fish" "ghostty" "kitty" "nvim" "btop" "gtk-3.0" "gtk-4.0"
+        "hypr" "waybar" "swaync" "rofi" "mako"
+        "fish" "ghostty" "nvim" "btop" "gtk-3.0" "gtk-4.0"
         "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list" "starship.toml"
     )
 

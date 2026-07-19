@@ -56,18 +56,6 @@ if [[ -f "$waybar_css" ]]; then
     echo "✓ Updated Waybar font"
 fi
 
-# Update Kitty font
-kitty_conf="$HOME/.config/kitty/kitty.conf"
-if [[ -f "$kitty_conf" ]]; then
-    cp "$kitty_conf" "$kitty_conf.bak" 2>/dev/null
-    if grep -q "^font_family" "$kitty_conf"; then
-        sed -i "s|^font_family.*|font_family $main_font|" "$kitty_conf"
-    else
-        sed -i "/^background_opacity/a font_family $main_font" "$kitty_conf"
-    fi
-    echo "✓ Updated Kitty font"
-fi
-
 # Update Ghostty font
 ghostty_conf="$HOME/.config/ghostty/config"
 if [[ -f "$ghostty_conf" ]]; then
@@ -80,16 +68,6 @@ if [[ -f "$ghostty_conf" ]]; then
         echo "font-family = $main_font" >> "$ghostty_conf"
     fi
     echo "✓ Updated Ghostty font"
-fi
-
-# Update Alacritty font
-alacritty_conf="$HOME/.config/alacritty/alacritty.toml"
-if [[ -f "$alacritty_conf" ]]; then
-    cp "$alacritty_conf" "$alacritty_conf.bak" 2>/dev/null
-    if grep -q 'normal.family =' "$alacritty_conf"; then
-        sed -i "s|normal.family = \".*\"|normal.family = \"$main_font\"|" "$alacritty_conf"
-    fi
-    echo "✓ Updated Alacritty font"
 fi
 
 # Update GTK font

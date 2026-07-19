@@ -191,7 +191,7 @@ customization() {
                 clear
                 echo "Enter the name of the default terminal you want to use."
                 echo "This should be the command you use to launch the terminal."
-                echo "If you arent sure, its probably the same as the package name (e.g kitty, alacritty, etc)."
+                echo "If you arent sure, its probably the same as the package name (e.g ghostty, alacritty, etc)."
                 echo
                 echo "It is also important to note that YOU will be responsible for configuring the new terminal emulator."
                 echo

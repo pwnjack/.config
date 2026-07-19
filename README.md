@@ -186,7 +186,7 @@ git reset origin/main   # marks repo files as tracked without touching them
 # Core (official/CachyOS repos)
 sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot \
                hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
-               wofi wlogout ghostty kitty fish starship neovim thunar yazi \
+               ghostty fish starship neovim thunar yazi \
                btop fastfetch playerctl cliphist wl-clipboard python-pywal \
                qt5ct qt6ct nwg-look brightnessctl pavucontrol blueman \
                jq ffmpeg inotify-tools zoxide ttf-firacode-nerd \

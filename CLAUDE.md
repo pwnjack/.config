@@ -28,7 +28,7 @@ killall waybar && waybar &
 
 # Change user preferences (plain text files)
 echo "firefox" > ~/.config/options/browser
-echo "kitty" > ~/.config/options/terminal
+echo "ghostty" > ~/.config/options/terminal
 ```
 
 ## Architecture
@@ -82,7 +82,7 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 | WM | Hyprland (Wayland) |
 | Bar | Waybar |
 | Launcher | Rofi |
-| Terminal | Ghostty (primary), Kitty (fallback) |
+| Terminal | Ghostty |
 | Notifications | SwayNC (toast + sidebar) |
 | Shell | Fish + Starship |
 | Editor | Neovim (LazyVim) |

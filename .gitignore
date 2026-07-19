@@ -199,11 +199,10 @@ chromium/Default/
 chromium/Profile*/
 chromium/*Profile*/
 
-# Waybar/rofi/hypr/kitty/ghostty/gtk/alacritty: keep config, exclude backups
+# Waybar/rofi/hypr/ghostty/gtk/alacritty: keep config, exclude backups
 waybar/**/*.bak
 rofi/**/*.bak
 hypr/**/*.bak
-kitty/**/*.bak
 ghostty/**/*.bak
 gtk-3.0/**/*.bak
 gtk-4.0/**/*.bak
@@ -315,11 +314,8 @@ TODO.md
 
 # Essential tools
 !ghostty/
-!kitty/
 !nvim/
 !rofi/
-!wofi/
-!wlogout/
 !mako/
 !swaylock/
 !sddm/
