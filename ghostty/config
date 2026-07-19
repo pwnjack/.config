@@ -7,7 +7,7 @@
 # included below via `config-file = ?colors` (ghostty/colors is a symlink
 # to the rendered file).
 
-font-family = "Fira Code Nerd Font"
+font-family = "FiraCode Nerd Font"
 
 # Conventional keybinds
 keybind = ctrl+shift+c=copy_to_clipboard

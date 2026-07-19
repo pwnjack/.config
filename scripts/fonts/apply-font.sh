@@ -7,8 +7,8 @@
 ##
 
 # Read font options
-main_font="$(cat $HOME/.config/options/font 2>/dev/null || echo "FiraCode Nerd Font")"
-gtk_font="$(cat $HOME/.config/options/font-gtk 2>/dev/null || echo "Cascadia Mono Semi-Bold")"
+main_font="$(cat "$HOME/.config/options/font" 2>/dev/null || echo "FiraCode Nerd Font")"
+gtk_font="$(cat "$HOME/.config/options/font-gtk" 2>/dev/null || echo "Cascadia Mono Semi-Bold")"
 
 # Remove quotes if present
 main_font=$(echo "$main_font" | sed 's/^"//;s/"$//')
@@ -60,12 +60,14 @@ fi
 ghostty_conf="$HOME/.config/ghostty/config"
 if [[ -f "$ghostty_conf" ]]; then
     cp "$ghostty_conf" "$ghostty_conf.bak" 2>/dev/null
-    sed -i '/^font-family =/d' "$ghostty_conf"
-    if grep -q "^# pywal colors" "$ghostty_conf"; then
-        sed -i "/^# pywal colors/i font-family = $main_font" "$ghostty_conf"
+    if grep -q "^font-family = " "$ghostty_conf"; then
+        # Replace in place so the line keeps its position (no churn)
+        sed -i "s|^font-family = .*|font-family = \"$main_font\"|" "$ghostty_conf"
+    elif grep -q "^# pywal colors" "$ghostty_conf"; then
+        sed -i "/^# pywal colors/i font-family = \"$main_font\"" "$ghostty_conf"
     else
         echo "" >> "$ghostty_conf"
-        echo "font-family = $main_font" >> "$ghostty_conf"
+        echo "font-family = \"$main_font\"" >> "$ghostty_conf"
     fi
     echo "✓ Updated Ghostty font"
 fi

@@ -97,7 +97,7 @@ systemctl --user status hypridle
 ### Broken Colors
 ```bash
 # Regenerate pywal colors
-wal -i ~/Pictures/Wallpapers/wall1.jpg
+wal -i ~/.config/wallpapers/wall1.jpg
 
 # Recreate symlink
 ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
