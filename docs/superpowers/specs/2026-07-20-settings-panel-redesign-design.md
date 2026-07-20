@@ -29,7 +29,7 @@ Sidebar (search field above, groups with uppercase headers):
 |-------|----------|----------|
 | Look & Feel | Appearance | blur (toggle+size+passes), shadows, corner rounding, border width, gaps in/out, active/inactive opacity, main font, GTK font, cursor theme+size |
 | Look & Feel | Animations | animations master toggle, per-animation speed sliders (windows, in, out, move, fade, workspaces, border) |
-| Behavior | Windows | layout mode (dwindle/master), pseudotile, preserve split, smart split, allow tearing, resize on border, XWayland |
+| Behavior | Windows | layout mode (dwindle/master), preserve split, smart split, allow tearing, resize on border, XWayland (pseudotile omitted — option removed in Hyprland 0.55; the old Misc logo/splash toggles are dropped as never-visible under a wallpaper daemon) |
 | Behavior | Input | mouse sensitivity, follow mouse, numlock, natural scroll, touchpad scroll factor |
 | Behavior | Notifications | swaync position X/Y, timeouts, notification/control-center width, transition time |
 | Hardware | Monitors (new) | read-only per-monitor cards from `hyprctl monitors -j` (name, model, resolution, scale, refresh), main-monitor picker (writes `options/mainmonitor` + `hypr/config/hardware/primary.conf`), VRR dropdown (moved from Power), "Advanced setup" chip launching the TUI monitor wizard in the user's terminal |

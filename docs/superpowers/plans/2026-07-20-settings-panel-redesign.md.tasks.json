@@ -1,0 +1,46 @@
+{
+  "planPath": "docs/superpowers/plans/2026-07-20-settings-panel-redesign.md",
+  "tasks": [
+    {
+      "id": 10,
+      "subject": "Task 1: Persistence lib (persist.ts + overrides.conf wiring)",
+      "status": "pending",
+      "description": "**Goal:** Hyprland keyword changes apply instantly and survive reboot via a panel-owned overrides file sourced last.\n\n**Files:**\n- Create: hypr/config/overrides.conf, ags/lib/persist.ts\n- Modify: hypr/hyprland.conf (source config/overrides.conf last)\n\n**Acceptance Criteria:**\n- [ ] overrides.conf sourced last; hyprctl reload clean\n- [ ] general:gaps_in = 13 override survives hyprctl reload\n- [ ] persist.ts API: setPersistent/resetSetting/hasOverride/getOverride/setAnimationPersistent/hasAnimationOverride/resetAnimation + DEFAULTS\n- [ ] Atomic writes via Gio replace_contents\n\n**Verify:** MECHANISM-OK round-trip command in plan Task 1\n\n```json:metadata\n{\"files\": [\"ags/lib/persist.ts\", \"hypr/config/overrides.conf\", \"hypr/hyprland.conf\"], \"verifyCommand\": \"plan Task 1 Verify (MECHANISM-OK) + ags bundle\", \"acceptanceCriteria\": [\"override survives reload\", \"removal restores default\", \"atomic writes\", \"bundle passes\"], \"planTask\": 1}\n```"
+    },
+    {
+      "id": 11,
+      "subject": "Task 2: Component library + registry (controls, SettingRow, chips, search, monitors lib)",
+      "status": "pending",
+      "description": "**Goal:** Reusable widgets for descriptive rows and the data-driven row/category registry.\n\n**Files:**\n- Create: ags/widget/components/{controls,SettingRow,rows,SearchEntry,ActionChip,MonitorCard}.tsx, ags/lib/{registry,monitors}.ts\n- Modify: ags/lib/options.ts (extend OPTIONS), ags/lib/swaync.ts (SWAYNC_DEFAULTS)\n\n**Acceptance Criteria:**\n- [ ] SettingRow: icon plate + title + description + control + conditional reset\n- [ ] SliderControl updates value label via closure (no tree-walking)\n- [ ] Row factories wire persist/options/reset + requestRefresh\n- [ ] ags bundle passes\n\n**Verify:** cd ~/.config/ags && ags bundle app.ts /tmp/claude-panel-build.js; echo $? → 0\n\n```json:metadata\n{\"files\": [\"ags/lib/registry.ts\", \"ags/lib/monitors.ts\", \"ags/widget/components/\"], \"verifyCommand\": \"cd ~/.config/ags && ags bundle app.ts /tmp/claude-panel-build.js; echo $?\", \"acceptanceCriteria\": [\"SettingRow anatomy\", \"closure-based slider label\", \"factories wired\", \"bundle passes\"], \"planTask\": 2}\n```"
+    },
+    {
+      "id": 12,
+      "subject": "Task 3: Panel shell (grouped sidebar, search, footer, freshness) + style.ts",
+      "status": "pending",
+      "blockedBy": [10, 11],
+      "description": "**Goal:** New shell per layout A: grouped nav, top search, footer action chips, content rebuilt on every show.\n\n**Files:**\n- Create: ags/style.ts, temp ags/widget/categories/index.ts barrel\n- Rewrite: ags/widget/SettingsPanel.tsx, ags/widget/components/CategoryNav.tsx\n- Modify: ags/app.ts\n\n**Acceptance Criteria:**\n- [ ] Grouped sidebar with search on top; uppercase group headers\n- [ ] Search → flat breadcrumbed results; clear restores; Esc two-stage\n- [ ] Footer chips: Reload Hyprland / Restart Waybar / Update System / Advanced (TUI)\n- [ ] Rebuild on notify::visible; 880x640 pywal styling\n\n**Verify:** bundle 0; relaunch; search works; toggle writes overrides.conf\n\n```json:metadata\n{\"files\": [\"ags/style.ts\", \"ags/widget/SettingsPanel.tsx\", \"ags/widget/components/CategoryNav.tsx\", \"ags/app.ts\", \"ags/widget/categories/index.ts\"], \"verifyCommand\": \"ags bundle + relaunch + functional check (plan Task 3)\", \"acceptanceCriteria\": [\"grouped nav+search+footer\", \"esc two-stage\", \"rebuild on show\", \"override written on toggle\"], \"planTask\": 3}\n```"
+    },
+    {
+      "id": 13,
+      "subject": "Task 4: Migrate all categories to the new IA",
+      "status": "pending",
+      "blockedBy": [10, 11, 12],
+      "description": "**Goal:** All nine categories per spec IA table, data-driven; old category files deleted.\n\n**Files:**\n- Create: categories/{Appearance,Animations,Windows,Input,Notifications,Power,DefaultApps}.tsx + Monitors/Startup stubs; rewrite barrel\n- Delete: Toggles/Misc/Layout/Apps/AnimationSettings.tsx, components/{Toggle,Slider,Dropdown}.tsx\n\n**Acceptance Criteria:**\n- [ ] Every spec IA row present with icon + description (pseudotile/logo/splash dropped)\n- [ ] Hyprland rows persist via overrides.conf; fonts run apply-font.sh; cursor theme writes option+conf+gsettings+keyword\n- [ ] swaync resets to SWAYNC_DEFAULTS; hypridle file persistence\n- [ ] Old files deleted; bundle passes\n\n**Verify:** bundle 0; relaunch; per-category backing-store round-trip\n\n```json:metadata\n{\"files\": [\"ags/widget/categories/\"], \"verifyCommand\": \"cd ~/.config/ags && ags bundle app.ts /tmp/claude-panel-build.js; echo $?\", \"acceptanceCriteria\": [\"IA matches amended spec\", \"hyprland rows persistent\", \"resets work\", \"old files deleted\"], \"planTask\": 4}\n```"
+    },
+    {
+      "id": 14,
+      "subject": "Task 5: Monitors and Startup categories",
+      "status": "pending",
+      "blockedBy": [10, 11, 12],
+      "description": "**Goal:** Fill the Monitors and Startup category stubs.\n\n**Files:**\n- Rewrite: ags/widget/categories/Monitors.tsx, Startup.tsx\n\n**Acceptance Criteria:**\n- [ ] Monitor cards (name/model/res@hz/scale/position), MAIN badge / Set-as-main, VRR dropdown, Advanced-setup chip → TUI\n- [ ] Set-as-main writes options/mainmonitor + primary.conf and refreshes\n- [ ] Startup toggles (autologin/clock/randomwallpaper) round-trip options files; clock starts/stops eww\n\n**Verify:** cat options/mainmonitor primary.conf after set-as-main; cat options/{autologin,clock,randomwallpaper} after flips\n\n```json:metadata\n{\"files\": [\"ags/widget/categories/Monitors.tsx\", \"ags/widget/categories/Startup.tsx\"], \"verifyCommand\": \"cat ~/.config/options/mainmonitor ~/.config/hypr/config/hardware/primary.conf ~/.config/options/autologin ~/.config/options/clock ~/.config/options/randomwallpaper\", \"acceptanceCriteria\": [\"monitor cards + set-as-main\", \"VRR dropdown\", \"startup toggles round-trip\"], \"planTask\": 5}\n```"
+    },
+    {
+      "id": 15,
+      "subject": "Task 6: Final verification pass",
+      "status": "pending",
+      "blockedBy": [13, 14],
+      "description": "**Goal:** All six spec verification items pass with captured evidence (build gate = ags bundle).\n\n**Files:** none (fixes only)\n\n**Acceptance Criteria:**\n- [ ] bundle exit 0\n- [ ] 9 categories render, no console errors\n- [ ] persistence round-trip incl. hyprctl reload + reset\n- [ ] freshness on reopen after external keyword change\n- [ ] search cross-category with working controls\n- [ ] startup toggles tracked in options files\n\n**Verify:** plan Task 6 steps 1-6 with captured output\n\n```json:metadata\n{\"verifyCommand\": \"plan Task 6 steps 1-6\", \"acceptanceCriteria\": [\"bundle clean\", \"9 categories render\", \"persist round-trip\", \"freshness\", \"search\", \"startup toggles\"], \"planTask\": 6}\n```"
+    }
+  ],
+  "lastUpdated": "2026-07-20T00:00:00Z"
+}
