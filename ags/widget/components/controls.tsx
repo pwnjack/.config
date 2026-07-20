@@ -26,10 +26,12 @@ export function SliderControl(p: SliderControlProps): Gtk.Widget {
     scale.set_valign(Gtk.Align.CENTER)
     // Wheel must scroll the panel, not the slider
     const ctrls = scale.observe_controllers()
+    const toRemove: Gtk.EventController[] = []
     for (let i = 0; i < ctrls.get_n_items(); i++) {
         const c = ctrls.get_item(i)
-        if (c instanceof Gtk.EventControllerScroll) scale.remove_controller(c)
+        if (c instanceof Gtk.EventControllerScroll) toRemove.push(c)
     }
+    for (const c of toRemove) scale.remove_controller(c)
     scale.connect("value-changed", () => {
         const val = Math.round(scale.get_value() * 100) / 100
         valueLabel.label = fmt(val)                     // same closure — no tree walking
@@ -58,14 +60,21 @@ export function DropdownControl(p: { items: DropdownItem[]; active: string; onCh
 }
 
 export function EntryControl(p: { text: string; placeholder?: string; onCommit: (text: string) => void }): Gtk.Widget {
+    let last = p.text
+    const commit = () => {
+        const text = entry.get_text()
+        if (text === last) return
+        last = text
+        p.onCommit(text)
+    }
     const entry = new Gtk.Entry({
         text: p.text, hexpand: false, widthChars: 18,
         placeholderText: p.placeholder ?? "", cssClasses: ["app-entry"],
         valign: Gtk.Align.CENTER,
     })
-    entry.connect("activate", () => p.onCommit(entry.get_text()))
+    entry.connect("activate", commit)
     const focus = new Gtk.EventControllerFocus()
-    focus.connect("leave", () => p.onCommit(entry.get_text()))
+    focus.connect("leave", commit)
     entry.add_controller(focus)
     return entry
 }
