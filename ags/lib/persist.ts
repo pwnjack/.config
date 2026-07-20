@@ -1,6 +1,7 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import { execAsync } from "ags/process"
+import { setKeyword } from "./hyprctl"
 
 const OVERRIDES_PATH = GLib.get_home_dir() + "/.config/hypr/config/overrides.conf"
 
@@ -41,7 +42,6 @@ export const DEFAULTS: Record<string, string> = {
     "misc:mouse_move_enables_dpms": "true",
     "xwayland:enabled": "true",
     "cursor:enable_hyprcursor": "true",
-    "cursor:size": "24",
 }
 
 function readLines(): string[] {
@@ -95,14 +95,10 @@ function removeLine(keyword: string): void {
     }))
 }
 
-function apply(keyword: string, value: string): void {
-    execAsync(["hyprctl", "keyword", keyword, value]).catch(console.error)
-}
-
 /** Apply now via hyprctl AND persist to overrides.conf. */
 export function setPersistent(keyword: string, value: string | number | boolean): void {
+    setKeyword(keyword, value)
     const val = typeof value === "boolean" ? (value ? "true" : "false") : String(value)
-    apply(keyword, val)
     upsert(keyword, val)
 }
 
@@ -110,8 +106,10 @@ export function setPersistent(keyword: string, value: string | number | boolean)
 export function resetSetting(keyword: string): void {
     removeLine(keyword)
     const def = DEFAULTS[keyword]
-    if (def !== undefined) apply(keyword, def)
+    if (def !== undefined) setKeyword(keyword, def)
 }
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 /**
  * Persist a full animation line, e.g. "windows,1,6,default".
@@ -119,19 +117,19 @@ export function resetSetting(keyword: string): void {
  */
 export function setAnimationPersistent(name: string, line: string): void {
     const lines = readLines().filter(l =>
-        !l.match(new RegExp(`^animation\\s*=\\s*${name},`)))
+        !l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`)))
     lines.push(`animation = ${line}`)
     writeLines(lines)
-    execAsync(["hyprctl", "keyword", "animation", line]).catch(console.error)
+    setKeyword("animation", line)
 }
 
 export function hasAnimationOverride(name: string): boolean {
-    return readLines().some(l => l.match(new RegExp(`^animation\\s*=\\s*${name},`)))
+    return readLines().some(l => l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`)))
 }
 
 export function resetAnimation(name: string): void {
     writeLines(readLines().filter(l =>
-        !l.match(new RegExp(`^animation\\s*=\\s*${name},`))))
+        !l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`))))
     // No hyprctl re-apply: tracked animations.conf value returns on next reload.
     execAsync(["hyprctl", "reload"]).catch(console.error)
 }
