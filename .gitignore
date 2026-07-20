@@ -343,3 +343,6 @@ zed/settings.json
 
 # Environment variables (API keys, secrets)
 .env
+
+# Superpowers brainstorm sessions
+.superpowers/
