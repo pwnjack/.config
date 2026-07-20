@@ -65,7 +65,10 @@ export default function SettingsPanel() {
     })
 
     const render = () => {
-        scroll.set_child(query ? resultsPage(query) : categoryPage(activeCategory))
+        // Queries under 2 chars match nearly everything and each result row costs
+        // a synchronous hyprctl read — treat them as no query.
+        const q = query.trim().length >= 2 ? query : ""
+        scroll.set_child(q ? resultsPage(q) : categoryPage(activeCategory))
     }
     setRefreshHandler(render)
 
@@ -132,7 +135,7 @@ export default function SettingsPanel() {
                 self.add_controller(keyController)
                 // Freshness: rebuild everything each time the panel is shown
                 self.connect("notify::visible", () => {
-                    if (self.visible) { rebuildSidebar(); render() }
+                    if (self.visible) { query = ""; rebuildSidebar(); render() }
                 })
                 rebuildSidebar()
                 render()
