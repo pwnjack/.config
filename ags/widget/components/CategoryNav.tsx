@@ -1,69 +1,32 @@
 import Gtk from "gi://Gtk?version=4.0"
+import { allCategories } from "../../lib/registry"
 
-export interface Category {
-    id: string
-    label: string
-    icon: string
-}
+const GROUP_ORDER = ["Look & Feel", "Behavior", "Hardware", "System"] as const
 
-export const CATEGORIES: Category[] = [
-    { id: "toggles", label: "Toggles", icon: "emblem-default-symbolic" },
-    { id: "appearance", label: "Appearance", icon: "preferences-desktop-display-symbolic" },
-    { id: "animations", label: "Animations", icon: "starred-symbolic" },
-    { id: "input", label: "Input", icon: "input-mouse-symbolic" },
-    { id: "layout", label: "Layout", icon: "view-grid-symbolic" },
-    { id: "notifications", label: "Notifications", icon: "preferences-system-notifications-symbolic" },
-    { id: "power", label: "Power", icon: "battery-symbolic" },
-    { id: "apps", label: "Apps", icon: "system-run-symbolic" },
-    { id: "misc", label: "Misc", icon: "preferences-other-symbolic" },
-]
-
-interface CategoryNavProps {
-    active: string
-    onSelect: (id: string) => void
-}
-
-export default function CategoryNav({ active, onSelect }: CategoryNavProps) {
-    const buttons: Map<string, Gtk.Button> = new Map()
-
-    function setActive(id: string) {
-        buttons.forEach((btn, catId) => {
-            if (catId === id) {
-                btn.cssClasses = ["nav-button", "nav-active"]
-            } else {
-                btn.cssClasses = ["nav-button"]
-            }
-        })
-        onSelect(id)
+export default function CategoryNav(p: { active: string; onSelect: (id: string) => void }): Gtk.Widget {
+    const buttons = new Map<string, Gtk.Button>()
+    const nav = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 })
+    const setActive = (id: string) => {
+        buttons.forEach((btn, catId) =>
+            btn.set_css_classes(catId === id ? ["nav-button", "nav-active"] : ["nav-button"]))
+        p.onSelect(id)
     }
-
-    return (
-        <box
-            cssClasses={["category-nav"]}
-            orientation={Gtk.Orientation.VERTICAL}
-            spacing={2}
-        >
-            <label
-                label="Settings"
-                cssClasses={["nav-title"]}
-                xalign={0}
-            />
-            <box cssClasses={["nav-separator"]} />
-            {CATEGORIES.map(cat => (
-                <button
-                    cssClasses={[
-                        "nav-button",
-                        ...(cat.id === active ? ["nav-active"] : []),
-                    ]}
-                    onClicked={() => setActive(cat.id)}
-                    $={(self: Gtk.Button) => { buttons.set(cat.id, self) }}
-                >
-                    <box spacing={8}>
-                        <image iconName={cat.icon} />
-                        <label label={cat.label} />
-                    </box>
-                </button>
-            ))}
-        </box>
-    )
+    for (const group of GROUP_ORDER) {
+        const cats = allCategories().filter(c => c.group === group)
+        if (cats.length === 0) continue
+        nav.append(new Gtk.Label({ label: group.toUpperCase(), cssClasses: ["nav-section"], xalign: 0 }))
+        for (const cat of cats) {
+            const btn = new Gtk.Button({
+                cssClasses: cat.id === p.active ? ["nav-button", "nav-active"] : ["nav-button"],
+            })
+            const box = new Gtk.Box({ spacing: 8 })
+            box.append(new Gtk.Image({ iconName: cat.icon }))
+            box.append(new Gtk.Label({ label: cat.label }))
+            btn.set_child(box)
+            btn.connect("clicked", () => setActive(cat.id))
+            buttons.set(cat.id, btn)
+            nav.append(btn)
+        }
+    }
+    return nav
 }
