@@ -6,6 +6,14 @@
 
 sleep 0.5
 
+# 0. Random wallpaper on startup (options/randomwallpaper = enabled)
+#    waypaper --random also runs its post_command (wall.sh), so pywal colors follow
+if grep -q "enabled" "$HOME/.config/options/randomwallpaper" 2>/dev/null \
+    && command -v waypaper >/dev/null 2>&1; then
+    waypaper --random
+    exit 0
+fi
+
 # 1. Wallpaper saved by waypaper
 wp=$(grep "^wallpaper = " "$HOME/.config/waypaper/config.ini" 2>/dev/null \
     | sed "s/^wallpaper = //" | sed "s|^~|$HOME|")
