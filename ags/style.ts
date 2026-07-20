@@ -54,7 +54,9 @@ export function buildCss(): string {
 }
 
 .content-area {
-    padding: 24px 28px;
+    /* right side stays slim so the overlay scrollbar gets its own gutter;
+       .category-content adds 18px back for optical symmetry (28+4 = 14+18) */
+    padding: 24px 14px 24px 28px;
 }
 
 .content-scroll {
@@ -82,7 +84,7 @@ export function buildCss(): string {
 }
 
 .category-content {
-    padding: 4px;
+    padding: 4px 18px 4px 4px;
 }
 
 .category-title {
