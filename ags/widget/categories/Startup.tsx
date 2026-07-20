@@ -13,6 +13,7 @@ const Startup: CategoryDef = {
             description: "eww clock widget on the desktop", option: "clock",
             onChange: v => {
                 if (v) execAsync(["bash", "-c", "command -v eww >/dev/null && eww open clock"]).catch(console.error)
+                // pkill terminates the whole eww daemon — fine while the clock is the only eww widget
                 else execAsync(["bash", "-c", "pkill eww"]).catch(console.error)
             } }),
         optionToggle({ id: "startup.randomwallpaper", title: "Random Wallpaper", icon: "preferences-desktop-wallpaper-symbolic",

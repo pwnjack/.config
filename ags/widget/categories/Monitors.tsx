@@ -1,5 +1,5 @@
 import { CategoryDef, requestRefresh } from "../../lib/registry"
-import { kwDropdown, customRow } from "../components/rows"
+import { kwDropdown } from "../components/rows"
 import MonitorCard from "../components/MonitorCard"
 import ActionChip from "../components/ActionChip"
 import { listMonitors, getMainMonitor, setMainMonitor } from "../../lib/monitors"
