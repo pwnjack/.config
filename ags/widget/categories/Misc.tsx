@@ -104,6 +104,11 @@ export default function Misc() {
                 active={getOptionBool("cursor:enable_hyprcursor")}
                 onToggled={(v) => setKeyword("cursor:enable_hyprcursor", v)}
             />
+            <Toggle
+                label="Random Wallpaper at Startup"
+                active={readOption("randomwallpaper") === "enabled"}
+                onToggled={(v) => writeOption("randomwallpaper", v ? "enabled" : "disabled")}
+            />
         </box>
     )
 }
