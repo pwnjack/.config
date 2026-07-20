@@ -1,60 +1,27 @@
-import Gtk from "gi://Gtk?version=4.0"
-import Toggle from "../components/Toggle"
-import SettingsSlider from "../components/Slider"
-import Dropdown from "../components/Dropdown"
-import { setKeyword, getOptionBool, getOptionInt, getOptionFloat } from "../../lib/hyprctl"
+import { CategoryDef } from "../../lib/registry"
+import { kwToggle, kwSlider, kwDropdown } from "../components/rows"
 
-export default function Input() {
-    return (
-        <box
-            cssClasses={["category-content"]}
-            orientation={Gtk.Orientation.VERTICAL}
-            spacing={8}
-        >
-            <label label="Input" cssClasses={["category-title"]} xalign={0} />
-            <label
-                label="Mouse, keyboard, and touchpad settings"
-                cssClasses={["category-desc"]}
-                xalign={0}
-            />
-            <box cssClasses={["content-separator"]} />
-            <SettingsSlider
-                label="Mouse Sensitivity"
-                value={getOptionFloat("input:sensitivity")}
-                min={-1.0}
-                max={1.0}
-                step={0.1}
-                onChanged={(val) => setKeyword("input:sensitivity", val)}
-            />
-            <Dropdown
-                label="Follow Mouse"
-                options={["0", "1", "2", "3"]}
-                active={String(getOptionInt("input:follow_mouse"))}
-                onChanged={(val) => setKeyword("input:follow_mouse", parseInt(val))}
-            />
-            <Toggle
-                label="Numlock by Default"
-                active={getOptionBool("input:numlock_by_default")}
-                onToggled={(v) => setKeyword("input:numlock_by_default", v)}
-            />
-            <Toggle
-                label="Natural Scroll (Touchpad)"
-                active={getOptionBool("input:touchpad:natural_scroll")}
-                onToggled={(v) => setKeyword("input:touchpad:natural_scroll", v)}
-            />
-            <SettingsSlider
-                label="Touchpad Scroll Factor"
-                value={getOptionFloat("input:touchpad:scroll_factor")}
-                min={0.1}
-                max={2.0}
-                step={0.1}
-                onChanged={(val) => setKeyword("input:touchpad:scroll_factor", val)}
-            />
-            <Toggle
-                label="Resize on Border"
-                active={getOptionBool("general:resize_on_border")}
-                onToggled={(v) => setKeyword("general:resize_on_border", v)}
-            />
-        </box>
-    )
+const Input: CategoryDef = {
+    id: "input", label: "Input", group: "Behavior",
+    icon: "input-mouse-symbolic",
+    description: "Mouse, keyboard and touchpad",
+    rows: () => [
+        kwSlider({ id: "input.sensitivity", title: "Mouse Sensitivity", icon: "input-mouse-symbolic",
+            description: "-1 slow … +1 fast (libinput accel)", keyword: "input:sensitivity",
+            min: -1.0, max: 1.0, step: 0.1, float: true }),
+        kwDropdown({ id: "input.follow-mouse", title: "Focus Follows Mouse", icon: "focus-windows-symbolic",
+            description: "How window focus follows the pointer", keyword: "input:follow_mouse",
+            items: [
+                { label: "Disabled", value: "0" }, { label: "Full", value: "1" },
+                { label: "Loose", value: "2" }, { label: "Detached", value: "3" },
+            ] }),
+        kwToggle({ id: "input.numlock", title: "Numlock by Default", icon: "input-keyboard-symbolic",
+            description: "Enable numlock at startup", keyword: "input:numlock_by_default" }),
+        kwToggle({ id: "input.natural-scroll", title: "Natural Scroll (Touchpad)", icon: "touchpad-symbolic",
+            description: "Content follows finger direction", keyword: "input:touchpad:natural_scroll" }),
+        kwSlider({ id: "input.scroll-factor", title: "Touchpad Scroll Factor", icon: "touchpad-symbolic",
+            description: "Scroll speed multiplier", keyword: "input:touchpad:scroll_factor",
+            min: 0.1, max: 2.0, step: 0.1, float: true }),
+    ],
 }
+export default Input

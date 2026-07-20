@@ -1,16 +1,17 @@
 import { CategoryDef } from "../../lib/registry"
-import { kwSlider, kwToggle } from "../components/rows"
+import Appearance from "./Appearance"
+import Animations from "./Animations"
+import Windows from "./Windows"
+import Input from "./Input"
+import Notifications from "./Notifications"
+import Monitors from "./Monitors"     // Task 5
+import Power from "./Power"
+import Startup from "./Startup"       // Task 5
+import DefaultApps from "./DefaultApps"
 
-// Temporary Appearance-only barrel — Task 4 replaces this with the full category set.
-export const CATEGORIES: CategoryDef[] = [{
-    id: "appearance", label: "Appearance", group: "Look & Feel",
-    icon: "preferences-desktop-display-symbolic",
-    description: "Borders, blur, gaps and opacity",
-    rows: () => [
-        kwToggle({ id: "appearance.blur", title: "Blur", icon: "weather-fog-symbolic",
-            description: "Frosted-glass effect behind windows", keyword: "decoration:blur:enabled" }),
-        kwSlider({ id: "appearance.rounding", title: "Corner Rounding", icon: "object-select-symbolic",
-            description: "Window corner radius in pixels", keyword: "decoration:rounding",
-            min: 0, max: 30, step: 1 }),
-    ],
-}]
+export const CATEGORIES: CategoryDef[] = [
+    Appearance, Animations,               // Look & Feel
+    Windows, Input, Notifications,        // Behavior
+    Monitors, Power,                      // Hardware
+    Startup, DefaultApps,                 // System
+]

@@ -1,76 +1,51 @@
-import Gtk from "gi://Gtk?version=4.0"
-import SettingsSlider from "../components/Slider"
-import Dropdown from "../components/Dropdown"
-import { readConfig, updateAndReload } from "../../lib/swaync"
+import { CategoryDef } from "../../lib/registry"
+import { customRow } from "../components/rows"
+import { SliderControl, DropdownControl } from "../components/controls"
+import { readConfig, updateAndReload, SWAYNC_DEFAULTS } from "../../lib/swaync"
 
-export default function Notifications() {
-    const config = readConfig()
-
-    return (
-        <box
-            cssClasses={["category-content"]}
-            orientation={Gtk.Orientation.VERTICAL}
-            spacing={8}
-        >
-            <label label="Notifications" cssClasses={["category-title"]} xalign={0} />
-            <label
-                label="SwayNC notification daemon settings"
-                cssClasses={["category-desc"]}
-                xalign={0}
-            />
-            <box cssClasses={["content-separator"]} />
-            <Dropdown
-                label="Position X"
-                options={["left", "center", "right"]}
-                active={config["positionX"] || "right"}
-                onChanged={(val) => updateAndReload("positionX", val)}
-            />
-            <Dropdown
-                label="Position Y"
-                options={["top", "bottom"]}
-                active={config["positionY"] || "top"}
-                onChanged={(val) => updateAndReload("positionY", val)}
-            />
-            <SettingsSlider
-                label="Default Timeout (s)"
-                value={config["timeout"] || 5}
-                min={1}
-                max={15}
-                step={1}
-                onChanged={(val) => updateAndReload("timeout", Math.round(val))}
-            />
-            <SettingsSlider
-                label="Low Priority Timeout (s)"
-                value={config["timeout-low"] || 3}
-                min={1}
-                max={10}
-                step={1}
-                onChanged={(val) => updateAndReload("timeout-low", Math.round(val))}
-            />
-            <SettingsSlider
-                label="Notification Width"
-                value={config["notification-window-width"] || 400}
-                min={200}
-                max={600}
-                step={10}
-                onChanged={(val) => updateAndReload("notification-window-width", Math.round(val))}
-            />
-            <SettingsSlider
-                label="Control Center Width"
-                value={config["control-center-width"] || 358}
-                min={200}
-                max={600}
-                step={10}
-                onChanged={(val) => updateAndReload("control-center-width", Math.round(val))}
-            />
-            <SettingsSlider
-                label="Transition Time (ms)"
-                value={config["transition-time"] || 100}
-                min={0}
-                max={500}
-                step={25}
-                onChanged={(val) => updateAndReload("transition-time", Math.round(val))}
-            />
-        </box>
-    )
+function snSlider(id: string, title: string, icon: string, desc: string, key: string,
+    min: number, max: number, step: number) {
+    return customRow({
+        id, title, icon, description: desc,
+        control: () => SliderControl({
+            value: Number(readConfig()[key] ?? SWAYNC_DEFAULTS[key]),
+            min, max, step, onChanged: v => updateAndReload(key, Math.round(v)),
+        }),
+        onReset: () => updateAndReload(key, SWAYNC_DEFAULTS[key]),
+        resetVisible: () => readConfig()[key] !== undefined
+            && readConfig()[key] !== SWAYNC_DEFAULTS[key],
+    })
 }
+
+const Notifications: CategoryDef = {
+    id: "notifications", label: "Notifications", group: "Behavior",
+    icon: "preferences-system-notifications-symbolic",
+    description: "SwayNC toasts and control center",
+    rows: () => [
+        customRow({ id: "notif.pos-x", title: "Position X", icon: "object-flip-horizontal-symbolic",
+            description: "Horizontal screen edge for toasts",
+            control: () => DropdownControl({
+                items: [{ label: "Left", value: "left" }, { label: "Center", value: "center" }, { label: "Right", value: "right" }],
+                active: String(readConfig()["positionX"] ?? SWAYNC_DEFAULTS["positionX"]),
+                onChanged: v => updateAndReload("positionX", v),
+            }) }),
+        customRow({ id: "notif.pos-y", title: "Position Y", icon: "object-flip-vertical-symbolic",
+            description: "Vertical screen edge for toasts",
+            control: () => DropdownControl({
+                items: [{ label: "Top", value: "top" }, { label: "Bottom", value: "bottom" }],
+                active: String(readConfig()["positionY"] ?? SWAYNC_DEFAULTS["positionY"]),
+                onChanged: v => updateAndReload("positionY", v),
+            }) }),
+        snSlider("notif.timeout", "Default Timeout", "alarm-symbolic",
+            "Seconds a toast stays on screen", "timeout", 1, 15, 1),
+        snSlider("notif.timeout-low", "Low Priority Timeout", "alarm-symbolic",
+            "Seconds for low-priority toasts", "timeout-low", 1, 10, 1),
+        snSlider("notif.width", "Notification Width", "object-flip-horizontal-symbolic",
+            "Toast width in pixels", "notification-window-width", 200, 600, 10),
+        snSlider("notif.cc-width", "Control Center Width", "sidebar-show-symbolic",
+            "Sidebar width in pixels", "control-center-width", 200, 600, 10),
+        snSlider("notif.transition", "Transition Time", "media-playback-start-symbolic",
+            "Animation duration in ms", "transition-time", 0, 500, 25),
+    ],
+}
+export default Notifications

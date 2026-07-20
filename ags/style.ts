@@ -30,20 +30,6 @@ export function buildCss(): string {
     border-radius: 16px 0 0 16px;
 }
 
-.nav-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: ${c.foreground};
-    margin-bottom: 8px;
-    padding: 4px 8px;
-}
-
-.nav-separator {
-    min-height: 1px;
-    background-color: alpha(${c.colors[8]}, 0.3);
-    margin-bottom: 8px;
-}
-
 .nav-button {
     background-color: transparent;
     color: ${c.colors[7]};
@@ -117,34 +103,6 @@ export function buildCss(): string {
     margin-bottom: 8px;
 }
 
-.toggle-row {
-    padding: 10px 8px;
-    border-radius: 8px;
-}
-
-.toggle-row:hover {
-    background-color: alpha(${c.colors[4]}, 0.1);
-}
-
-.toggle-label {
-    font-size: 14px;
-    color: ${c.foreground};
-}
-
-.slider-row {
-    padding: 8px;
-    border-radius: 8px;
-}
-
-.slider-row:hover {
-    background-color: alpha(${c.colors[4]}, 0.1);
-}
-
-.slider-label {
-    font-size: 14px;
-    color: ${c.foreground};
-}
-
 .slider-value {
     font-size: 13px;
     font-family: monospace;
@@ -167,20 +125,6 @@ export function buildCss(): string {
     border-radius: 50%;
     min-width: 16px;
     min-height: 16px;
-}
-
-.app-row {
-    padding: 8px;
-    border-radius: 8px;
-}
-
-.app-row:hover {
-    background-color: alpha(${c.colors[4]}, 0.1);
-}
-
-.app-label {
-    font-size: 14px;
-    color: ${c.foreground};
 }
 
 .app-entry {
@@ -213,20 +157,6 @@ switch slider {
     min-width: 20px;
     min-height: 20px;
     margin: 2px;
-}
-
-.dropdown-row {
-    padding: 10px 8px;
-    border-radius: 8px;
-}
-
-.dropdown-row:hover {
-    background-color: alpha(${c.colors[4]}, 0.1);
-}
-
-.dropdown-label {
-    font-size: 14px;
-    color: ${c.foreground};
 }
 
 .settings-dropdown {
