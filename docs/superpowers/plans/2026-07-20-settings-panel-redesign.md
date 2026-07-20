@@ -406,7 +406,6 @@ export interface SettingRowProps {
     control: Gtk.Widget
     onReset?: () => void
     resetVisible?: boolean
-    breadcrumb?: string   // set in search results: category label
 }
 
 export default function SettingRow(p: SettingRowProps): Gtk.Widget {
@@ -419,13 +418,7 @@ export default function SettingRow(p: SettingRowProps): Gtk.Widget {
     const text = new Gtk.Box({
         orientation: Gtk.Orientation.VERTICAL, hexpand: true, valign: Gtk.Align.CENTER,
     })
-    const title = new Gtk.Label({ label: p.title, xalign: 0, cssClasses: ["row-title"] })
-    text.append(title)
-    if (p.breadcrumb) {
-        title.label = p.title
-        const crumb = new Gtk.Label({ label: p.breadcrumb, xalign: 0, cssClasses: ["row-crumb"] })
-        text.append(crumb)
-    }
+    text.append(new Gtk.Label({ label: p.title, xalign: 0, cssClasses: ["row-title"] }))
     text.append(new Gtk.Label({
         label: p.description, xalign: 0, cssClasses: ["row-desc"], wrap: true,
     }))
