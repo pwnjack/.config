@@ -25,6 +25,7 @@ export function getOption(name: string): string {
         if (json.int !== undefined) return String(json.int)
         if (json.float !== undefined) return String(json.float)
         if (json.str !== undefined) return json.str
+        if (json.custom !== undefined) return String(json.custom).trim().split(/\s+/)[0]
         if (json.set !== undefined) return String(json.set)
         return ""
     } catch {

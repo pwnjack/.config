@@ -2,6 +2,13 @@ import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import { execAsync } from "ags/process"
 
+export const SWAYNC_DEFAULTS: Record<string, string | number> = {
+    "positionX": "right", "positionY": "top",
+    "timeout": 5, "timeout-low": 3,
+    "notification-window-width": 400, "control-center-width": 358,
+    "transition-time": 100,
+}
+
 const CONFIG_PATH = GLib.get_home_dir() + "/.config/swaync/config.json"
 
 export function readConfig(): Record<string, any> {
