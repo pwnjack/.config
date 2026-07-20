@@ -55,8 +55,9 @@ export function buildCss(): string {
 
 .content-area {
     /* right side stays slim so the overlay scrollbar gets its own gutter;
-       .category-content adds 18px back for optical symmetry (28+4 = 14+18) */
-    padding: 24px 14px 24px 28px;
+       .category-content adds 18px back for optical symmetry (28+4 = 14+18).
+       No bottom padding: .panel-footer centers the chips in its own space. */
+    padding: 24px 14px 0 28px;
 }
 
 .content-scroll {
@@ -214,8 +215,8 @@ switch slider {
 .reset-btn:hover { color: ${c.colors[6]}; }
 
 .panel-footer {
+    padding: 16px;
     border-top: 1px solid alpha(${c.colors[8]}, 0.2);
-    padding: 10px 16px;
 }
 .action-chip {
     background-color: alpha(${c.colors[0]}, 0.6);

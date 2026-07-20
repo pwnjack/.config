@@ -58,6 +58,7 @@ export default function SettingsPanel() {
     let activeCategory = allCategories()[0].id
     let query = ""
     let searchWidget: Gtk.SearchEntry | null = null
+    let win: Astal.Window | null = null
 
     const scroll = new Gtk.ScrolledWindow({
         hscrollbarPolicy: Gtk.PolicyType.NEVER, vscrollbarPolicy: Gtk.PolicyType.AUTOMATIC,
@@ -78,7 +79,10 @@ export default function SettingsPanel() {
     const rebuildSidebar = () => {
         let child = sidebar.get_first_child()
         while (child) { const next = child.get_next_sibling(); sidebar.remove(child); child = next }
-        searchWidget = SearchEntry({ onChanged: q => { query = q; render() } })
+        searchWidget = SearchEntry({
+            onChanged: q => { query = q; render() },
+            onStop: () => { if (win) win.visible = false },
+        })
         sidebar.append(searchWidget)
         sidebar.append(CategoryNav({
             active: activeCategory,
@@ -125,11 +129,9 @@ export default function SettingsPanel() {
             keymode={Astal.Keymode.EXCLUSIVE}
             visible
             $={(self: Astal.Window) => {
+                win = self
                 keyController.connect("key-pressed", (_c: Gtk.EventControllerKey, keyval: number) => {
-                    if (keyval === Gdk.KEY_Escape) {
-                        if (query) { query = ""; searchWidget?.set_text(""); render() }
-                        else self.visible = false
-                    }
+                    if (keyval === Gdk.KEY_Escape) self.visible = false
                     return false
                 })
                 self.add_controller(keyController)
