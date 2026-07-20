@@ -13,7 +13,10 @@ export default function SettingRow(p: SettingRowProps): Gtk.Widget {
     const row = new Gtk.Box({ cssClasses: ["setting-row"], spacing: 12 })
 
     const plate = new Gtk.Box({ cssClasses: ["row-icon"], valign: Gtk.Align.CENTER })
-    plate.append(new Gtk.Image({ iconName: p.icon }))
+    plate.append(new Gtk.Image({
+        iconName: p.icon, hexpand: true, vexpand: true,
+        halign: Gtk.Align.CENTER, valign: Gtk.Align.CENTER,
+    }))
     row.append(plate)
 
     const text = new Gtk.Box({
