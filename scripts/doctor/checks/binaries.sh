@@ -141,7 +141,58 @@ _bin_check_command() {
         # Leading whitespace would otherwise become the first field.
         read -r first _ <<< "$segment"
         _bin_check_token "$first" "$origin"
+        _bin_check_systemd_unit "$segment" "$origin"
     done < <(printf '%s\n' "$raw" | sed 's/&&/\n/g; s/||/\n/g; s/[|;]/\n/g')
+}
+
+# _bin_unit_exists <unit> -> 0 when systemd knows that user unit.
+# Its own function so tests can stub it; the real answer is host-specific.
+_bin_unit_exists() {
+    command -v systemctl >/dev/null 2>&1 || return 0
+    systemctl --user cat "$1" >/dev/null 2>&1
+}
+
+# _bin_check_systemd_unit <command-segment> <origin-file>
+#
+# `systemctl --user start foo.service` passes the binary check trivially —
+# systemctl is always installed — so without this the unit name is unchecked
+# and a typo fails silently on every login. That is exactly the failure this
+# module exists to catch: it is how `exec-once = $polkitAgent` went unnoticed,
+# and routing that fix through systemctl would otherwise have blinded the
+# check that found it.
+_bin_check_systemd_unit() {
+    local segment="$1" origin="$2" unit=""
+
+    case "$segment" in
+        systemctl*' --user '*) ;;
+        *) return 0 ;;
+    esac
+
+    # Last whitespace-delimited field, which is the unit for the start/restart/
+    # enable forms this repo uses. Anything else is left alone.
+    case "$segment" in
+        *' start '*|*' restart '*|*' enable '*) unit="${segment##* }" ;;
+        *) return 0 ;;
+    esac
+
+    [ -n "$unit" ] || return 0
+    case "$unit" in
+        -*) return 0 ;;   # a flag, not a unit
+    esac
+
+    # The unit is usually reached through a Hyprland variable — this repo
+    # writes `systemctl --user start $polkitAgent` — so resolve it the same
+    # way the binary check does. Skipping `$…` tokens here would silently
+    # exempt precisely the line this check was added for.
+    if [ "${unit:0:1}" = '$' ]; then
+        unit="$(_bin_resolve_var "${unit#\$}")"
+        [ -n "$unit" ] || return 0   # undefined: already reported as a token
+    fi
+
+    if ! _bin_unit_exists "$unit"; then
+        warn "$origin starts the systemd user unit '$unit', which systemd does not know" \
+             "systemctl --user list-unit-files | grep $(doctor_q "${unit%%.*}")"
+    fi
 }
 
 # _bin_scan <file-relative-to-root> <sed-extraction-expression>
