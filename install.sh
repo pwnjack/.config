@@ -75,7 +75,7 @@ echo -e "${NC}"
 # Check if running on Arch-based system
 if [ ! -f /etc/arch-release ]; then
     warning "This script is designed for Arch-based systems"
-    read -p "Continue anyway? (y/N) " -n 1 -r
+    read -p "Continue anyway? (y/N) " -n 1 -r || true
     echo
     [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
 fi
@@ -106,7 +106,7 @@ PACKAGES=(
     "brightnessctl" "pavucontrol" "blueman" "nm-connection-editor"
     "gnome-calculator"
     # Script dependencies
-    "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat"
+    "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
     # Fonts (configs default to FiraCode Nerd Font)
     "ttf-firacode-nerd" "ttf-cascadia-mono-nerd" "ttf-nerd-fonts-symbols"
     "noto-fonts" "noto-fonts-emoji"
@@ -137,7 +137,7 @@ done
 
 if [ ${#MISSING_PACMAN[@]} -gt 0 ]; then
     warning "Missing packages: ${MISSING_PACMAN[*]}"
-    read -p "Install missing packages? (y/N) " -n 1 -r
+    read -p "Install missing packages? (y/N) " -n 1 -r || true
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         execute sudo pacman -S --needed "${MISSING_PACMAN[@]}"
@@ -161,7 +161,7 @@ done
 if [ ${#STILL_MISSING_AUR[@]} -gt 0 ]; then
     warning "Missing AUR packages: ${STILL_MISSING_AUR[*]}"
     if command -v paru &> /dev/null || command -v yay &> /dev/null; then
-        read -p "Install missing AUR packages? (y/N) " -n 1 -r
+        read -p "Install missing AUR packages? (y/N) " -n 1 -r || true
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             AUR_HELPER=$(command -v paru || command -v yay)
@@ -288,6 +288,17 @@ if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
 fi
 
 # ------------------------------------------------------------------
+# Git hooks
+# ------------------------------------------------------------------
+# Tracked hooks live in scripts/hooks and are activated by pointing git at
+# them, so they update with a pull instead of rotting in .git/hooks.
+if [ -d "$CONFIG_DIR/.git" ]; then
+    info "Activating tracked git hooks..."
+    execute git -C "$CONFIG_DIR" config core.hooksPath scripts/hooks
+    success "Pre-commit gate active (shellcheck + doctor tests + ags bundle)"
+fi
+
+# ------------------------------------------------------------------
 # Final wiring
 # ------------------------------------------------------------------
 info "Making scripts executable..."
@@ -308,7 +319,7 @@ fi
 # Set fish as default shell
 if check_dependency "fish"; then
     if [ "$SHELL" != "$(which fish)" ]; then
-        read -p "Set fish as default shell? (y/N) " -n 1 -r
+        read -p "Set fish as default shell? (y/N) " -n 1 -r || true
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             execute chsh -s "$(which fish)"
