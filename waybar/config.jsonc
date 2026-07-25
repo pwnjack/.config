@@ -55,7 +55,11 @@
       "empty": "○",
     },
     "persistent-workspaces": {
-      "*": 5,
+      // Explicit IDs, never a bare count. Waybar reads `"*": 5` as five
+      // workspaces *in addition to* the ones that already exist, so the bar
+      // grew to eight buttons as soon as three workspaces were in use. A list
+      // pins exactly which IDs are always shown.
+      "*": [1, 2, 3, 4, 5],
     },
   },
 
