@@ -62,7 +62,20 @@ hypr/config/
 
 ### Pywal Color Flow
 
-Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. Generated state lives under `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/ghostty-colors`, `wal/thunar-gtk.css`, `waypaper-config.ini`); the repo tracks only symlinks to it, so wallpaper switches never dirty git.
+Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. Generated state lives under `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/ghostty-colors`, `wal/thunar-gtk.css`, `wal/cava-config`, `wal/btop.theme`, `wal/starship.toml`, `waypaper-config.ini`); the repo tracks only symlinks to it, so wallpaper switches never dirty git.
+
+Components that need more than a plain include own a `<component>/apply_wal_colors.sh`. `scripts/theming/apply-wal.sh` is the driver: it **globs** for those scripts rather than listing them, so adding a themed component is one new file — no edit to the driver, to `wall.sh`, or to `install.sh`. Both of those call the driver and name no component.
+
+Every `apply_wal_colors.sh` must:
+
+1. Render into `~/.cache/wal/` and never write a tracked file.
+2. **Always leave its output existing**, falling back to defaults when the pywal input is missing. The repo tracks a symlink to that output, and a dangling tracked symlink is an ERROR in `doctor.sh` — on a fresh checkout the cache is empty.
+3. Be idempotent, and a no-op when its component is not installed.
+4. Reload its own running consumer if that is possible. The driver knows nothing about `swaync-client` or `SIGUSR2`.
+
+`scripts/theming/palette.sh` is the shared loader: `wal_load` fills a `wal` array from `~/.cache/wal/colors` (with a built-in fallback palette), and `wal_readable_on <hex>` returns whichever of the darkest/lightest palette entries stays legible on that background. Use it rather than re-parsing pywal output — a wallpaper palette gives no contrast guarantees, so any fixed text color is unreadable on some wallpapers.
+
+Two components are templated (`<component>/<name>.in` -> rendered to cache -> tracked file is a symlink) because neither program has an include mechanism: **cava** and **starship**. Edit the `.in` file, never the symlink. cava is templated rather than using its native `theme =` support because cava 0.10.7 corrupts the heap on any vertical `gradient`, theme file or not — `horizontal_gradient` is the working path. **btop** uses its native theme directory instead, and **fastfetch** needs nothing: its `keyColor` values and the distro logo are ANSI indices, which the terminal already resolves to the pywal palette.
 
 ### User Preferences (`options/`)
 
@@ -74,6 +87,7 @@ Simple text files (one value per file) that scripts read at runtime: `browser`, 
 - `waybar/` — Bar management and toggling
 - `settings/` — Config utilities, updates, monitor detection
 - `fonts/` — Font application automation
+- `theming/` — Pywal fan-out driver (`apply-wal.sh`) and the shared palette loader (`palette.sh`)
 
 All scripts are bash. They check for command existence before running and read preferences from `options/`.
 

@@ -97,7 +97,7 @@ PACKAGES=(
     # Terminals, shell, editors
     "ghostty" "fish" "starship" "neovim" "zed" "kwrite"
     # File managers and system tools
-    "thunar" "yazi" "btop" "bottom" "resources" "fastfetch"
+    "thunar" "yazi" "btop" "bottom" "resources" "fastfetch" "cava"
     # Clipboard, screenshots, media
     "cliphist" "wl-clipboard" "playerctl"
     # Theming
@@ -182,8 +182,9 @@ if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
 
     CONFIGS_TO_BACKUP=(
         "hypr" "waybar" "swaync" "rofi"
-        "fish" "ghostty" "nvim" "btop" "gtk-3.0" "gtk-4.0"
-        "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list" "starship.toml"
+        "fish" "ghostty" "nvim" "btop" "cava" "gtk-3.0" "gtk-4.0"
+        "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list"
+        "fastfetch" "starship" "starship.toml"
     )
 
     for config in "${CONFIGS_TO_BACKUP[@]}"; do
@@ -245,9 +246,12 @@ else
     warning "Could not initialize pywal - run 'wal -i /path/to/wallpaper' manually later"
 fi
 
-# Pywal symlink for Hyprland colors
+# Pywal symlink for Hyprland colors.
+# The target is relative on purpose. An absolute one bakes this machine's home
+# path into a tracked file, which doctor.sh reports as a portability warning
+# and which breaks the moment the repo is checked out under a different user.
 info "Setting up pywal integration..."
-execute ln -sfn "$HOME/.cache/wal/colors-hyprland.conf" "$CONFIG_DIR/hypr/config/colors.conf"
+execute ln -sfn "../../../.cache/wal/colors-hyprland.conf" "$CONFIG_DIR/hypr/config/colors.conf"
 if [ -f "$HOME/.cache/wal/colors-hyprland.conf" ]; then
     success "Pywal symlink created"
 else
@@ -265,17 +269,11 @@ if [ -n "$FIRST_WALLPAPER" ]; then
     success "Wallpaper state initialized"
 fi
 
-# Render ghostty + thunar colors (cache-backed, included from tracked configs)
-if [ -f "$HOME/.cache/wal/colors-ghostty" ]; then
-    execute "$CONFIG_DIR/ghostty/apply_wal_colors.sh"
-else
-    execute touch "$HOME/.cache/wal/ghostty-colors"
-fi
-if [ -f "$HOME/.cache/wal/colors-waybar.css" ]; then
-    execute "$CONFIG_DIR/Thunar/apply_wal_colors.sh"
-else
-    execute touch "$HOME/.cache/wal/thunar-gtk.css"
-fi
+# Render every themed component's colors (cache-backed, reached from tracked
+# configs by symlink or include). The driver globs for the per-component
+# scripts, and each one produces its output even when pywal has not run, so
+# no component needs a fallback here.
+execute "$CONFIG_DIR/scripts/theming/apply-wal.sh"
 
 # Seed waypaper config
 if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then

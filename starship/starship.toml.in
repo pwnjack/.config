@@ -1,0 +1,155 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# THIS IS THE TEMPLATE. Edit this file, not ~/.config/starship.toml — that one
+# is a symlink to the copy rendered into ~/.cache/wal/ by
+# starship/apply_wal_colors.sh.
+#
+# @colorN@ is pywal's colorN. @oncolorN@ is whichever of the palette's darkest
+# and lightest colors stays legible as text on @colorN@, decided per wallpaper:
+# a palette can put color1 near black on one image and near white on the next,
+# so a fixed text color would be unreadable half the time.
+#
+# The powerline ramp runs color1 -> color6. pywal orders those by ascending
+# lightness, so the segments gradate left to right on their own.
+
+add_newline = true
+
+format = """
+[ ](@color1@)\
+$python\
+$username\
+[](bg:@color2@ fg:@color1@)\
+$directory\
+[](fg:@color2@ bg:@color3@)\
+$git_branch\
+$git_status\
+[](fg:@color3@ bg:@color4@)\
+$c\
+$elixir\
+$elm\
+$golang\
+$haskell\
+$java\
+$julia\
+$nodejs\
+$nim\
+$rust\
+[](fg:@color4@ bg:@color5@)\
+$docker_context\
+[](fg:@color5@ bg:@color6@)\
+$os\
+[ ](@color6@)\
+"""
+
+right_format = """
+[ ](@color6@)\
+$time
+[ ](@color6@)\
+"""
+
+command_timeout = 500
+
+[username]
+show_always = true
+style_user = "bg:@color1@ fg:@oncolor1@"
+style_root = "bg:@color1@ fg:@oncolor1@"
+format = '[$user ]($style)'
+
+[directory]
+style = "bg:@color2@ fg:@oncolor2@"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[directory.substitutions]
+"Documents" = "󰈙 "
+"Downloads" = " "
+"Music" = " "
+"Pictures" = " "
+
+[c]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[docker_context]
+symbol = " "
+style = "bg:@color5@ fg:@oncolor5@"
+format = '[ $symbol $context ]($style) $path'
+
+[elixir]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[elm]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[git_branch]
+symbol = ""
+style = "bg:@color3@ fg:@oncolor3@"
+format = '[ $symbol $branch ]($style)'
+
+[git_status]
+style = "bg:@color3@ fg:@oncolor3@"
+format = '[$all_status$ahead_behind ]($style)'
+
+[golang]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[haskell]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[java]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[julia]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[nodejs]
+symbol = ""
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[nim]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[python]
+symbol = " "
+# color1, not the language color the other runtimes use: $python sits in the
+# first block of `format`, ahead of $username, so it has to match that block's
+# background or an active virtualenv punches a mismatched chunk into it.
+style = "bg:@color1@ fg:@oncolor1@"
+format = '[(\($virtualenv\) )]($style)'
+
+[rust]
+symbol = " "
+style = "bg:@color4@ fg:@oncolor4@"
+format = '[ $symbol ($version) ]($style)'
+
+[time]
+disabled = false
+time_format = "%R"
+style = 'fg:@oncolor6@ bg:@color6@'
+format = '[ $time ]($style)'
+
+[os]
+format = "[ $symbol ($type )]($style)"
+style = 'fg:@oncolor6@ bg:@color6@'
+disabled = false
+
+[os.symbols]
+Arch = "󰣇"
+Fedora = ""

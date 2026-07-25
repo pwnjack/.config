@@ -5,16 +5,15 @@
 wal_css="$HOME/.cache/wal/colors-waybar.css"
 thunar_css="$HOME/.cache/wal/thunar-gtk.css"
 
-# If wal colors are not available, do nothing
-if [[ ! -f "$wal_css" ]]; then
-    exit 0
-fi
-
+# A missing input is not an early exit: gtk-3.0/thunar-colors.css is a tracked
+# symlink to the output, and a tracked symlink with no target is an ERROR in
+# doctor.sh. The greps below simply come back empty and the fallbacks apply.
+#
 # Extract colors from wal's waybar css
-bg=$(grep -m1 "@define-color background" "$wal_css" | awk '{print $3}' | tr -d ';')
-fg=$(grep -m1 "@define-color foreground" "$wal_css" | awk '{print $3}' | tr -d ';')
-sel=$(grep -m1 "@define-color color5" "$wal_css" | awk '{print $3}' | tr -d ';')
-rb=$(grep -m1 "@define-color color1" "$wal_css" | awk '{print $3}' | tr -d ';')
+bg=$(grep -m1 "@define-color background" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
+fg=$(grep -m1 "@define-color foreground" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
+sel=$(grep -m1 "@define-color color5" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
+rb=$(grep -m1 "@define-color color1" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
 
 # Fallbacks in case parsing failed
 bg=${bg:-#05090C}
