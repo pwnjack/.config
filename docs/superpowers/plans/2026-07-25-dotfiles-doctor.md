@@ -66,7 +66,7 @@ Narrowed rule, implemented in Task 5: for the single-owner DBus role `org.freede
 - [ ] `run-tests.sh` exits 0 when all assertions pass, 1 when any fails
 - [ ] `shellcheck -S warning` passes on all three files
 
-**Verify:** `./scripts/doctor/test/run-tests.sh` → `3 files, N assertions, 0 failures`, exit 0
+**Verify:** `./scripts/doctor/test/run-tests.sh` → `1 files, 13 assertions, 0 failures`, exit 0 (only `test-lib.sh` exists at this point; later tasks each add one file)
 
 **Steps:**
 
