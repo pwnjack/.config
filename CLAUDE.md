@@ -100,6 +100,7 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Config is Arch/CachyOS-specific — package management uses `pacman` and `paru`/`yay` for AUR.
 - Keybindings follow a macOS-inspired layout (Super key as primary modifier).
 - `.gitignore` is aggressive (~318 lines) — only essential Hyprland/shell/utility configs are tracked. Application data directories (Obsidian, game launchers, Electron apps, etc.) are excluded.
+- `rofi/keybinds-cheatsheet.sh` (Super+H) renders itself from `keybinds.conf` at runtime — never hand-edit the rows. A binding's trailing `#` comment is its label (`$vars` inside are resolved); without one the label comes from the dispatcher. Preview with `./rofi/keybinds-cheatsheet.sh --print`.
 - `doctor.sh` and its check modules derive every target from tracked files. When adding a check, never introduce a hand-written list of paths, binaries, or packages — parse the config that already declares them. A list is a second source of truth and will drift.
 - Check modules must never run their loops in a pipeline (`cmd | while read`); the severity counters are shell variables and would be lost in the subshell, silently discarding every finding. Use `while read ...; do ... done < <(cmd)`. The test harness greps for this and fails the suite.
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.

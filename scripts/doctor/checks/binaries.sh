@@ -42,35 +42,19 @@
 #     invoked only from inside `$( … )` is not checked.
 #
 
+# Sourced here rather than from doctor.sh because the test suite sources this
+# module directly, without the entry point.
+# shellcheck source=../../lib/hypr-vars.sh
+source "${BASH_SOURCE[0]%/*}/../../lib/hypr-vars.sh"
+
 # Names already reported this run, space-delimited and space-padded.
 _BIN_SEEN=""
 
 # _bin_resolve_var <name> -> value, or empty when undefined.
-# Mirrors how Hyprland resolves the variables used in keybinds.conf.
+# The rules live in scripts/lib/hypr-vars.sh, shared with the keybinds
+# cheatsheet, which resolves the same variables for display.
 _bin_resolve_var() {
-    local name="$1" value=""
-
-    case "$name" in
-        terminal|browser)
-            if [ -f "$DOCTOR_ROOT/options/$name" ]; then
-                value="$(head -n1 "$DOCTOR_ROOT/options/$name")"
-            fi
-            ;;
-        *)
-            if [ -f "$DOCTOR_ROOT/hypr/config/apptype.conf" ]; then
-                # [$] is a character class matching a literal $, which keeps
-                # the expression readable and unambiguous to shellcheck.
-                value="$(sed -n "s/^[\$]${name}[[:space:]]*=[[:space:]]*//p" \
-                    "$DOCTOR_ROOT/hypr/config/apptype.conf" | head -n1)"
-                value="${value%%#*}"
-            fi
-            ;;
-    esac
-
-    # Trim surrounding whitespace.
-    value="${value#"${value%%[![:space:]]*}"}"
-    value="${value%"${value##*[![:space:]]}"}"
-    printf '%s' "$value"
+    hypr_resolve_var "$1" "$DOCTOR_ROOT"
 }
 
 # _bin_check_token <token> <origin-file>
