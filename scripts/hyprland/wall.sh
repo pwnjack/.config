@@ -33,7 +33,6 @@ sleep 0.5
 for script in \
     "$HOME/.config/ghostty/apply_wal_colors.sh" \
     "$HOME/.config/Thunar/apply_wal_colors.sh" \
-    "$HOME/.config/mako/apply_wal_colors.sh" \
     "$HOME/.config/swaync/apply_wal_colors.sh" \
     "$HOME/.config/scripts/waybar/waybar.sh"; do
     [ -x "$script" ] && "$script" &

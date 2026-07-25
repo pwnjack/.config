@@ -18,9 +18,6 @@
 
   // Modules Center
   "modules-center": [
-    // "custom/appmenu",
-    // "custom/wallpaper",
-    //"custom/nightlight",
     "hyprland/workspaces",
     "clock",
     "custom/weather",
@@ -98,40 +95,11 @@
     },
   },
 
-  // Wallpaper
-  "custom/wallpaper": {
-    "format": "",
-    "on-click": "waypaper",
-    "on-click-right": "waypaper --random",
-    "tooltip-format": "Change wallpaper",
-  },
-
-  // Night Light
-  "custom/nightlight": {
-    "format": "󰃟",
-    "on-click": "pgrep hyprsunset && { pkill hyprsunset; notify-send -i night-light-disabled-symbolic -e 'Night Light Disabled'; } || { hyprsunset -t 4800 & notify-send -i night-light-symbolic -e 'Night Light Enabled'; }",
-    "tooltip-format": "Night Light",
-  },
-
-  // Color Picker
-  "custom/hyprpicker": {
-    "format": "",
-    "on-click": "color=$(hyprpicker 2>/dev/null) && echo -n $color | wl-copy && notify-send -i color-select-symbolic 'Color copied to clipboard!' $color",
-    "tooltip-format": "Color Picker",
-  },
-
   // Settings
   "custom/settings": {
     "format": "󰢻",
     "on-click": "astal -i settings-panel --toggle-window settings-panel",
     "tooltip-format": "Settings",
-  },
-
-  // Rofi Application Launcher
-  "custom/appmenu": {
-    "format": "",
-    "on-click": "~/.config/rofi/launcher.sh",
-    "tooltip-format": "Open App Launcher",
   },
 
   // System tray

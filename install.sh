@@ -99,7 +99,7 @@ PACKAGES=(
     # File managers and system tools
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch"
     # Clipboard, screenshots, media
-    "cliphist" "wl-clipboard" "flameshot" "playerctl"
+    "cliphist" "wl-clipboard" "playerctl"
     # Theming
     "python-pywal" "qt5ct" "qt6ct" "nwg-look"
     # Applets and controls
@@ -181,7 +181,7 @@ if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
     execute mkdir -p "$BACKUP_DIR"
 
     CONFIGS_TO_BACKUP=(
-        "hypr" "waybar" "swaync" "rofi" "mako"
+        "hypr" "waybar" "swaync" "rofi"
         "fish" "ghostty" "nvim" "btop" "gtk-3.0" "gtk-4.0"
         "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list" "starship.toml"
     )
@@ -265,11 +265,6 @@ if [ -n "$FIRST_WALLPAPER" ]; then
     success "Wallpaper state initialized"
 fi
 
-# Render mako config from the pywal palette (wal ran above)
-if [ -f "$HOME/.cache/wal/colors.sh" ]; then
-    execute "$CONFIG_DIR/mako/apply_wal_colors.sh"
-fi
-
 # Render ghostty + thunar colors (cache-backed, included from tracked configs)
 if [ -f "$HOME/.cache/wal/colors-ghostty" ]; then
     execute "$CONFIG_DIR/ghostty/apply_wal_colors.sh"
@@ -305,7 +300,7 @@ info "Making scripts executable..."
 if [ "$DRY_RUN" = false ]; then
     find "$CONFIG_DIR/scripts" "$CONFIG_DIR/rofi" "$CONFIG_DIR/swaync" \
          "$CONFIG_DIR/waybar" "$CONFIG_DIR/sddm" "$CONFIG_DIR/ghostty" \
-         "$CONFIG_DIR/mako" "$CONFIG_DIR/Thunar" \
+         "$CONFIG_DIR/Thunar" \
          -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 fi
 success "Scripts are executable"
