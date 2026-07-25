@@ -3,13 +3,22 @@
 # Sourced fragment, never executed directly, so it carries no shebang; the
 # directive below tells shellcheck which shell to assume (SC2148).
 # shellcheck shell=bash
+#
+# Checks are run ONCE, redirected to a file under $DOCTOR_TEST_TMP, and the
+# output is read back. `out="$(check_x)"` would run the check in a subshell and
+# discard its severity counters, forcing a second run to observe them — so the
+# asserted text and the asserted counts would come from different executions.
 
 # shellcheck source=/dev/null
 source "$DOCTOR_DIR/lib.sh"
 # shellcheck source=/dev/null
 source "$DOCTOR_DIR/checks/symlinks.sh"
 
-sym_saved_root="$DOCTOR_ROOT"
+# Assigned throughout this file but read only by the check sourced above — a
+# cross-file use that SC2034 cannot see. Declare it external.
+export DOCTOR_ROOT
+
+sym_out_file="$DOCTOR_TEST_TMP/symlinks.out"
 
 # --- a repo containing every symlink state the check classifies ---
 sym_fixture="$(make_fixture)"
@@ -23,8 +32,13 @@ ln -s "../target-dir/real-file" "$sym_fixture/sub/good-relative"
 ln -s "../target-dir" "$sym_fixture/sub/good-dir-link"
 # error: relative target does not exist
 ln -s "../target-dir/nonexistent" "$sym_fixture/sub/relative-dangling"
-# error: absolute AND dangling — reported as dangling, not as non-portable
+# error: absolute AND broken — reported as unresolvable, not as non-portable
 ln -s "/home/someone/nowhere/missing-file" "$sym_fixture/sub/absolute-dangling"
+# error: a path with a space, so the fix hint has to be shell-quoted
+ln -s "../target-dir/nonexistent" "$sym_fixture/sub/spaced dangling"
+# error: a symlink loop. -e fails on it exactly as it does on a missing target
+ln -s "loop-b" "$sym_fixture/sub/loop-a"
+ln -s "loop-a" "$sym_fixture/sub/loop-b"
 # warn: absolute but resolving. The fixture lives under $TMPDIR, so this is the
 # general "absolute target" case rather than a literal /home/... one.
 ln -s "$sym_fixture/target-dir/real-file" "$sym_fixture/sub/absolute-resolving"
@@ -43,32 +57,57 @@ echo "not a link" > "$sym_fixture/sub/clobbered-by-file"
 rm "$sym_fixture/sub/deleted-entirely"
 
 DOCTOR_ROOT="$sym_fixture"
-
 doctor_reset
-sym_out="$(check_symlinks 2>&1)"
-# The call above ran in a command substitution, so its increments were lost
-# with the subshell. Re-run in this shell to observe the counters.
-doctor_reset
-check_symlinks >/dev/null 2>&1
+check_symlinks > "$sym_out_file" 2>&1
+sym_out="$(<"$sym_out_file")"
 
-assert_contains "$sym_out" "relative-dangling" "dangling relative symlink is reported"
-assert_contains "$sym_out" "ERROR" "dangling symlink is ERROR severity"
-assert_contains "$sym_out" "absolute-dangling" "dangling absolute symlink is reported"
+assert_contains "$sym_out" "relative-dangling" "unresolvable relative symlink is reported"
+assert_contains "$sym_out" "ERROR" "unresolvable symlink is ERROR severity"
+assert_contains "$sym_out" "absolute-dangling" "unresolvable absolute symlink is reported"
 assert_contains "$sym_out" "absolute-resolving" "absolute-but-resolving symlink is reported"
 assert_contains "$sym_out" "WARN" "absolute symlink is WARN severity"
 assert_contains "$sym_out" "clobbered-by-file" "symlink replaced by a regular file is reported"
 assert_contains "$sym_out" "deleted-entirely" "symlink missing from the working tree is reported"
 assert_not_contains "$sym_out" "good-relative" "healthy relative symlink produces no finding"
 assert_not_contains "$sym_out" "good-dir-link" "healthy symlink to a directory produces no finding"
-assert_contains "$sym_out" "2 of 7 tracked symlinks" "ok line reports the healthy count"
+
+# A loop is broken, but it is not missing — "dangling" would send the reader
+# hunting for a target that is sitting right there.
+assert_contains "$sym_out" "sub/loop-a → loop-b (does not resolve)" "symlink loop is not called dangling"
+assert_not_contains "$sym_out" "dangling)" "no finding uses the word dangling"
 
 # absolute-dangling is both absolute and broken; the if/elif reports it as
-# dangling only, so it lands in the error tally rather than the warning one.
-assert_eq "$DOCTOR_ERRORS" "4" "dangling, clobbered and missing symlinks counted as errors"
+# unresolvable only, so it lands in the error tally rather than the warning one.
+assert_eq "$DOCTOR_ERRORS" "7" "unresolvable, clobbered and missing symlinks counted as errors"
 assert_eq "$DOCTOR_WARNINGS" "1" "one absolute resolving symlink counted as warning"
 
-# The fix hint for a non-portable link is the relative target to use instead.
-assert_contains "$sym_out" "../target-dir/real-file" "non-portable link is given a relative fix"
+# --- every fix hint is copy-pasteable ---
+# One assertion per hint: the quoting bug survived review because only the
+# non-portable hint was ever asserted.
+assert_contains "$sym_out" "ln -sfn ../target-dir/real-file $sym_fixture/sub/absolute-resolving" \
+    "non-portable hint gives the relative target to use"
+assert_contains "$sym_out" "ln -sfn NEW_TARGET $sym_fixture/sub/relative-dangling" \
+    "unresolvable hint uses a placeholder that is not shell syntax"
+assert_not_contains "$sym_out" "<correct-target>" "no hint contains what a shell reads as a redirection"
+assert_contains "$sym_out" "cp -a $sym_fixture/sub/clobbered-by-file $sym_fixture/sub/clobbered-by-file.bak && git -C $sym_fixture checkout -- sub/clobbered-by-file" \
+    "clobbered hint backs the file up before checkout discards it"
+assert_contains "$sym_out" "git -C $sym_fixture checkout -- sub/deleted-entirely" \
+    "missing hint restores the link from the index"
+# The bug this catches: an unquoted path with a space is two arguments to ln.
+assert_contains "$sym_out" "ln -sfn NEW_TARGET $sym_fixture/sub/spaced\\ dangling" \
+    "hint shell-quotes a path containing a space"
+
+# --- the relative-target suggestion degrades gracefully ---
+# Shadow realpath so the ${relative:-NEW_TARGET} fallback is exercised; the
+# check runs in this shell, so a function definition shadows the binary.
+realpath() { return 1; }
+doctor_reset
+check_symlinks > "$sym_out_file" 2>&1
+sym_norealpath_out="$(<"$sym_out_file")"
+unset -f realpath
+assert_contains "$sym_norealpath_out" "ln -sfn NEW_TARGET $sym_fixture/sub/absolute-resolving" \
+    "non-portable hint falls back to a placeholder when realpath fails"
+assert_eq "$DOCTOR_WARNINGS" "1" "realpath failure does not change the classification"
 
 # --- a /home/... target is WARN, matching the live rofi/colors.rasi finding ---
 # Needs a real existing path under /home to resolve; if this machine has no
@@ -89,9 +128,8 @@ if [ -n "$sym_home_target" ]; then
 
     DOCTOR_ROOT="$sym_home_fixture"
     doctor_reset
-    sym_home_out="$(check_symlinks 2>&1)"
-    doctor_reset
-    check_symlinks >/dev/null 2>&1
+    check_symlinks > "$sym_out_file" 2>&1
+    sym_home_out="$(<"$sym_out_file")"
 
     assert_contains "$sym_home_out" "home-absolute" "symlink into /home is reported"
     assert_contains "$sym_home_out" "WARN" "symlink into /home is WARN severity"
@@ -102,7 +140,7 @@ fi
 # --- paths git would C-quote must still be read back verbatim ---
 # `git ls-files -s` renders a path containing a quote or a non-ASCII byte as a
 # C-style quoted string, which no longer names a file on disk. Reading the list
-# NUL-delimited avoids that; without it these two links look dangling.
+# NUL-delimited avoids that; without it these two links look unresolvable.
 sym_quote_fixture="$(make_fixture)"
 echo "real" > "$sym_quote_fixture/real-file"
 ln -s "real-file" "$sym_quote_fixture/spaced link"
@@ -112,14 +150,21 @@ git -C "$sym_quote_fixture" commit -qm "fixture"
 
 DOCTOR_ROOT="$sym_quote_fixture"
 doctor_reset
-sym_quote_out="$(check_symlinks 2>&1)"
-doctor_reset
-check_symlinks >/dev/null 2>&1
+check_symlinks > "$sym_out_file" 2>&1
+sym_quote_out="$(<"$sym_out_file")"
 
-assert_contains "$sym_quote_out" "2 of 2 tracked symlinks" "quoted-path symlinks read back as healthy"
-assert_eq "$DOCTOR_ERRORS" "0" "quoted paths are not mistaken for dangling links"
+assert_contains "$sym_quote_out" "all 2 tracked symlinks" "quoted-path symlinks read back as healthy"
+assert_eq "$DOCTOR_ERRORS" "0" "quoted paths are not mistaken for broken links"
+
+# --- the all-clear line is reserved for an actually clear result ---
+# A green tick over "0 of 2 healthy" is the one line a skim-reader would
+# misread, so the ok line appears only when nothing is wrong.
+assert_contains "$sym_quote_out" "✓" "all-healthy repo gets the green tick"
+assert_not_contains "$sym_out" "✓" "repo with broken symlinks gets no green tick"
 
 # --- a repo with no tracked symlinks at all ---
+# Not a warning: whether zero symlinks is suspicious depends on the repo, and
+# doctor_require_repo has already ruled out the "not a repository" cause.
 sym_bare_fixture="$(make_fixture)"
 echo "plain" > "$sym_bare_fixture/regular-file"
 git -C "$sym_bare_fixture" add -A
@@ -127,19 +172,10 @@ git -C "$sym_bare_fixture" commit -qm "fixture"
 
 DOCTOR_ROOT="$sym_bare_fixture"
 doctor_reset
-sym_bare_out="$(check_symlinks 2>&1)"
-doctor_reset
-check_symlinks >/dev/null 2>&1
+check_symlinks > "$sym_out_file" 2>&1
+sym_bare_out="$(<"$sym_out_file")"
 
-assert_contains "$sym_bare_out" "no tracked symlinks found" "repo without symlinks warns"
-assert_not_contains "$sym_bare_out" "tracked symlinks are healthy" "no ok line without symlinks"
-assert_eq "$DOCTOR_WARNINGS" "1" "empty symlink list counted as a warning"
-
-# --- a DOCTOR_ROOT that is not a git repository ---
-DOCTOR_ROOT="$sym_saved_root"
-doctor_reset
-sym_nogit_out="$(check_symlinks 2>&1)"
-assert_contains "$sym_nogit_out" "no tracked symlinks found" "non-repo root warns instead of crashing"
-assert_not_contains "$sym_nogit_out" "fatal" "git's own error is not leaked to the report"
-
-DOCTOR_ROOT="$sym_saved_root"
+assert_contains "$sym_bare_out" "no tracked symlinks found" "repo without symlinks says so"
+assert_not_contains "$sym_bare_out" "tracked symlinks are healthy" "no all-clear line without symlinks"
+assert_eq "$DOCTOR_NOTICES" "1" "empty symlink list is a notice, not a warning"
+assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" "empty symlink list is not an error or warning"

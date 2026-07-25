@@ -7,6 +7,10 @@
 # shellcheck source=/dev/null
 source "$DOCTOR_DIR/lib.sh"
 
+# Assigned below but read only by the library sourced above — a cross-file use
+# that SC2034 cannot see. Declare it external.
+export DOCTOR_ROOT
+
 # --- severity counters ---
 doctor_reset
 out="$(err "broken thing" "run the fix" 2>&1)"
@@ -94,3 +98,31 @@ assert_eq "$(env -u DOCTOR_ROOT bash -c 'source "$DOCTOR_DIR/lib.sh"; printf %s 
     "$HOME/.config" "DOCTOR_ROOT defaults to ~/.config"
 assert_eq "$(DOCTOR_ROOT=/tmp/fake bash -c 'source "$DOCTOR_DIR/lib.sh"; printf %s "$DOCTOR_ROOT"')" \
     "/tmp/fake" "DOCTOR_ROOT honours the environment"
+
+# --- doctor_q: fix hints stay copy-pasteable ---
+# An unquoted path with a space silently becomes two arguments to whatever the
+# hint tells the user to run, so every path in a hint goes through this.
+assert_eq "$(doctor_q "/plain/path")" "/plain/path" "doctor_q leaves an ordinary path alone"
+assert_eq "$(doctor_q "/has a space")" '/has\ a\ space' "doctor_q escapes spaces"
+assert_eq "$(doctor_q 'a;rm -rf b')" 'a\;rm\ -rf\ b' "doctor_q escapes shell metacharacters"
+
+# --- doctor_require_repo ---
+# Every check derives its targets from git, so doctor.sh establishes this once
+# up front rather than each module rediscovering it.
+doctor_reset
+lib_repo_fixture="$(make_fixture)"
+DOCTOR_ROOT="$lib_repo_fixture"
+doctor_require_repo >/dev/null 2>&1 && rc=0 || rc=$?
+assert_eq "$rc" "0" "doctor_require_repo accepts a git work tree"
+assert_eq "$DOCTOR_ERRORS" "0" "doctor_require_repo is silent on a valid repo"
+
+doctor_reset
+DOCTOR_ROOT="$TEST_DIR/nonexistent-default"
+out="$(doctor_require_repo 2>&1)" && rc=0 || rc=$?
+assert_eq "$rc" "1" "doctor_require_repo rejects a non-repository"
+assert_contains "$out" "is not a git repository" "doctor_require_repo explains the failure"
+assert_not_contains "$out" "fatal" "git's own error is not leaked into the report"
+# Same subshell caveat as the err cases above: re-run to observe the counter.
+doctor_require_repo >/dev/null 2>&1
+assert_eq "$DOCTOR_ERRORS" "1" "doctor_require_repo records an error"
+doctor_reset

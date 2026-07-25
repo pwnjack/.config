@@ -87,6 +87,19 @@ make_fixture() {
     printf '%s' "$dir"
 }
 
+# Scratch space for test files that need to capture a check's output WITHOUT a
+# command substitution: `out="$(check_x)"` runs the check in a subshell, so its
+# severity counters are lost and a second run is needed to observe them. Two
+# runs of a check that shells out to the system is both slow and racy, so tests
+# redirect to a file here and read it back instead. Swept with the fixtures.
+# Bail rather than let it be empty: a test redirecting to "$DOCTOR_TEST_TMP/x"
+# would then write to /x and fail in a way that looks like a check bug.
+DOCTOR_TEST_TMP="$(mktemp -d "$FIXTURE_PREFIX.scratch.XXXXXXXX")" || {
+    echo "could not create scratch dir"
+    exit 1
+}
+export DOCTOR_TEST_TMP
+
 cleanup_fixtures() {
     local f
     # An unmatched glob stays literal, and the -d test rejects it.
@@ -132,6 +145,11 @@ for test_file in "$TEST_DIR"/test-*.sh; do
     [ -e "$test_file" ] || continue
     FILES_RUN=$((FILES_RUN + 1))
     echo "▸ $(basename "$test_file")"
+    # Every file starts from the same safe default. Files are sourced into one
+    # shell in glob order, so without this a file that forgets to override
+    # DOCTOR_ROOT silently inherits the previous file's fixture — and a file
+    # that saves/restores it would save that stale value, not the default.
+    DOCTOR_ROOT="$TEST_DIR/nonexistent-default"
     # shellcheck source=/dev/null
     source "$test_file"
 done

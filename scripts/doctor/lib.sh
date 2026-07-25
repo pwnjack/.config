@@ -10,7 +10,11 @@
 #   The test harness greps check modules for this pattern and fails on it.
 #
 #   These names are reserved by this library — check modules must not redefine
-#   them: group ok err warn note summary doctor_reset _finding
+#   them: group ok err warn note summary doctor_reset doctor_q
+#   doctor_require_repo _finding
+#
+#   Any path interpolated into a fix hint must go through doctor_q, or the hint
+#   stops being copy-pasteable the moment a path contains a space.
 #
 #   Messages and fix hints are printed with printf %s, never echo -e, so paths,
 #   grep patterns and sed commands survive verbatim (a message containing \n or
@@ -69,6 +73,28 @@ warn() {
 note() {
     DOCTOR_NOTICES=$((DOCTOR_NOTICES + 1))
     _finding "${DOCTOR_DIM}· INFO ${DOCTOR_NC}" "$1" "${2:-}"
+}
+
+# doctor_q <string> — shell-quote a value for use inside a fix hint.
+# A no-op for ordinary paths; escapes anything a shell would otherwise split or
+# expand, so the hint can be pasted verbatim.
+doctor_q() {
+    printf '%q' "$1"
+}
+
+# Guards the assumption every check makes: that DOCTOR_ROOT is a git work tree,
+# since all target lists are derived from git rather than hand-written. Call it
+# once from doctor.sh before running any check — individual modules must not,
+# because "git returned nothing" is a normal result for most of them and only
+# this function can tell that apart from "not a repository".
+# Records an ERROR and returns 1 if the root is not a work tree.
+doctor_require_repo() {
+    if git -C "$DOCTOR_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        return 0
+    fi
+    err "$DOCTOR_ROOT is not a git repository — every check derives its targets from git" \
+        "clone the dotfiles repo to $(doctor_q "$DOCTOR_ROOT"), or set DOCTOR_ROOT to where it lives"
+    return 1
 }
 
 # Prints the tally. Returns 1 if any ERROR was recorded, else 0.
