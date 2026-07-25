@@ -144,6 +144,32 @@ bin_clean_out="$(cat "$bin_clean_file")"
 assert_contains "$bin_clean_out" "✓" "green tick when every binary resolves"
 assert_eq "$DOCTOR_WARNINGS" "0" "clean tree produces no warnings"
 
+# --- installed package that ships no PATH executable --------------------
+# Real case: hyprpolkitagent installs only /usr/lib/hyprpolkitagent/… and a
+# systemd unit, so `exec-once = hyprpolkitagent` fails silently every login.
+# The package lookup is stubbed because the true answer is machine-specific.
+_bin_package_installed() { [ "$1" = "absent-bin-qq" ]; }
+
+DOCTOR_ROOT="$bin_fixture"
+bin_pkg_file="$DOCTOR_TEST_TMP/bin-pkg"
+doctor_reset
+check_binaries > "$bin_pkg_file" 2>&1
+
+assert_contains "$(bin_line "$bin_pkg_file" "absent-bin-qq")" "ships no executable on PATH" \
+    "installed package with no PATH binary gets the accurate diagnosis"
+assert_contains "$(bin_line "$bin_pkg_file" "absent-bin-qq")" "silently does nothing" \
+    "diagnosis states the consequence, not just the symptom"
+assert_contains "$(bin_line "$bin_pkg_file" "absent-daemon-qq")" "not installed" \
+    "genuinely absent package still gets the install diagnosis"
+assert_not_contains "$(bin_line "$bin_pkg_file" "absent-bin-qq")" "pacman -S" \
+    "no install hint for something already installed"
+
+# Restore the real lookup for anything sourced after this file.
+_bin_package_installed() {
+    command -v pacman >/dev/null 2>&1 || return 1
+    pacman -Q "$1" >/dev/null 2>&1
+}
+
 # --- missing config files are not an error ------------------------------
 bin_empty_fixture="$(make_fixture)"
 git -C "$bin_empty_fixture" commit -q --allow-empty -m "empty"

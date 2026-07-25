@@ -108,10 +108,26 @@ _bin_check_token() {
     esac
     _BIN_SEEN="$_BIN_SEEN $bin "
 
-    if ! command -v "$bin" >/dev/null 2>&1; then
+    command -v "$bin" >/dev/null 2>&1 && return 0
+
+    # A package of the same name being installed changes the diagnosis
+    # completely: the config is not missing a package, it is naming something
+    # that was never executable from PATH, so the line silently does nothing.
+    if _bin_package_installed "$bin"; then
+        warn "$origin invokes '$bin', which is installed but ships no executable on PATH — this line silently does nothing" \
+             "pacman -Ql $(doctor_q "$bin") | grep -E 'bin/|systemd' to find the real entry point"
+    else
         warn "$origin invokes '$bin', which is not installed" \
              "pacman -S $(doctor_q "$bin")   (or drop it from $(doctor_q "$origin"))"
     fi
+}
+
+# _bin_package_installed <name> -> 0 when a package of that name is installed.
+# Its own function so the tests can stub it: the real answer is specific to
+# whichever machine happens to be running the suite.
+_bin_package_installed() {
+    command -v pacman >/dev/null 2>&1 || return 1
+    pacman -Q "$1" >/dev/null 2>&1
 }
 
 # _bin_check_command <raw-command-string> <origin-file>
