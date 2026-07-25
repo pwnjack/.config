@@ -75,7 +75,7 @@ echo -e "${NC}"
 # Check if running on Arch-based system
 if [ ! -f /etc/arch-release ]; then
     warning "This script is designed for Arch-based systems"
-    read -p "Continue anyway? (y/N) " -n 1 -r
+    read -p "Continue anyway? (y/N) " -n 1 -r || true
     echo
     [[ ! $REPLY =~ ^[Yy]$ ]] && exit 0
 fi
@@ -99,14 +99,14 @@ PACKAGES=(
     # File managers and system tools
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch"
     # Clipboard, screenshots, media
-    "cliphist" "wl-clipboard" "flameshot" "playerctl"
+    "cliphist" "wl-clipboard" "playerctl"
     # Theming
     "python-pywal" "qt5ct" "qt6ct" "nwg-look"
     # Applets and controls
     "brightnessctl" "pavucontrol" "blueman" "nm-connection-editor"
     "gnome-calculator"
     # Script dependencies
-    "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat"
+    "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
     # Fonts (configs default to FiraCode Nerd Font)
     "ttf-firacode-nerd" "ttf-cascadia-mono-nerd" "ttf-nerd-fonts-symbols"
     "noto-fonts" "noto-fonts-emoji"
@@ -137,7 +137,7 @@ done
 
 if [ ${#MISSING_PACMAN[@]} -gt 0 ]; then
     warning "Missing packages: ${MISSING_PACMAN[*]}"
-    read -p "Install missing packages? (y/N) " -n 1 -r
+    read -p "Install missing packages? (y/N) " -n 1 -r || true
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         execute sudo pacman -S --needed "${MISSING_PACMAN[@]}"
@@ -161,7 +161,7 @@ done
 if [ ${#STILL_MISSING_AUR[@]} -gt 0 ]; then
     warning "Missing AUR packages: ${STILL_MISSING_AUR[*]}"
     if command -v paru &> /dev/null || command -v yay &> /dev/null; then
-        read -p "Install missing AUR packages? (y/N) " -n 1 -r
+        read -p "Install missing AUR packages? (y/N) " -n 1 -r || true
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             AUR_HELPER=$(command -v paru || command -v yay)
@@ -181,7 +181,7 @@ if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
     execute mkdir -p "$BACKUP_DIR"
 
     CONFIGS_TO_BACKUP=(
-        "hypr" "waybar" "swaync" "rofi" "mako"
+        "hypr" "waybar" "swaync" "rofi"
         "fish" "ghostty" "nvim" "btop" "gtk-3.0" "gtk-4.0"
         "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list" "starship.toml"
     )
@@ -265,11 +265,6 @@ if [ -n "$FIRST_WALLPAPER" ]; then
     success "Wallpaper state initialized"
 fi
 
-# Render mako config from the pywal palette (wal ran above)
-if [ -f "$HOME/.cache/wal/colors.sh" ]; then
-    execute "$CONFIG_DIR/mako/apply_wal_colors.sh"
-fi
-
 # Render ghostty + thunar colors (cache-backed, included from tracked configs)
 if [ -f "$HOME/.cache/wal/colors-ghostty" ]; then
     execute "$CONFIG_DIR/ghostty/apply_wal_colors.sh"
@@ -288,13 +283,24 @@ if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
 fi
 
 # ------------------------------------------------------------------
+# Git hooks
+# ------------------------------------------------------------------
+# Tracked hooks live in scripts/hooks and are activated by pointing git at
+# them, so they update with a pull instead of rotting in .git/hooks.
+if [ -d "$CONFIG_DIR/.git" ]; then
+    info "Activating tracked git hooks..."
+    execute git -C "$CONFIG_DIR" config core.hooksPath scripts/hooks
+    success "Pre-commit gate active (shellcheck + doctor tests + ags bundle)"
+fi
+
+# ------------------------------------------------------------------
 # Final wiring
 # ------------------------------------------------------------------
 info "Making scripts executable..."
 if [ "$DRY_RUN" = false ]; then
     find "$CONFIG_DIR/scripts" "$CONFIG_DIR/rofi" "$CONFIG_DIR/swaync" \
          "$CONFIG_DIR/waybar" "$CONFIG_DIR/sddm" "$CONFIG_DIR/ghostty" \
-         "$CONFIG_DIR/mako" "$CONFIG_DIR/Thunar" \
+         "$CONFIG_DIR/Thunar" \
          -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
 fi
 success "Scripts are executable"
@@ -308,7 +314,7 @@ fi
 # Set fish as default shell
 if check_dependency "fish"; then
     if [ "$SHELL" != "$(which fish)" ]; then
-        read -p "Set fish as default shell? (y/N) " -n 1 -r
+        read -p "Set fish as default shell? (y/N) " -n 1 -r || true
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             execute chsh -s "$(which fish)"

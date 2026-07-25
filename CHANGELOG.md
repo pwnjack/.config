@@ -2,6 +2,58 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-07-26] - Doctor & Lint Gate
+
+### Added
+- **`doctor.sh`**: report-only health check for the live system. Validates
+  tracked symlinks, Hyprland `source` chains, literal `~/.config` references,
+  keybind and autostart binaries, running daemons, D-Bus role ownership, and
+  `install.sh` package drift. Every target is derived from tracked files, so
+  there is no list to keep in sync. Exits 1 only on ERROR-class findings.
+- **Pre-commit hook** (`scripts/hooks/pre-commit`, activated via
+  `core.hooksPath`): `shellcheck` on staged scripts, the doctor test suite
+  when `scripts/doctor/` changes, `ags bundle` on staged panel sources.
+- **Doctor test suite** (`scripts/doctor/test/`): 207 assertions across a
+  dependency-free harness that runs each check against throwaway git fixtures.
+
+### Fixed
+- **`install.sh --dry-run` could not run non-interactively.** `read` returns
+  non-zero at EOF, and under `set -e` that aborted the script at the first
+  prompt — so the dry run failed whenever any package was missing. Predates
+  this work; surfaced by needing to verify the hook wiring.
+
+### Found by doctor.sh, and fixed
+- **`exec-once = $polkitAgent` had never worked.** `hyprpolkitagent` is
+  installed but ships no executable on `PATH` — only
+  `/usr/lib/hyprpolkitagent/hyprpolkitagent`, a systemd user unit, and a D-Bus
+  activation file. The autostart line failed silently on every login; polkit
+  prompts worked only because D-Bus activated the agent on demand. Now started
+  through its systemd unit, which also picks up `Restart=on-failure`. The
+  binary check gained systemd-unit validation so routing through `systemctl`
+  does not blind the check that found this.
+- **mako was inert.** swaync owns `org.freedesktop.Notifications`, the D-Bus
+  name a notification daemon must hold to receive anything, so mako's config
+  had no effect. `mako/` and its references in `wall.sh`, `install.sh` and
+  `CLAUDE.md` are gone. This corrects the "mako stays (still in use alongside
+  SwayNC)" decision recorded in the 2026-07-19 polish spec, which was never
+  tested. The *package* stays — `cachyos-hyprland-settings` requires it.
+- `rofi/options/colors.rasi` and `waybar/colors.css` were tracked symlinks
+  with absolute `/home/pwnjack` targets, dangling for any other user. Now
+  relative, completing the 2026-07-15 "portable symlinks" fix that converted
+  two of four cases and missed these.
+- `waypaper/config.ini.template` referenced a `style.css` and a
+  `keybindings.ini` that have never existed. Removed.
+- `flameshot` was listed in `install.sh` but not installed, and `flameshot/`
+  was tracked while screenshots go through `hyprshot` and
+  `rofi/screenshot.sh`. Both removed.
+
+### Removed
+- Four waybar module definitions no bar array referenced
+  (`custom/appmenu`, `custom/wallpaper`, `custom/nightlight`,
+  `custom/hyprpicker`) and their commented-out entries. Every defined module
+  is now active; recoverable from git history if one is wanted back.
+- `herdr/` runtime logs and session state are now gitignored.
+
 ## [2026-07-15] - Fresh-Install Hardening
 
 ### Fixed

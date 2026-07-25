@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Pre-commit gate. Activated by install.sh via:
+#   git config core.hooksPath scripts/hooks
+#
+# Tracked in the repo rather than copied into .git/hooks, so it updates with a
+# pull and cannot silently diverge from the configs it guards.
+#
+# Checks staged content only, so an unrelated pre-existing warning elsewhere in
+# the repo never blocks an unrelated commit.
+#
+# Bypass with `git commit --no-verify`.
+#
+set -uo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+FAILED=0
+
+# Staged, excluding deletions — a deleted file cannot be linted.
+staged() {
+    git diff --cached --name-only --diff-filter=ACM -z
+}
+
+# --- shell scripts --------------------------------------------------------
+# The hooks themselves carry no .sh suffix, so they are matched by path as
+# well. One case statement, so a hypothetical scripts/hooks/foo.sh is not
+# linted twice.
+STAGED_SH=()
+while IFS= read -r -d '' _hook_file; do
+    case "$_hook_file" in
+        *.sh|scripts/hooks/*) STAGED_SH+=("$_hook_file") ;;
+    esac
+done < <(staged)
+
+if [ "${#STAGED_SH[@]}" -gt 0 ]; then
+    if command -v shellcheck >/dev/null 2>&1; then
+        echo "pre-commit: shellcheck (${#STAGED_SH[@]} file(s))"
+        for _hook_file in "${STAGED_SH[@]}"; do
+            [ -f "$REPO/$_hook_file" ] || continue
+            if ! shellcheck -S warning "$REPO/$_hook_file"; then
+                FAILED=1
+            fi
+        done
+    else
+        echo "pre-commit: shellcheck not installed, skipping shell lint"
+    fi
+fi
+
+# --- doctor's own test suite ---------------------------------------------
+# The suite is fast (~1s) and its whole purpose is catching regressions in the
+# checks. Run it whenever anything under scripts/doctor changes.
+if staged | tr '\0' '\n' | grep -q '^scripts/doctor/'; then
+    echo "pre-commit: doctor test suite"
+    if ! "$REPO/scripts/doctor/test/run-tests.sh" >/dev/null 2>&1; then
+        echo "pre-commit: doctor tests failed — run ./scripts/doctor/test/run-tests.sh to see why"
+        FAILED=1
+    fi
+fi
+
+# --- AGS settings panel ---------------------------------------------------
+# `ags bundle` is the only compile gate available: there is no tsc, no
+# package.json and no node_modules in ags/. esbuild catches syntax errors but
+# NOT type errors, so tsconfig's `strict: true` is not enforced here.
+if staged | tr '\0' '\n' | grep -q '^ags/'; then
+    if command -v ags >/dev/null 2>&1; then
+        echo "pre-commit: ags bundle"
+        BUNDLE_OUT="$(mktemp)"
+        if ! (cd "$REPO/ags" && ags bundle app.ts "$BUNDLE_OUT" >/dev/null 2>&1); then
+            echo "pre-commit: ags bundle failed — run 'cd ags && ags bundle app.ts /tmp/out' to see why"
+            FAILED=1
+        fi
+        rm -f "$BUNDLE_OUT"
+    else
+        echo "pre-commit: ags not installed, skipping panel build check"
+    fi
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+    echo
+    echo "pre-commit: checks failed. Fix the issues above, or bypass with --no-verify."
+    exit 1
+fi
+exit 0

@@ -53,7 +53,7 @@ Top-level `doctor.sh`, beside `install.sh`. It is a user-facing entry point, not
 | Non-portable tracked symlink | same, target matching `^/home/` | WARN |
 | Missing sourced config | `source =` lines in `hyprland.conf`, `hyprlock.conf` | ERROR |
 | Missing pywal cache | `~/.cache/wal/colors-hyprland.conf` (target of `colors.conf`) | ERROR |
-| Missing referenced path | every literal `~/.config/...` or `$HOME/.config/...` in any tracked file | ERROR |
+| Missing referenced path | every literal `~/.config/...` or `$HOME/.config/...` in any tracked file | WARN |
 | Missing `wall.sh` color script | the `apply_wal_colors.sh` paths listed in `wall.sh` | WARN |
 | Keybind → absent binary | `exec,` targets in `keybinds.conf` | WARN |
 | Autostart → absent binary | `exec-once =` in `autostart.conf` | WARN |
@@ -77,8 +77,10 @@ An unresolvable variable is itself a WARN — it means a config references somet
 ### Severity model
 
 - **ERROR** — the session is broken or will break on next login. Dangling symlink, missing `source` target, absent pywal cache.
-- **WARN** — degraded. A keybind that silently does nothing, a daemon that failed to start.
+- **WARN** — degraded. A keybind that silently does nothing, a daemon that failed to start, a config pointing at a file that no longer exists.
 - **INFO** — tidiness. Orphaned config, package drift, which process owns the notification bus.
+
+**Correction, 2026-07-25 (during implementation):** the derivation table originally rated a missing literal `~/.config/...` reference as ERROR. That was wrong against this very severity contract. The live tree carries two such references — `waypaper/config.ini.template` points at a `style.css` and a `keybindings.ini` that do not exist — and waypaper starts fine without them. Rating them ERROR would make `doctor.sh` exit 1 on a healthy machine, destroying the exit code's value as a signal and training the user to ignore the tool. Only `source =` targets and the pywal cache genuinely break the session; everything else that merely points at a missing file degrades one feature and is therefore WARN.
 
 **Exit 1 if any ERROR, else 0.** WARN and INFO never fail the run, so doctor stays usable in a script.
 
@@ -136,8 +138,11 @@ Acceptance is that doctor reproduces, unprompted, the findings established by ha
 - INFO: `flameshot` in `install.sh` PACKAGES, not installed
 - INFO: mako orphaned — swaync owns `org.freedesktop.Notifications`
 - WARN: `rofi/options/colors.rasi` and `waybar/colors.css` use absolute `/home/pwnjack` targets
+- WARN: `waypaper/config.ini.template` references a `style.css` and a `keybindings.ini` that do not exist
 - clean: all 9 tracked symlinks resolve; all 15 `source =` targets resolve
 - exit 0 on the current system — verified 2026-07-25 that no ERROR-class condition exists today
+
+**Self-reference exclusion.** `scripts/doctor/` is excluded from the literal-path scan for the same reason `docs/` is: its test fixtures deliberately reference paths that do not exist. Without the exclusion the tool reports sixteen findings about its own test file — discovered when the first live run after committing the tests returned 18 errors instead of 2.
 
 Negative tests, run against a scratch copy so the live system is untouched:
 

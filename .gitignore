@@ -346,3 +346,6 @@ zed/settings.json
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+# Herdr session state and logs (runtime, not config)
+herdr/

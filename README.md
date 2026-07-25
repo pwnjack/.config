@@ -83,10 +83,51 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 │   └── *.css                   # Styling
 ├── options/                    # User preferences (text files)
 ├── scripts/                    # Utility scripts
+│   ├── doctor/                 # Health-check modules and their tests
+│   └── hooks/                  # Tracked git hooks (see Maintenance)
 ├── fish/                       # Shell config
 ├── ghostty/                    # Terminal config
-└── nvim/                       # Editor config
+├── nvim/                       # Editor config
+├── install.sh                  # Fresh-system setup
+└── doctor.sh                   # Health check (see Maintenance)
 ```
+
+## Maintenance
+
+```bash
+./doctor.sh          # validate the live system
+./doctor.sh --help   # usage
+```
+
+`doctor.sh` reports and never modifies anything. Every check derives its
+targets from tracked files — git's symlink modes, `source =` lines in
+`hyprland.conf`, `exec,` targets in `keybinds.conf`, the package arrays in
+`install.sh` — so adding a keybind or an autostart entry extends coverage
+automatically. There is no list to keep in sync.
+
+| Severity | Meaning | Exit code |
+|----------|---------|-----------|
+| `ERROR` | The session is broken or will break on next login | exits 1 |
+| `WARN` | Degraded — a keybind does nothing, a daemon did not start | exits 0 |
+| `INFO` | Tidiness — orphaned config, package drift | exits 0 |
+
+What it checks:
+
+- **Symlinks** — dangling targets, non-portable absolute paths, and links
+  clobbered by a regular file (which git still reports as a symlink)
+- **Config references** — every `source =` target, every literal `~/.config`
+  path in a tracked file, the `wall.sh` colour fan-out, the pywal cache
+- **Binaries** — every command bound in `keybinds.conf` or `autostart.conf`,
+  resolving Hyprland's `$variable` indirection first
+- **Services** — autostart daemons actually running, who owns
+  `org.freedesktop.Notifications`, and `install.sh` package drift
+
+A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
+`core.hooksPath`) runs `shellcheck` on staged shell scripts, the doctor's test
+suite when `scripts/doctor/` changes, and `ags bundle` on staged panel
+sources. Bypass with `git commit --no-verify`.
+
+Run the doctor's own tests with `./scripts/doctor/test/run-tests.sh`.
 
 ## Keybindings
 
