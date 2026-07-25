@@ -17,6 +17,12 @@
 #   docs/ and *.md — plans, specs and READMEs cite illustrative paths that are
 #   meant not to exist. Scanning them buries every real finding.
 #
+#   scripts/doctor/ — same reason, one level up. The check modules argue for
+#   their own design in prose that has to name example paths, and the test
+#   fixtures are built entirely out of paths chosen for not existing. Without
+#   this the doctor's loudest finding is itself: sixteen errors, every one of
+#   them a line in its own test file.
+#
 #   Tracked symlinks. In this repo a tracked symlink always points into
 #   ~/.cache, so its content is written by pywal, waypaper or wal.sh, not by
 #   this repo. A dangling reference in there is not something the user can fix
@@ -34,15 +40,32 @@
 #   Paths outside the tree under test (a bare /etc/... source target). There is
 #   nothing under DOCTOR_ROOT to compare them against.
 #
-# SEVERITY: a missing source target or literal path is an ERROR — Hyprland
-# fails the source line outright, and a script that execs a missing file dies.
-# The exception is wall.sh's colour fan-out, which the script itself guards
-# with `[ -x "$script" ]` and documents as optional: a missing one degrades
-# theming rather than breaking the session, so it is a WARN. That list is
-# lifted from wall.sh's `for ... in ... ; do` header rather than matched by
-# filename, so the waybar entry — which is not an apply_wal_colors.sh — is
-# covered too. If wall.sh ever stops using a loop the list comes back empty and
-# those paths revert to ERROR, which is the safe direction to fail in.
+# SEVERITY. ERROR means the session is broken or breaks on next login; WARN
+# means a feature is degraded. That line falls between the two kinds of
+# reference this check finds:
+#
+#   A missing `source =` target is an ERROR. Hyprland fails the line outright
+#   and the whole module — keybinds, rules, monitors — never loads.
+#
+#   A missing pywal cache is an ERROR. colors.conf dangles and every themed
+#   component loses its palette at once.
+#
+#   A missing literal ~/.config/... reference is a WARN. A script or config
+#   pointing at a file that is not there breaks that one feature when it is
+#   invoked; the session still comes up. Calling it an ERROR would make
+#   doctor.sh exit 1 on a healthy machine, which is how a health check teaches
+#   its user to ignore the exit code.
+#
+# wall.sh's colour fan-out is a WARN for a second, independent reason: the
+# script guards each entry with `[ -x "$script" ]` and documents them as
+# optional, so a missing one is expected rather than merely survivable. It
+# keeps its own wording and fix hint — pointing at the loop to edit rather than
+# at a stray reference — and the distinction is worth keeping even though both
+# now land on the same severity, so that re-tightening literal references
+# later cannot silently sweep the deliberately-optional ones up with them.
+# That list is lifted from wall.sh's `for ... in ... ; do` header rather than
+# matched by filename, so the waybar entry — which is not an
+# apply_wal_colors.sh — is covered too.
 #
 # DOCTOR_ROOT is assumed to be a git work tree; doctor.sh establishes that once
 # via doctor_require_repo, so an empty listing here means "no configs", not "no
@@ -62,6 +85,9 @@
 #     in the configs make one unlikely.
 #   - A ~/.config/../ reference resolves outside DOCTOR_ROOT. It is only ever
 #     stat'ed, never written, and no such reference exists in practice.
+#   - If wall.sh ever stops iterating its colour scripts in a `for` loop the
+#     optional list comes back empty and those paths fall through to the
+#     generic literal-reference wording. Same severity, less specific hint.
 #
 
 # Cache root, overridable so the test suite can point at a throwaway directory
@@ -139,7 +165,7 @@ _ref_check_sources() {
     # Process substitution, not a pipeline — see the contract note in lib.sh.
     while IFS= read -r -d '' conf; do
         case "$conf" in
-            docs/*|*.md) continue ;;
+            docs/*|scripts/doctor/*|*.md) continue ;;
         esac
         [ -f "$DOCTOR_ROOT/$conf" ] || continue
         [ -L "$DOCTOR_ROOT/$conf" ] && continue
@@ -180,7 +206,7 @@ _ref_check_literals() {
 
     while IFS= read -r -d '' file; do
         case "$file" in
-            docs/*|*.md) continue ;;
+            docs/*|scripts/doctor/*|*.md) continue ;;
         esac
         [ -f "$DOCTOR_ROOT/$file" ] || continue
         [ -L "$DOCTOR_ROOT/$file" ] && continue
@@ -196,8 +222,8 @@ _ref_check_literals() {
                 warn "$wall applies colours via ~/.config/$rel, which is missing" \
                      "restore $(doctor_q "$full"), or remove it from the list in $(doctor_q "$DOCTOR_ROOT/$wall")"
             else
-                err "$file references ~/.config/$rel, which does not exist" \
-                    "restore $(doctor_q "$full"), or drop the reference from $(doctor_q "$DOCTOR_ROOT/$file")"
+                warn "$file references ~/.config/$rel, which does not exist" \
+                     "restore $(doctor_q "$full"), or drop the reference from $(doctor_q "$DOCTOR_ROOT/$file")"
             fi
         done < <(_ref_extract_paths "$DOCTOR_ROOT/$file")
     done < <(git -C "$DOCTOR_ROOT" ls-files -z 2>/dev/null)

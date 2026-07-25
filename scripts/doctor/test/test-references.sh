@@ -29,6 +29,8 @@ ref_fixture="$(make_fixture)"
 
 mkdir -p "$ref_fixture/hypr/config/spaced dir" \
          "$ref_fixture/scripts/hyprland" \
+         "$ref_fixture/scripts/doctor/test" \
+         "$ref_fixture/scripts/doctor/checks" \
          "$ref_fixture/docs"
 
 # --- Hyprland source chains -------------------------------------------------
@@ -72,6 +74,19 @@ Illustrative: $HOME/.config/docs-txt/never-exists
 EOF
 cat > "$ref_fixture/NOTES.md" <<'EOF'
 Illustrative: ~/.config/md-only/never-exists
+EOF
+
+# The doctor's own tree. Its fixtures are built out of paths chosen for not
+# existing, and its modules name example paths in prose, so scanning it makes
+# the check's loudest finding itself.
+cat > "$ref_fixture/scripts/doctor/test/test-example.sh" <<'EOF'
+p="$HOME/.config/doctor-fixture/never-exists"
+EOF
+cat > "$ref_fixture/scripts/doctor/checks/example.sh" <<'EOF'
+# A module comment citing ~/.config/doctor-prose/never-exists as an example.
+EOF
+cat > "$ref_fixture/scripts/doctor/test/fixture-example.conf" <<'EOF'
+source = doctor-fixture-target.conf
 EOF
 
 cat > "$ref_fixture/scripts/broken.sh" <<'EOF'
@@ -141,7 +156,10 @@ ref_out="$(<"$ref_out_file")"
 # --- source chains ----------------------------------------------------------
 assert_contains "$ref_out" "hypr/hyprland.conf sources config/missing.conf" \
     "missing source target is reported"
-assert_contains "$ref_out" "ERROR" "missing source target is ERROR severity"
+# Hyprland fails the line outright and the whole module never loads, so this is
+# the one reference kind that genuinely breaks the session.
+ref_source_line="$(grep -F 'sources config/missing.conf' "$ref_out_file")"
+assert_contains "$ref_source_line" "ERROR" "missing source target is ERROR severity"
 assert_contains "$ref_out" "hypr/hyprlock.conf sources config/lock-missing.conf" \
     "source target is resolved against the sourcing file's own directory"
 assert_not_contains "$ref_out" "config/good.conf, which does not exist" \
@@ -169,11 +187,29 @@ assert_contains "$ref_out" "scripts/broken.sh references ~/.config/gone/missing.
 assert_not_contains "$ref_out" "present.sh, which does not exist" \
     "literal path that exists produces no finding"
 
+# A script pointing at a missing file breaks that one feature when invoked; the
+# session still comes up. ERROR is reserved for what stops the session, or the
+# exit code stops meaning anything. Severity is asserted on the finding's own
+# line — the whole-output "contains ERROR" form cannot tell which finding it
+# came from once the check emits more than one severity.
+ref_literal_line="$(grep -F 'scripts/broken.sh references' "$ref_out_file")"
+assert_contains "$ref_literal_line" "WARN" "missing literal path is WARN severity"
+assert_not_contains "$ref_literal_line" "ERROR" "missing literal path is not an ERROR"
+
 # docs/ and *.md hold illustrative paths; reporting them would bury the real
 # findings under the contents of every plan ever written.
 assert_not_contains "$ref_out" "docs-md" "a .md file under docs/ is not scanned"
 assert_not_contains "$ref_out" "docs-txt" "a non-md file under docs/ is not scanned"
 assert_not_contains "$ref_out" "md-only" "a .md file outside docs/ is not scanned"
+
+# Same rule, applied to the doctor's own tree: its fixtures are made of paths
+# picked for not existing, so scanning it makes the check report on itself.
+assert_not_contains "$ref_out" "doctor-fixture/never-exists" \
+    "a test fixture under scripts/doctor/ is not scanned"
+assert_not_contains "$ref_out" "doctor-prose" \
+    "an example path in a check module's own comments is not scanned"
+assert_not_contains "$ref_out" "doctor-fixture-target.conf" \
+    "a fixture .conf under scripts/doctor/ is not walked for source lines"
 
 assert_not_contains "$ref_out" "themes" \
     "paths holding a variable or a glob are skipped, not reported"
@@ -192,21 +228,31 @@ assert_not_contains "$ref_out" "generated/never-exists.css" \
 # --- wall.sh colour fan-out -------------------------------------------------
 assert_contains "$ref_out" "applies colours via ~/.config/ghostty/apply_wal_colors.sh" \
     "missing wall.sh colour script is reported"
-assert_contains "$ref_out" "WARN" "missing wall.sh colour script is WARN severity"
+ref_wall_line="$(grep -F 'applies colours via ~/.config/ghostty' "$ref_out_file")"
+assert_contains "$ref_wall_line" "WARN" "missing wall.sh colour script is WARN severity"
 assert_contains "$ref_out" "applies colours via ~/.config/scripts/waybar/waybar.sh" \
     "the fan-out list is the whole for-loop, not just apply_wal_colors.sh"
+
+# Both land on WARN now, so the thing worth asserting is that the guarded and
+# unguarded references keep separate wording and separate fix hints: one sends
+# the reader to the loop to edit, the other to a stray reference.
 assert_contains "$ref_out" "wall.sh references ~/.config/gone/wall-hard-ref.sh" \
-    "an unguarded reference in wall.sh is not downgraded to a warning"
+    "an unguarded reference in wall.sh keeps the generic wording"
+assert_not_contains "$ref_out" "applies colours via ~/.config/gone/wall-hard-ref.sh" \
+    "a reference outside the loop is not treated as an optional colour script"
 
 # --- pywal cache ------------------------------------------------------------
 assert_contains "$ref_out" "$ref_cache_empty/wal/colors-hyprland.conf" \
     "missing pywal cache is reported"
+# colors.conf dangles and every themed component loses its palette at once.
+ref_pywal_line="$(grep -F 'pywal cache missing' "$ref_out_file")"
+assert_contains "$ref_pywal_line" "ERROR" "missing pywal cache is ERROR severity"
 
 # --- tallies ----------------------------------------------------------------
-# 4 source targets, 4 literal paths, 1 pywal cache.
-assert_eq "$DOCTOR_ERRORS" "9" "unresolvable references counted as errors"
-# The three entries of wall.sh's existence-guarded loop.
-assert_eq "$DOCTOR_WARNINGS" "3" "optional colour scripts counted as warnings"
+# Only what stops the session: 4 unresolvable source targets, 1 pywal cache.
+assert_eq "$DOCTOR_ERRORS" "5" "session-breaking references counted as errors"
+# 4 literal references plus the 3 entries of wall.sh's guarded loop.
+assert_eq "$DOCTOR_WARNINGS" "7" "degraded-feature references counted as warnings"
 assert_eq "$DOCTOR_NOTICES" "0" "nothing here is a notice"
 
 # --- every fix hint is copy-pasteable ---------------------------------------
