@@ -18,20 +18,22 @@
 #      file — a real bug caught in the binaries.sh task and fixed the same way
 #      here: quote the tilde.
 #
-#   2. D-Bus role ownership — DOCTOR_DBUS_ROLES names one well-known bus name
-#      and the role whoever owns it fulfils. Only notification-daemon is in
-#      scope; scaling to more roles would need the variable to become a
-#      newline list and the lookup below to loop over it, which is not worth
-#      building for a set of one.
+#   2. D-Bus role ownership — DOCTOR_DBUS_ROLE names one well-known bus name
+#      that only a single process can hold. Only the notification daemon is in
+#      scope; scaling to more would need the variable to become a newline list
+#      and the lookup below to loop over it, which is not worth building for a
+#      set of one.
 #
-#      A package "providing" that role is NOT derived from pacman's own
-#      Provides field. Verified on the live system: both
-#      `pacman -Qi mako` and `pacman -Qi swaync` print "Provides : None" —
-#      neither package declares it. So _svc_package_provides checks the real
-#      Provides field first (in case some future package does declare it
-#      correctly) and falls back to a small hand-maintained table of the
-#      notification daemons this repo ships a tracked config directory for.
-#      Extend the table, not the pacman query, when a third one shows up.
+#      Which packages compete for that name is DERIVED, not listed. Every
+#      program able to own a well-known bus name ships an activation file
+#      under /usr/share/dbus-1/services declaring `Name=<bus-name>`, and
+#      `pacman -Qoq` maps that file back to its package. Installing a third
+#      notification daemon therefore extends coverage on its own.
+#
+#      pacman's own Provides field is deliberately NOT used. Verified on the
+#      live system: `pacman -Qi mako` and `pacman -Qi swaync` both print
+#      "Provides : None", so a Provides lookup finds nothing and the orphan
+#      finding — the reason this section exists — would never fire.
 #
 #   3. Package drift — PACKAGES and AUR_PACKAGES arrays parsed out of
 #      install.sh. Verified against the live file (lines 89-121): both arrays
@@ -73,10 +75,9 @@
 #      instead of one warning-shaped finding per item.
 #
 
-# Bus name being checked, and the role whoever owns it is expected to fulfil.
-# Format: "bus-name:role-label". See the header note on why this stays a
-# single pair instead of a newline list.
-DOCTOR_DBUS_ROLES="org.freedesktop.Notifications:notification-daemon"
+# The single-owner bus name being audited. See the header note on why this
+# stays one value instead of a newline list.
+DOCTOR_DBUS_ROLE="org.freedesktop.Notifications"
 
 # _svc_autostart_daemons -> bare-binary exec-once targets, one per line,
 # deduplicated. Reads with process substitution, per the lib.sh contract:
@@ -137,20 +138,40 @@ _svc_bus_owner() {
     busctl --user list 2>/dev/null | awk -v n="$1" '$1 == n { print $3; found=1 } END { exit !found }'
 }
 
-# _svc_package_provides <name> <role> -> 0 if the package is known to
-# implement that D-Bus role. See the header note: this is deliberately not a
-# pure pacman-Provides lookup, because neither notification daemon this repo
-# configures actually declares one.
-_svc_package_provides() {
-    local pkg="$1" role="$2"
-    command -v pacman >/dev/null 2>&1 || return 1
-    if pacman -Qi "$pkg" 2>/dev/null | grep -Eq "^Provides[[:space:]]*:.*${role}"; then
-        return 0
-    fi
-    case "$role:$pkg" in
-        notification-daemon:mako|notification-daemon:swaync) return 0 ;;
-        *) return 1 ;;
-    esac
+# Where D-Bus publishes its activation files. Overridable for tests.
+DOCTOR_DBUS_SERVICES="${DOCTOR_DBUS_SERVICES:-/usr/share/dbus-1/services}"
+
+# _svc_role_providers <bus-name> -> package names implementing that bus name,
+# one per line.
+#
+# Derived, never listed. Every program that can own a well-known D-Bus name
+# ships an activation file declaring `Name=<bus-name>`, and pacman maps that
+# file back to its owning package. So installing a third notification daemon
+# extends coverage on its own.
+#
+# pacman's Provides field is deliberately NOT used: verified on this machine
+# that `pacman -Qi mako` and `pacman -Qi swaync` both print "Provides : None",
+# so a Provides lookup would find nothing and the orphan finding — the reason
+# this section exists — would never fire.
+# _svc_role_service_files <bus-name> -> activation files declaring that name.
+# Split out from the package lookup below so the scanning half can be tested
+# against a fixture directory without needing pacman to know about it.
+_svc_role_service_files() {
+    [ -d "$DOCTOR_DBUS_SERVICES" ] || return 0
+    grep -lFx "Name=$1" "$DOCTOR_DBUS_SERVICES"/*.service 2>/dev/null
+}
+
+_svc_role_providers() {
+    local file pkg
+
+    command -v pacman >/dev/null 2>&1 || return 0
+
+    while read -r file; do
+        [ -n "$file" ] || continue
+        pkg="$(pacman -Qoq "$file" 2>/dev/null)"
+        [ -n "$pkg" ] || continue
+        printf '%s\n' "$pkg"
+    done < <(_svc_role_service_files "$1")
 }
 
 # _svc_has_tracked_config <dir> -> 0 if git tracks anything under DOCTOR_ROOT/dir.
@@ -187,20 +208,17 @@ check_services() {
 
     # --- 3. D-Bus role ownership + orphaned notification-daemon configs ----
     if command -v busctl >/dev/null 2>&1; then
-        local bus_name="${DOCTOR_DBUS_ROLES%%:*}" role="${DOCTOR_DBUS_ROLES#*:}"
+        local bus_name="$DOCTOR_DBUS_ROLE"
         owner="$(_svc_bus_owner "$bus_name")"
         if [ -n "$owner" ]; then
             note "$bus_name is currently owned by '$owner'"
-            if command -v pacman >/dev/null 2>&1; then
-                for candidate in mako swaync; do
-                    [ "$candidate" = "$owner" ] && continue
-                    _svc_package_installed "$candidate" || continue
-                    _svc_package_provides "$candidate" "$role" || continue
-                    _svc_has_tracked_config "$candidate" || continue
-                    note "'$candidate' is installed with a tracked config at $(doctor_q "$candidate")/ but does not own $bus_name — its config has no effect while '$owner' holds the name" \
-                         "either uninstall $(doctor_q "$candidate"), or stop '$owner' and let $(doctor_q "$candidate") own $bus_name"
-                done
-            fi
+            while read -r candidate; do
+                [ -n "$candidate" ] || continue
+                [ "$candidate" = "$owner" ] && continue
+                _svc_has_tracked_config "$candidate" || continue
+                note "'$candidate' is installed with a tracked config at $(doctor_q "$candidate")/ but does not own $bus_name — its config has no effect while '$owner' holds the name" \
+                     "either uninstall $(doctor_q "$candidate"), or stop '$owner' and let $(doctor_q "$candidate") own $bus_name"
+            done < <(_svc_role_providers "$bus_name")
         fi
     fi
 

@@ -14,7 +14,7 @@ source "$DOCTOR_DIR/checks/services.sh"
 
 # Assigned throughout and read by the sourced check module, not by this file
 # directly, which is what SC2034 would otherwise flag.
-export DOCTOR_ROOT
+export DOCTOR_ROOT DOCTOR_DBUS_SERVICES
 
 # svc_line <file> <substring> -> the matching line, or empty
 # Severity must be asserted on the finding's own line: asserting "WARN"
@@ -81,7 +81,9 @@ _svc_package_installed() {
     esac
 }
 _svc_bus_owner() { printf 'swaync'; }
-_svc_package_provides() { [ "$2" = "notification-daemon" ] && { [ "$1" = "mako" ] || [ "$1" = "swaync" ]; }; }
+# Providers are stubbed so the orphan finding does not depend on which
+# notification daemons this particular host happens to have installed.
+_svc_role_providers() { printf 'swaync\nmako\n'; }
 
 svc_out_file="$DOCTOR_TEST_TMP/services-out"
 doctor_reset
@@ -124,7 +126,7 @@ DOCTOR_ROOT="$svc_clean"
 _svc_is_running() { [ "$1" = "svc-running-qq" ]; }
 _svc_package_installed() { [ "$1" = "svc-present-pkg-qq" ]; }
 _svc_bus_owner() { return 1; }
-_svc_package_provides() { return 1; }
+_svc_role_providers() { return 0; }
 
 svc_clean_file="$DOCTOR_TEST_TMP/services-clean"
 doctor_reset
@@ -178,17 +180,45 @@ _svc_bus_owner() {
     command -v busctl >/dev/null 2>&1 || return 1
     busctl --user list 2>/dev/null | awk -v n="$1" '$1 == n { print $3; found=1 } END { exit !found }'
 }
-_svc_package_provides() {
-    local pkg="$1" role="$2"
-    command -v pacman >/dev/null 2>&1 || return 1
-    if pacman -Qi "$pkg" 2>/dev/null | grep -Eq "^Provides[[:space:]]*:.*${role}"; then
-        return 0
-    fi
-    case "$role:$pkg" in
-        notification-daemon:mako|notification-daemon:swaync) return 0 ;;
-        *) return 1 ;;
-    esac
+_svc_role_providers() {
+    local file pkg
+    command -v pacman >/dev/null 2>&1 || return 0
+    while read -r file; do
+        [ -n "$file" ] || continue
+        pkg="$(pacman -Qoq "$file" 2>/dev/null)"
+        [ -n "$pkg" ] || continue
+        printf '%s\n' "$pkg"
+    done < <(_svc_role_service_files "$1")
 }
+
+# --- role providers are derived from D-Bus activation files ---------------
+# The scanning half is tested against a fixture directory; the pacman lookup
+# that maps a file to its package is host-specific and stubbed above.
+svc_dbus_dir="$DOCTOR_TEST_TMP/dbus-services"
+mkdir -p "$svc_dbus_dir"
+printf '[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/one\n' \
+    > "$svc_dbus_dir/one.service"
+printf '[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/two\n' \
+    > "$svc_dbus_dir/two.service"
+printf '[D-BUS Service]\nName=org.example.Unrelated\nExec=/usr/bin/three\n' \
+    > "$svc_dbus_dir/three.service"
+printf '[D-BUS Service]\nName=org.freedesktop.NotificationsExtra\nExec=/usr/bin/four\n' \
+    > "$svc_dbus_dir/four.service"
+
+DOCTOR_DBUS_SERVICES="$svc_dbus_dir"
+svc_found="$(_svc_role_service_files "org.freedesktop.Notifications" | sed 's|.*/||' | sort | tr '\n' ' ')"
+assert_eq "$svc_found" "one.service two.service " \
+    "activation files declaring the bus name are found"
+assert_not_contains "$svc_found" "three.service" \
+    "a file declaring an unrelated bus name is not matched"
+assert_not_contains "$svc_found" "four.service" \
+    "the name match is exact, not a prefix"
+
+DOCTOR_DBUS_SERVICES="$DOCTOR_TEST_TMP/no-such-dbus-dir"
+assert_eq "$(_svc_role_service_files "org.freedesktop.Notifications")" "" \
+    "a missing D-Bus services directory yields nothing, not an error"
+
+DOCTOR_DBUS_SERVICES="/usr/share/dbus-1/services"
 
 # --- missing config files are not an error --------------------------------
 svc_empty_fixture="$(make_fixture)"
