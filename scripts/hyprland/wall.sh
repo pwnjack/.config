@@ -29,14 +29,14 @@ wal -q -i "$wallpaper"
 # Wait for wal to finish generating colors
 sleep 0.5
 
-# Apply pywal colors to all components (each script is optional)
-for script in \
-    "$HOME/.config/ghostty/apply_wal_colors.sh" \
-    "$HOME/.config/Thunar/apply_wal_colors.sh" \
-    "$HOME/.config/swaync/apply_wal_colors.sh" \
-    "$HOME/.config/scripts/waybar/waybar.sh"; do
-    [ -x "$script" ] && "$script" &
-done
+# Apply pywal colors to every themed component. The driver finds the
+# per-component apply_wal_colors.sh scripts by glob, so no component is named
+# here — adding one is a single new file.
+[ -x "$HOME/.config/scripts/theming/apply-wal.sh" ] && "$HOME/.config/scripts/theming/apply-wal.sh"
+
+# waybar is not a themed component in that sense: it reads the pywal CSS
+# through a tracked symlink and only needs restarting.
+[ -x "$HOME/.config/scripts/waybar/waybar.sh" ] && "$HOME/.config/scripts/waybar/waybar.sh" &
 
 notify-send -i preferences-desktop-wallpaper-symbolic "Wallpaper Applied" "New color scheme generated from image:\n$wallname"
 
