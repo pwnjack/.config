@@ -1,0 +1,212 @@
+#!/bin/bash
+#
+# Autostart daemons, D-Bus role ownership, and install.sh package drift.
+#
+# Three independent probes share one module because they are the three ways
+# this repo's runtime state can silently diverge from its config without any
+# file going missing (which the other checks already cover):
+#
+#   1. Daemon list — derived from bare-binary `exec-once` lines in
+#      autostart.conf, the same source binaries.sh already scans. A line is a
+#      daemon candidate only when its first token has no `/`, `~/` or `$`
+#      prefix: those forms name a one-shot script or an unresolved variable,
+#      neither of which is "a process that should still be alive". This is
+#      deliberately the same split binaries.sh uses for the identical reason.
+#
+#      An unquoted `~/*` case pattern is tilde-expanded to the running user's
+#      home before matching, so it can never match a literal "~/" in a config
+#      file — a real bug caught in the binaries.sh task and fixed the same way
+#      here: quote the tilde.
+#
+#   2. D-Bus role ownership — DOCTOR_DBUS_ROLES names one well-known bus name
+#      and the role whoever owns it fulfils. Only notification-daemon is in
+#      scope; scaling to more roles would need the variable to become a
+#      newline list and the lookup below to loop over it, which is not worth
+#      building for a set of one.
+#
+#      A package "providing" that role is NOT derived from pacman's own
+#      Provides field. Verified on the live system: both
+#      `pacman -Qi mako` and `pacman -Qi swaync` print "Provides : None" —
+#      neither package declares it. So _svc_package_provides checks the real
+#      Provides field first (in case some future package does declare it
+#      correctly) and falls back to a small hand-maintained table of the
+#      notification daemons this repo ships a tracked config directory for.
+#      Extend the table, not the pacman query, when a third one shows up.
+#
+#   3. Package drift — PACKAGES and AUR_PACKAGES arrays parsed out of
+#      install.sh. Verified against the live file (lines 89-121): both arrays
+#      close on a bare `)` at column 0 with no continuation, which is what the
+#      awk state machine below assumes. If a future edit indents the closing
+#      paren or puts a second array entry on that line, the parser silently
+#      stops seeing members past that point — a silent under-report, not a
+#      crash, and worth knowing if this check ever looks confidently wrong.
+#
+# Severity: a daemon not running is WARN (one feature — the thing it does —
+# stops working, but the session is fine). Everything else here is INFO: who
+# owns a D-Bus name, an orphaned config directory, a package drifted out of
+# install.sh — all tidiness, nothing broken. Nothing in this module is ever
+# ERROR: there is no daemon whose absence breaks the session itself (that is
+# what binaries.sh's WARN-only stance already argues for the same targets).
+#
+# Accepted risks:
+#
+#   * The daemon-running check does not verify a matching package is
+#     installed first. "Installed but not running" in the task brief is read
+#     as "autostart declares it, so it is expected to be alive" rather than a
+#     literal pacman cross-check — the binary-to-package name mapping is not
+#     1:1 (swayosd-server ships from package "swayosd", ags from AUR package
+#     "aylurs-gtk-shell") and reconstructing it is its own project. A daemon
+#     that was deliberately uninstalled still gets one WARN instead of silence
+#     — a known false positive, cheap to dismiss, cheaper than a wrong map.
+#
+#   * `pgrep -x` matches on `comm`, which the kernel truncates at 15 bytes.
+#     Every name in this repo's autostart.conf is short enough that this never
+#     bites (`swayosd-server` is 14 bytes, the longest of them), so no
+#     workaround is implemented. `pgrep -f` was tried and rejected: it matches
+#     full command lines, so `pgrep -f ags` also matched an unrelated shell
+#     invocation that merely mentioned "ags" in its argv, and `-f hypridle`
+#     etc. are just as porous. `-x` is the correct tool here, not a shortcut.
+#
+#   * `pacman`, `busctl` and `pgrep` availability are each checked once in
+#      check_services before the loop that depends on them, not inside every
+#      iteration — so an unavailable tool skips the whole probe silently
+#      instead of one warning-shaped finding per item.
+#
+
+# Bus name being checked, and the role whoever owns it is expected to fulfil.
+# Format: "bus-name:role-label". See the header note on why this stays a
+# single pair instead of a newline list.
+DOCTOR_DBUS_ROLES="org.freedesktop.Notifications:notification-daemon"
+
+# _svc_autostart_daemons -> bare-binary exec-once targets, one per line,
+# deduplicated. Reads with process substitution, per the lib.sh contract:
+# piping sed's output into the read loop would run the loop in a subshell and
+# lose whatever it printed to the parent's stdout redirection along with it
+# (nothing here touches a severity counter, but the shape is kept identical to
+# every other check so the contract stays mechanically checkable by grep, not
+# by memory).
+_svc_autostart_daemons() {
+    local conf="$DOCTOR_ROOT/hypr/config/setup/autostart.conf" line first
+    [ -f "$conf" ] || return 0
+
+    while read -r line; do
+        line="${line%&}"
+        read -r first _ <<< "$line"
+        [ -n "$first" ] || continue
+        # Quoted: an unquoted ~/* here is tilde-expanded to $HOME before the
+        # case match runs, so it would never match a literal "~/" in a file.
+        case "$first" in
+            /*|'~'/*|'$'*) continue ;;
+        esac
+        printf '%s\n' "$first"
+    done < <(sed -n 's/^[[:space:]]*exec-once[[:space:]]*=[[:space:]]*//p' "$conf") | sort -u
+}
+
+# _svc_install_packages -> every PACKAGES/AUR_PACKAGES entry in install.sh,
+# one per line, deduplicated. See the header note on the `)`-at-column-0
+# assumption this relies on.
+_svc_install_packages() {
+    local installer="$DOCTOR_ROOT/install.sh"
+    [ -f "$installer" ] || return 0
+
+    awk '
+        /^(PACKAGES|AUR_PACKAGES)=\(/ { inside = 1; next }
+        inside && /^\)/               { inside = 0; next }
+        inside                        { print }
+    ' "$installer" | sed 's/#.*//' | tr -d '"' | tr ' ' '\n' | sed '/^[[:space:]]*$/d' | sort -u
+}
+
+# _svc_is_running <name> -> 0 if a process with that exact `comm` is alive.
+# Its own function so tests can stub it: the real answer is this machine's
+# process table at the moment the suite runs.
+_svc_is_running() {
+    command -v pgrep >/dev/null 2>&1 || return 1
+    pgrep -x "$1" >/dev/null 2>&1
+}
+
+# _svc_package_installed <name> -> 0 when a package of that name is installed.
+_svc_package_installed() {
+    command -v pacman >/dev/null 2>&1 || return 1
+    pacman -Q "$1" >/dev/null 2>&1
+}
+
+# _svc_bus_owner <bus-name> -> the process name that owns it on the session
+# bus, or empty (and non-zero) if nothing does or busctl is unavailable.
+_svc_bus_owner() {
+    command -v busctl >/dev/null 2>&1 || return 1
+    busctl --user list 2>/dev/null | awk -v n="$1" '$1 == n { print $3; found=1 } END { exit !found }'
+}
+
+# _svc_package_provides <name> <role> -> 0 if the package is known to
+# implement that D-Bus role. See the header note: this is deliberately not a
+# pure pacman-Provides lookup, because neither notification daemon this repo
+# configures actually declares one.
+_svc_package_provides() {
+    local pkg="$1" role="$2"
+    command -v pacman >/dev/null 2>&1 || return 1
+    if pacman -Qi "$pkg" 2>/dev/null | grep -Eq "^Provides[[:space:]]*:.*${role}"; then
+        return 0
+    fi
+    case "$role:$pkg" in
+        notification-daemon:mako|notification-daemon:swaync) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# _svc_has_tracked_config <dir> -> 0 if git tracks anything under DOCTOR_ROOT/dir.
+# Derived from git rather than `[ -d ]` so an untracked leftover directory
+# (build output, a stray cache) is never mistaken for a repo-managed config,
+# matching how symlinks.sh and references.sh source their truth from git.
+_svc_has_tracked_config() {
+    [ -n "$(git -C "$DOCTOR_ROOT" ls-files -- "$1" 2>/dev/null | head -n1)" ]
+}
+
+check_services() {
+    group "Services"
+
+    local before_e="$DOCTOR_ERRORS" before_w="$DOCTOR_WARNINGS" before_n="$DOCTOR_NOTICES"
+    local daemon pkg owner candidate
+
+    # --- 1. autostart daemons actually running -----------------------------
+    while read -r daemon; do
+        [ -n "$daemon" ] || continue
+        _svc_is_running "$daemon" && continue
+        warn "'$daemon' is declared in autostart.conf but is not running" \
+             "check what happened to it: journalctl --user -b | grep $(doctor_q "$daemon")"
+    done < <(_svc_autostart_daemons)
+
+    # --- 2. install.sh packages actually installed --------------------------
+    if command -v pacman >/dev/null 2>&1; then
+        while read -r pkg; do
+            [ -n "$pkg" ] || continue
+            _svc_package_installed "$pkg" && continue
+            note "install.sh lists '$pkg' but it is not installed" \
+                 "pacman -S $(doctor_q "$pkg")   (or your AUR helper, if it is AUR-only)"
+        done < <(_svc_install_packages)
+    fi
+
+    # --- 3. D-Bus role ownership + orphaned notification-daemon configs ----
+    if command -v busctl >/dev/null 2>&1; then
+        local bus_name="${DOCTOR_DBUS_ROLES%%:*}" role="${DOCTOR_DBUS_ROLES#*:}"
+        owner="$(_svc_bus_owner "$bus_name")"
+        if [ -n "$owner" ]; then
+            note "$bus_name is currently owned by '$owner'"
+            if command -v pacman >/dev/null 2>&1; then
+                for candidate in mako swaync; do
+                    [ "$candidate" = "$owner" ] && continue
+                    _svc_package_installed "$candidate" || continue
+                    _svc_package_provides "$candidate" "$role" || continue
+                    _svc_has_tracked_config "$candidate" || continue
+                    note "'$candidate' is installed with a tracked config at $(doctor_q "$candidate")/ but does not own $bus_name — its config has no effect while '$owner' holds the name" \
+                         "either uninstall $(doctor_q "$candidate"), or stop '$owner' and let $(doctor_q "$candidate") own $bus_name"
+                done
+            fi
+        fi
+    fi
+
+    if [ "$DOCTOR_ERRORS" = "$before_e" ] \
+        && [ "$DOCTOR_WARNINGS" = "$before_w" ] \
+        && [ "$DOCTOR_NOTICES" = "$before_n" ]; then
+        ok "every autostart daemon is running, install.sh packages are present, and no D-Bus role is contested"
+    fi
+}
