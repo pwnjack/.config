@@ -14,6 +14,12 @@ Hyprland dotfiles repository for Arch Linux / CachyOS. The entire repo lives at 
 ./install.sh --dry-run    # Preview without changes
 ./install.sh --no-backup  # Skip config backup
 
+# Validate the live system (report-only; exits 1 only on ERROR findings)
+./doctor.sh
+
+# Run the doctor's own test suite
+./scripts/doctor/test/run-tests.sh
+
 # Apply a new color scheme from wallpaper
 wal -i /path/to/wallpaper.jpg
 
@@ -94,3 +100,27 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Config is Arch/CachyOS-specific — package management uses `pacman` and `paru`/`yay` for AUR.
 - Keybindings follow a macOS-inspired layout (Super key as primary modifier).
 - `.gitignore` is aggressive (~318 lines) — only essential Hyprland/shell/utility configs are tracked. Application data directories (Obsidian, game launchers, Electron apps, etc.) are excluded.
+- `doctor.sh` and its check modules derive every target from tracked files. When adding a check, never introduce a hand-written list of paths, binaries, or packages — parse the config that already declares them. A list is a second source of truth and will drift.
+- Check modules must never run their loops in a pipeline (`cmd | while read`); the severity counters are shell variables and would be lost in the subshell, silently discarding every finding. Use `while read ...; do ... done < <(cmd)`. The test harness greps for this and fails the suite.
+- Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.
+- `scripts/doctor/` and `docs/` are excluded from the doctor's literal-path scan: both deliberately contain example paths that do not exist.
+
+## Doctor Architecture (`scripts/doctor/`)
+
+```
+doctor.sh                    # Entry point: sources lib + modules, guards the repo, exits 1 on ERROR
+scripts/doctor/
+├── lib.sh                   # group/ok/err/warn/note/summary, counters, doctor_q, doctor_require_repo
+├── checks/
+│   ├── symlinks.sh          # check_symlinks   — from `git ls-files -s` mode 120000
+│   ├── references.sh        # check_references — from `source =` lines and literal ~/.config paths
+│   ├── binaries.sh          # check_binaries   — from keybinds.conf `exec,` and autostart `exec-once`
+│   └── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
+└── test/
+    ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
+    └── test-*.sh            # One per module, sourced into one shared shell
+```
+
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`) each live in their own tiny function so tests can stub them.
+
+`ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

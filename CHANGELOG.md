@@ -2,6 +2,44 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-07-26] - Doctor & Lint Gate
+
+### Added
+- **`doctor.sh`**: report-only health check for the live system. Validates
+  tracked symlinks, Hyprland `source` chains, literal `~/.config` references,
+  keybind and autostart binaries, running daemons, D-Bus role ownership, and
+  `install.sh` package drift. Every target is derived from tracked files, so
+  there is no list to keep in sync. Exits 1 only on ERROR-class findings.
+- **Pre-commit hook** (`scripts/hooks/pre-commit`, activated via
+  `core.hooksPath`): `shellcheck` on staged scripts, the doctor test suite
+  when `scripts/doctor/` changes, `ags bundle` on staged panel sources.
+- **Doctor test suite** (`scripts/doctor/test/`): 207 assertions across a
+  dependency-free harness that runs each check against throwaway git fixtures.
+
+### Fixed
+- **`install.sh --dry-run` could not run non-interactively.** `read` returns
+  non-zero at EOF, and under `set -e` that aborted the script at the first
+  prompt — so the dry run failed whenever any package was missing. Predates
+  this work; surfaced by needing to verify the hook wiring.
+
+### Found (reported, not acted on)
+- **`exec-once = $polkitAgent` has never worked.** `hyprpolkitagent` is
+  installed but ships no executable on `PATH` — only
+  `/usr/lib/hyprpolkitagent/hyprpolkitagent`, a systemd user unit, and a D-Bus
+  activation file. The autostart line fails silently on every login; polkit
+  prompts work only because D-Bus activates the agent on demand.
+- **mako is inert.** swaync owns `org.freedesktop.Notifications`, the D-Bus
+  name a notification daemon must hold to receive anything. This corrects the
+  "mako stays (still in use alongside SwayNC)" decision recorded in the
+  2026-07-19 polish spec, which was never tested.
+- `rofi/options/colors.rasi` and `waybar/colors.css` are tracked symlinks with
+  absolute `/home/pwnjack` targets. The 2026-07-15 "portable symlinks" fix
+  converted two of four cases and missed these.
+- `waypaper/config.ini.template` references a `style.css` and a
+  `keybindings.ini` that do not exist.
+- `flameshot` is listed in `install.sh` but is not installed; `flameshot/` is
+  tracked while screenshots go through `hyprshot` and `rofi/screenshot.sh`.
+
 ## [2026-07-15] - Fresh-Install Hardening
 
 ### Fixed

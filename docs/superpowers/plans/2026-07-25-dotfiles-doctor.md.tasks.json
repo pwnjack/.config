@@ -37,7 +37,7 @@
     {
       "id": 5,
       "subject": "Task 5: Service, DBus, and package checks",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -46,7 +46,7 @@
     {
       "id": 6,
       "subject": "Task 6: doctor.sh entry point",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         2,
         3,
@@ -58,13 +58,13 @@
     {
       "id": 7,
       "subject": "Task 7: Pre-commit hook and install.sh wiring",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** A tracked pre-commit hook that shellchecks staged scripts and bundle-checks staged AGS sources, activated via `core.hooksPath`.\n\n**Files:**\n- Create: `scripts/hooks/pre-commit`\n- Modify: `install.sh` (hook activation before the \"Final wiring\" section ~line 290; add `shellcheck` to PACKAGES ~line 109)\n\n**Acceptance Criteria:**\n- [ ] Hook runs `shellcheck -S warning` on staged `*.sh` files only\n- [ ] Hook runs `ags bundle` only when staged files touch `ags/`\n- [ ] Hook exits 0 and prints nothing intrusive when nothing relevant is staged\n- [ ] Missing `shellcheck` or `ags` produces a warning and does not block the commit\n- [ ] `install.sh` sets `core.hooksPath` to `scripts/hooks`\n- [ ] `install.sh --dry-run` still completes without error\n- [ ] The bundle output goes to a temp file and is deleted\n\n**Verify:** `git config core.hooksPath` -> `scripts/hooks`; staging a script with an SC2086 violation blocks the commit\n\n**Steps:**\n1. Write `scripts/hooks/pre-commit` - staged-file filters, shellcheck loop, ags bundle to mktemp, graceful skip when tools absent\n2. `chmod +x` and `git config core.hooksPath scripts/hooks`\n3. Verify it blocks a deliberately bad staged script (SC2086 probe)\n4. Clean up the probe file\n5. Confirm a clean commit still succeeds\n6. Add hook activation block + `shellcheck` package to `install.sh`\n7. `./install.sh --dry-run` then commit (the hook runs on its own commit and must pass)\n\nFull code in `docs/superpowers/plans/2026-07-25-dotfiles-doctor.md`, Task 7.\n\n```json:metadata\n{\"files\": [\"scripts/hooks/pre-commit\", \"install.sh\"], \"verifyCommand\": \"git config core.hooksPath && ./install.sh --dry-run >/dev/null && echo dry-run-ok\", \"acceptanceCriteria\": [\"shellcheck runs on staged *.sh only\", \"ags bundle runs only when ags/ staged\", \"quiet exit 0 when nothing relevant staged\", \"missing tools warn but do not block\", \"install.sh sets core.hooksPath\", \"install.sh --dry-run completes\", \"bundle temp file deleted\"]}\n```"
     },
     {
       "id": 8,
       "subject": "Task 8: Documentation and live acceptance",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         6,
         7
@@ -72,5 +72,5 @@
       "description": "**Goal:** Document `doctor.sh` alongside `install.sh`, and confirm the tool independently reproduces the three findings established by hand while designing.\n\n**Files:**\n- Modify: `README.md` (structure tree entry + new Maintenance section)\n- Modify: `CLAUDE.md` (Key Commands + two Conventions bullets)\n- Modify: `CHANGELOG.md` (new `[2026-07-25]` entry at the top)\n\n**Acceptance Criteria:**\n- [ ] `README.md` documents `./doctor.sh` and the three severity levels\n- [ ] `CLAUDE.md` Key Commands includes `./doctor.sh` and the test command\n- [ ] `CLAUDE.md` Conventions records the no-hand-written-lists and no-pipeline-loops rules\n- [ ] `CHANGELOG.md` has a `[2026-07-25]` entry describing the doctor, the hook, and the findings\n- [ ] A live run reports all four expected findings (flameshot drift, mako inert, two absolute symlinks)\n- [ ] A live run exits 0 (no ERROR-class conditions on this machine)\n- [ ] Full test suite passes\n\n**Verify:** `./doctor.sh | grep -E 'flameshot|mako|colors.rasi|colors.css'` -> all four lines present\n\n**Steps:**\n1. Run `./doctor.sh; echo \"exit=$?\"` - the four expected findings must appear unprompted and exit must be 0. A missing finding is a bug in the corresponding check; fix the check before proceeding.\n2. Run the full test suite\n3. Update README.md (structure entry + Maintenance section with severity table)\n4. Update CLAUDE.md (Key Commands + Conventions)\n5. Update CHANGELOG.md (Added + Found sections)\n6. Commit\n\nDo NOT act on the findings - deleting flameshot/, removing mako/, or converting the absolute symlinks is separate work, deliberately out of scope.\n\nFull text for every doc edit is in `docs/superpowers/plans/2026-07-25-dotfiles-doctor.md`, Task 8.\n\n```json:metadata\n{\"files\": [\"README.md\", \"CLAUDE.md\", \"CHANGELOG.md\"], \"verifyCommand\": \"./doctor.sh | grep -E 'flameshot|mako|colors.rasi|colors.css' && ./scripts/doctor/test/run-tests.sh\", \"acceptanceCriteria\": [\"README documents doctor.sh and severity levels\", \"CLAUDE.md Key Commands includes doctor.sh and test command\", \"CLAUDE.md Conventions records derivation and subshell rules\", \"CHANGELOG has 2026-07-25 entry\", \"live run reports all four expected findings\", \"live run exits 0\", \"full test suite passes\"]}\n```"
     }
   ],
-  "lastUpdated": "2026-07-25T22:25:10.523151Z"
+  "lastUpdated": "2026-07-25T22:43:19.320872Z"
 }
