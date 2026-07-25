@@ -7,6 +7,14 @@
 #   below are plain shell variables, so `cmd | while read` increments them in
 #   a subshell and every finding is silently discarded. Always write:
 #       while read -r x; do ... done < <(cmd)
+#   The test harness greps check modules for this pattern and fails on it.
+#
+#   These names are reserved by this library — check modules must not redefine
+#   them: group ok err warn note summary doctor_reset _finding
+#
+#   Messages and fix hints are printed with printf %s, never echo -e, so paths,
+#   grep patterns and sed commands survive verbatim (a message containing \n or
+#   \t must not be rewritten). Only the colour constants get %b.
 #
 
 # Root of the dotfiles tree under test. Overridable so the test suite can point
@@ -31,19 +39,20 @@ doctor_reset() {
 }
 
 group() {
-    echo
-    echo -e "${DOCTOR_BLUE}▸${DOCTOR_NC} $1"
+    printf '\n%b▸%b %s\n' "$DOCTOR_BLUE" "$DOCTOR_NC" "$1"
 }
 
 ok() {
-    echo -e "  ${DOCTOR_GREEN}✓${DOCTOR_NC} $1"
+    printf '  %b✓%b %s\n' "$DOCTOR_GREEN" "$DOCTOR_NC" "$1"
 }
 
 # _finding <colored-tag> <message> [fix-hint]
+# Tag goes through %b so its colour escapes render; message and fix hint go
+# through %s so backslashes in paths and regexes are never reinterpreted.
 _finding() {
-    echo -e "  $1  $2"
+    printf '  %b  %s\n' "$1" "$2"
     if [ -n "${3:-}" ]; then
-        echo -e "           ${DOCTOR_DIM}fix: $3${DOCTOR_NC}"
+        printf '           %bfix: %s%b\n' "$DOCTOR_DIM" "$3" "$DOCTOR_NC"
     fi
 }
 
