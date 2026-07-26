@@ -2,6 +2,53 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-07-26] - Night Light
+
+### Added
+- **`scripts/hyprland/nightlight.sh`**: the single entry point for hyprsunset
+  (`toggle|on|off|auto|status|waybar`). The keybind, the waybar module and the
+  settings panel all call it; none of them talks to `hyprctl hyprsunset`.
+- **`hypr/hyprsunset.conf`**: the schedule, as clock-time `profile` blocks
+  (07:00 neutral / 20:00 warm). Tracked and panel-writable, the same
+  arrangement as `hypr/hypridle.conf`. `exec-once = hyprsunset` joins the
+  System Services block in `autostart.conf`.
+- **Two keybinds**: `$Mod SHIFT + D` toggles, `$Mod CTRL + D` returns to the
+  schedule. Both self-document in the Super+H cheatsheet from their trailing
+  comments, and `doctor.sh` picked both up with no new check.
+- **Waybar `custom/nightlight`**, restored from the dead commented-out module
+  but stateful: it reads real daemon state, so the icon cannot lie. Dim sun =
+  neutral, moon = warm, pill background = manual override. The orphaned
+  `#custom-nightlight` CSS rule left behind by the old removal is live again.
+- **Three Power rows in the settings panel** (`ags/lib/hyprsunset.ts`,
+  mirroring `hypridle.ts`): warmth, and both schedule boundaries. Times are
+  minutes-from-midnight behind a slider so the panel cannot emit a time
+  hyprsunset would reject.
+
+### Notes
+- **There is no state file, by design.** The daemon is the state, so all three
+  surfaces agree by construction, and a manual override expires on its own when
+  the daemon's profile timer next fires — no expiry logic to maintain.
+- **`profile { gamma = 100 }` is read as 10000% and kills the daemon.** Profile
+  gamma is a multiplier, not a percentage. It is optional, so it is omitted;
+  top-level `max-gamma` *is* a percentage.
+- **`identity` has no getter** — bare `identity` is a setter returning `ok`, and
+  `temperature` still reports its old value while identity masks it. `off`
+  writes the neutral temperature instead, which keeps state readable.
+- **`--config` does not work** in hyprsunset 0.4.0 despite being in the binary's
+  strings and absent from `--help`; the config path is fixed.
+- **Icons resolve differently in the panel and in notifications**, and both bite.
+  In the panel, symbolic names work but **Papirus-Dark ships its symbolic
+  `status/` set with the light theme's `#444444`**, so `night-light-symbolic`
+  renders invisible even though `Gtk.IconTheme.has_icon` returns true — the row
+  uses `redshift-status-on-symbolic` (symlinked into `panel/`, correctly themed).
+  In notifications, **swaync 0.12.6 renders no symbolic icon at all**, leaving
+  the slot blank, so `notify-send` uses the non-symbolic `weather-clear-night` /
+  `weather-clear` — which also mirror the bar's moon/sun glyphs. A name that
+  renders in the panel proves nothing about a toast.
+- `ags bundle` is esbuild, which strips types without checking them — a clean
+  bundle is not a typecheck, and the ags/gi ambient types are not vendored, so
+  standalone `tsc` cannot run against this tree at all.
+
 ## [2026-07-26] - Pywal Theming Completed
 
 ### Added

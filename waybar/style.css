@@ -100,6 +100,26 @@ tooltip label {
     padding: 0 10px;
 }
 
+/* Night light state is signalled by emphasis, never by hue: the pywal palette
+   takes its colours from the wallpaper, so "amber means warm" holds for no
+   wallpaper in particular. Dim = neutral, full = warm, pill = manual override
+   (the schedule is not in charge right now). */
+
+#custom-nightlight.neutral {
+    color: @color8;
+}
+
+#custom-nightlight.warm {
+    color: @foreground;
+}
+
+#custom-nightlight.neutral-override,
+#custom-nightlight.warm-override {
+    color: @foreground;
+    background-color: @color4;
+    border-radius: 8px;
+}
+
 /* HARDWARE GROUP */
 
 #disk,

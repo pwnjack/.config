@@ -35,6 +35,7 @@
     "battery",
     "pulseaudio",
     "tray",
+    "custom/nightlight",
     "custom/settings",
     "custom/sidebar",
     "custom/power",
@@ -97,6 +98,21 @@
       "• Discord(.*)": "Discord$1",
       "(.*)Discord(.*)": "  $1Discord$2",
     },
+  },
+
+  // Night Light
+  // State comes from the hyprsunset daemon via nightlight.sh, so the icon
+  // reflects what is actually applied. Signal 8 lets the script refresh the
+  // module the instant it changes something; the interval only has to catch
+  // the daemon's own scheduled profile switches.
+  "custom/nightlight": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 60,
+    "signal": 8,
+    "exec": "~/.config/scripts/hyprland/nightlight.sh waybar",
+    "on-click": "~/.config/scripts/hyprland/nightlight.sh toggle",
+    "on-click-right": "~/.config/scripts/hyprland/nightlight.sh auto",
   },
 
   // Settings
