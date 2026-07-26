@@ -88,11 +88,8 @@ tooltip label {
     background: @color4;
 }
 
-/* QUICK LINKS */
+/* NIGHT LIGHT */
 
-#custom-wallpaper,
-#custom-hyprpicker,
-#custom-appmenu,
 #custom-nightlight {
     background-color: transparent;
     font-size: 18px;
