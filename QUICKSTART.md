@@ -144,7 +144,14 @@ Edit: `~/.config/waybar/config.jsonc`
 ### Theming
 Colors are generated from the wallpaper by pywal - there are no static
 theme files. Change the wallpaper (`SUPER + CTRL + W`) and every component
-(Hyprland, Waybar, Rofi, SwayNC, Ghostty) re-themes automatically.
+(Hyprland, Waybar, Rofi, SwayNC, Ghostty, Thunar, cava, btop, Starship)
+re-themes automatically.
+
+Two configs are templates, because neither program can include another file:
+edit `cava/config.in` and `starship/starship.toml.in`. The matching
+`cava/config` and `starship.toml` are symlinks to generated copies - editing
+those loses your changes on the next wallpaper switch. Note btop has no reload
+signal, so a running instance keeps the old colors until you restart it.
 
 ## Backup & Restore
 

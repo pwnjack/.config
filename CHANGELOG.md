@@ -2,6 +2,53 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-07-26] - Pywal Theming Completed
+
+### Added
+- **`scripts/theming/apply-wal.sh`**: fan-out driver for the wallpaper palette.
+  It **globs** for `<component>/apply_wal_colors.sh` instead of listing
+  components, so adding a themed component is one new file — no edit to the
+  driver, to `wall.sh`, or to `install.sh`. Both of those now call it and name
+  nothing. Every apply script must leave its output existing, falling back to
+  defaults when pywal has not run, which is what keeps the tracked symlinks
+  from dangling on a fresh checkout.
+- **`scripts/theming/palette.sh`**: shared loader. `wal_load` fills a `wal`
+  array from `~/.cache/wal/colors`; `wal_readable_on <hex>` picks the text
+  color per background from BT.601 brightness. A wallpaper palette gives no
+  contrast guarantees — the same slot can come out near-black on one image and
+  near-white on the next, so any fixed foreground is unreadable half the time.
+- **cava, btop and Starship follow the wallpaper.** cava and Starship are
+  templated (`config.in`, `starship.toml.in`), since neither program can
+  include another file; btop uses its native theme directory.
+
+### Changed
+- **Starship was tracked but inert.** Nothing ever initialised it, so the
+  CachyOS vendor `fish_prompt` was in charge and `starship.toml` was never
+  read. `fish/config.fish` now starts it, and the hardcoded Nord/orange hex is
+  a `color1..color6` powerline ramp.
+- `ghostty/` and `Thunar/` apply scripts no longer exit early on missing pywal
+  input, so `install.sh` could drop its per-component `touch` fallbacks.
+
+### Fixed
+- **`install.sh` created an absolute symlink for `hypr/config/colors.conf`**,
+  baking one machine's home path into a tracked file. Now relative.
+- **`cava` was missing from the package list** despite `cava/` being tracked.
+- **`$python` was styled with the language color** while sitting in the first
+  powerline block, so an active virtualenv punched a mismatched chunk into it.
+
+### Notes
+- **cava 0.10.7 cannot use its own theme mechanism.** It corrupts the heap and
+  aborts with `free(): invalid next size` on any vertical `gradient` — theme
+  file or main config, at every stop count (5/5 crashes vs 0/5 for
+  `horizontal_gradient`). Its own bundled `themes/solarized_dark` crashes it
+  identically, so this is upstream. The palette goes to `horizontal_gradient`,
+  which colours the spectrum by frequency.
+- **fastfetch needed no change.** Its `keyColor` values and the CachyOS logo
+  emit ANSI indices, and ghostty maps all 16 palette entries from pywal, so it
+  already followed the wallpaper.
+- btop is themed but has no reload signal: a running instance keeps the old
+  colors until restarted.
+
 ## [2026-07-26] - Doctor & Lint Gate
 
 ### Added

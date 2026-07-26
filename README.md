@@ -84,9 +84,19 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 ├── options/                    # User preferences (text files)
 ├── scripts/                    # Utility scripts
 │   ├── doctor/                 # Health-check modules and their tests
+│   ├── theming/                # Pywal fan-out driver and palette loader
 │   └── hooks/                  # Tracked git hooks (see Maintenance)
 ├── fish/                       # Shell config
 ├── ghostty/                    # Terminal config
+├── btop/
+│   ├── btop.conf               # Monitor settings
+│   └── themes/pywal.theme      # Pywal colors (symlink)
+├── cava/
+│   ├── config.in               # Template — edit this one
+│   └── config                  # Rendered config (symlink)
+├── starship/
+│   └── starship.toml.in        # Prompt template — edit this one
+├── starship.toml               # Rendered prompt config (symlink)
 ├── nvim/                       # Editor config
 ├── install.sh                  # Fresh-system setup
 └── doctor.sh                   # Health check (see Maintenance)
@@ -228,7 +238,7 @@ git reset origin/main   # marks repo files as tracked without touching them
 sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot \
                hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
                ghostty fish starship neovim thunar yazi \
-               btop fastfetch playerctl cliphist wl-clipboard python-pywal \
+               btop fastfetch cava playerctl cliphist wl-clipboard python-pywal \
                qt5ct qt6ct nwg-look brightnessctl pavucontrol blueman \
                jq ffmpeg inotify-tools zoxide ttf-firacode-nerd \
                ttf-cascadia-mono-nerd noto-fonts noto-fonts-emoji
@@ -268,7 +278,24 @@ Generate colors from any wallpaper:
 wal -i /path/to/wallpaper.jpg
 ```
 
-Colors automatically apply to Hyprland, Waybar, Rofi, and SwayNC.
+Colors automatically apply to Hyprland, Waybar, Rofi, SwayNC, ghostty, Thunar,
+cava, btop and the Starship prompt. fastfetch follows too, without any config
+of its own — it colours by ANSI index, and the terminal palette is pywal's.
+
+Components needing more than a plain include own a
+`<component>/apply_wal_colors.sh`, rendering into `~/.cache/wal/`. The repo
+tracks only a symlink to the result, so switching wallpapers never dirties git.
+`scripts/theming/apply-wal.sh` runs them all — it finds them by glob, so adding
+a themed component means adding one file and nothing else:
+
+```bash
+# Re-render every component's colors without changing the wallpaper
+~/.config/scripts/theming/apply-wal.sh
+```
+
+Two components are templated because neither program can include another file:
+edit `cava/config.in` and `starship/starship.toml.in`, never `cava/config` or
+`starship.toml` — those are symlinks to the rendered copies.
 
 ### Visual Tweaks
 
