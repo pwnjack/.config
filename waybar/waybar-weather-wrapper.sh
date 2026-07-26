@@ -71,6 +71,8 @@ printf '%s' "$output" | jq -c \
     --argjson tip_map "$TIP_MAP" '
     def strip_vs: gsub("️"; "");
     def swap($m): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value));
-    .text = (.text | strip_vs | swap($text_map))
+    # waybar-weather puts one plain space after the glyph; widen it to the
+    # two-space spacer every other module uses -- see waybar/style.css.
+    .text = (.text | strip_vs | swap($text_map) | sub("</span> "; "</span>  "))
     | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map)) else . end
 ' 2>/dev/null || printf '%s' "$output"

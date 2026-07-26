@@ -75,7 +75,7 @@ jq -nc \
     # re-escape the entities produced by the other two.
     def pango: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
     {
-        text: ("<span size=\"large\">" + ($icon | pango) + "</span> "
+        text: ("<span size=\"large\">" + ($icon | pango) + "</span>  "
                + ($short | pango)),
         tooltip: ([($title | pango),
                    (if $artist == "" then empty else ($artist | pango) end),

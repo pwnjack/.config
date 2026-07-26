@@ -2,14 +2,16 @@
    WAYBAR STYLE
 
    SCALE
-     text      13px   every readout; the base size of every module
+     text      14px   every readout; the base size of every module
      icon      +20%   glyphs are wrapped in <span size='large'> inside
-                      config.jsonc and the module scripts, giving ~15.6px
-                      against the 13px base. Modules that are nothing but
-                      a glyph take 16px from CSS directly instead.
-     gap-in     6px   between modules inside a group   (3px + 3px)
-     gap-out   16px   between groups                   (8px + 8px)
-     edge      12px   outermost module to the bar border
+                      config.jsonc and the module scripts, giving ~16.8px
+                      against the 14px base. Modules that are nothing but
+                      a glyph take 17px from CSS directly instead.
+     gap-glyph ~14px   between a glyph and its value, INSIDE a label
+                       (two spaces at text size, in the format string)
+     gap-in    20px   between modules inside a group   (10px + 10px)
+     gap-out   30px   between groups                   (15px + 15px)
+     edge      16px   outermost module to the bar border
 
    GTK CSS has no numeric variables and a waybar module is a single Pango
    label — its glyph and its digits cannot be sized separately from here.
@@ -19,10 +21,24 @@
    GROUPS
      left     window · taskbar
      center   workspaces | clock · weather · media
-     right    cpu·mem·gpu·disk | net·bt·bat·vol | tray | night·set·notif·power
+     right    cpu·mem·gpu·disk | net | bt·bat | vol | tray | night·set·notif·power
 
-   All spacing comes from this file. Format strings carry no padding
-   spaces, so there is exactly one place to change a gap.
+   network, volume and tray stand alone. Volume is a control rather than a
+   status readout, and on a desktop bluetooth and battery are hidden, which
+   left two bare glyphs -- network and volume -- adjacent at the inner gap
+   with no internal whitespace to separate them. They collided.
+
+   Division of labour: this file owns every gap BETWEEN modules. The gap
+   INSIDE a module -- between a glyph and the number it labels -- cannot
+   come from here, because a module is a single Pango label with no box
+   around its parts. That one gap lives in the format string.
+
+   The three gaps must ascend: a glyph and its number have to look like one
+   unit, closer to each other than to anything else. One space at text size
+   welded them together. Measured ink gaps are misleading here -- digit ink
+   sits nearer its box edge than glyph ink does, so a numerically larger gap
+   can still read as tighter. Trust the render: two spaces inside the label
+   (~14px), 20px between modules, 30px between groups.
 
    Colour is pywal-driven throughout. The two alert states are the
    deliberate exception and are marked where they appear.
@@ -62,7 +78,7 @@ window#waybar {
 #battery,
 #pulseaudio,
 #tray {
-    font-size: 13px;
+    font-size: 14px;
 }
 
 /* ── SCALE: icon tier ────────────────────────────────────────────────
@@ -73,12 +89,12 @@ window#waybar {
 #custom-settings,
 #custom-sidebar,
 #custom-power {
-    font-size: 16px;
+    font-size: 17px;
 }
 
 /* ── RHYTHM ──────────────────────────────────────────────────────────
-   3px each side inside a group (= 6px gap), 8px on a group's outer
-   edge (= 16px between groups), 12px against the bar border. */
+   10px each side inside a group (= 20px gap), 15px on a group's outer
+   edge (= 30px between groups), 16px against the bar border. */
 
 #window,
 #taskbar,
@@ -102,39 +118,41 @@ window#waybar {
     background: transparent;
     color: @foreground;
     margin: 4px 0px;
-    padding: 0px 3px;
+    padding: 0px 10px;
 }
 
 /* group-opening edges */
 #clock,
 #cpu,
-#network,
+#bluetooth,
 #custom-nightlight {
-    padding-left: 8px;
+    padding-left: 15px;
 }
 
 /* group-closing edges */
 #taskbar,
 #disk,
-#pulseaudio,
+#battery,
 #custom-media {
-    padding-right: 8px;
+    padding-right: 15px;
 }
 
 /* self-contained groups */
 #workspaces,
+#network,
+#pulseaudio,
 #tray {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
 /* bar borders */
 #window {
-    padding-left: 12px;
+    padding-left: 16px;
 }
 
 #custom-power {
-    padding-right: 12px;
+    padding-right: 16px;
 }
 
 /* ── WORKSPACES ──────────────────────────────────────────────────────
