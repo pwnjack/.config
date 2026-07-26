@@ -33,7 +33,7 @@ jq -nc \
     --arg used "$used" \
     --arg total "$total" \
     '{
-        text: ("<span size=\"large\">\ue266</span>  " + $usage + "%"),
+        text: ("<span size=\"large\" letter_spacing=\"4096\">\ue266</span> " + $usage + "%"),
         tooltip: ("GPU " + $usage + "% [" + $temp + "°C]\n\n" + $name
                   + "\nVRAM: " + $used + "MB / " + $total + "MB")
     }'

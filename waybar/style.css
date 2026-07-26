@@ -7,8 +7,12 @@
                       config.jsonc and the module scripts, giving ~16.8px
                       against the 14px base. Modules that are nothing but
                       a glyph take 17px from CSS directly instead.
-     gap-glyph ~14px   between a glyph and its value, INSIDE a label
-                       (two spaces at text size, in the format string)
+     gap-glyph ~11px   cpu, memory, gpu, disk, weather -- one space plus
+                       letter_spacing='4096' (4pt) on the glyph span
+              ~14px   volume, battery -- two spaces. Their glyphs carry
+                       ink out to the right (speaker waves, battery tip),
+                       so the same width reads tighter; the wider spacer
+                       is what makes all of them look equal.
      gap-in    20px   between modules inside a group   (10px + 10px)
      gap-out   30px   between groups                   (15px + 15px)
      edge      16px   outermost module to the bar border
@@ -32,6 +36,12 @@
    INSIDE a module -- between a glyph and the number it labels -- cannot
    come from here, because a module is a single Pango label with no box
    around its parts. That one gap lives in the format string.
+
+   Widths are constrained: FiraCode contains only U+0020. Every other space
+   character -- en, thin, hair -- is absent and gets silently rendered by a
+   fallback font at an unpredictable width, so the only honest tools are
+   whole spaces (8.6px each at 14px) and Pango letter_spacing, which is why
+   the tighter modules use the latter to land between one space and two.
 
    The three gaps must ascend: a glyph and its number have to look like one
    unit, closer to each other than to anything else. One space at text size

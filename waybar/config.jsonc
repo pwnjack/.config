@@ -170,7 +170,7 @@
   // CPU
   "cpu": {
     "interval": 5,
-    "format": "<span size='large'></span>  {usage}%",
+    "format": "<span size='large' letter_spacing='4096'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "CPU {usage}% [{avg_frequency}GHz]\n\nCore0: {usage0}%  Core1: {usage1}%\nCore2: {usage2}%  Core3: {usage3}%\nCore4: {usage4}%  Core5: {usage5}%\nCore6: {usage6}%  Core7: {usage7}%",
@@ -179,7 +179,7 @@
   // Memory
   "memory": {
     "interval": 5,
-    "format": "<span size='large'></span>  {}%",
+    "format": "<span size='large' letter_spacing='4096'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "Memory {percentage}% [{used}GB / {total}GB]\n\nSwap: {swapPercentage}% [{swapUsed}GB / {swapTotal}GB]",
@@ -196,7 +196,7 @@
   // Disk
   "disk": {
     "interval": 30,
-    "format": "<span size='large'></span>  {percentage_used}%",
+    "format": "<span size='large' letter_spacing='4096'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
     "tooltip": true,

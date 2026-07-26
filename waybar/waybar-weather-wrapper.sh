@@ -15,7 +15,7 @@
 # added here.
 #
 
-TEXT_MAP='{"☀":"<span size=\"large\">󰖙</span>","☁":"<span size=\"large\">󰖐</span>","⛅":"<span size=\"large\">󰖕</span>","🌤":"<span size=\"large\">󰖕</span>","⛈":"<span size=\"large\">󰙾</span>","🌩":"<span size=\"large\">󰖓</span>","🌫":"<span size=\"large\">󰖑</span>","🌦":"<span size=\"large\">󰖗</span>","🌧":"<span size=\"large\">󰖖</span>","🌨":"<span size=\"large\">󰖘</span>","🌑":"<span size=\"large\">󰖔</span>","🌒":"<span size=\"large\">󰖔</span>","🌓":"<span size=\"large\">󰖔</span>","🌔":"<span size=\"large\">󰖔</span>","🌕":"<span size=\"large\">󰖔</span>","🌖":"<span size=\"large\">󰖔</span>","🌗":"<span size=\"large\">󰖔</span>","🌘":"<span size=\"large\">󰖔</span>","🌙":"<span size=\"large\">󰖔</span>"}'
+TEXT_MAP='{"☀":"<span size=\"large\" letter_spacing=\"4096\">󰖙</span>","☁":"<span size=\"large\" letter_spacing=\"4096\">󰖐</span>","⛅":"<span size=\"large\" letter_spacing=\"4096\">󰖕</span>","🌤":"<span size=\"large\" letter_spacing=\"4096\">󰖕</span>","⛈":"<span size=\"large\" letter_spacing=\"4096\">󰙾</span>","🌩":"<span size=\"large\" letter_spacing=\"4096\">󰖓</span>","🌫":"<span size=\"large\" letter_spacing=\"4096\">󰖑</span>","🌦":"<span size=\"large\" letter_spacing=\"4096\">󰖗</span>","🌧":"<span size=\"large\" letter_spacing=\"4096\">󰖖</span>","🌨":"<span size=\"large\" letter_spacing=\"4096\">󰖘</span>","🌑":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌒":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌓":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌔":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌕":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌖":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌗":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌘":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌙":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>"}'
 TIP_MAP='{"🌅":"󰖜","🌇":"󰖛"}'
 
 # Function to check network connectivity
@@ -71,8 +71,6 @@ printf '%s' "$output" | jq -c \
     --argjson tip_map "$TIP_MAP" '
     def strip_vs: gsub("️"; "");
     def swap($m): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value));
-    # waybar-weather puts one plain space after the glyph; widen it to the
-    # two-space spacer every other module uses -- see waybar/style.css.
-    .text = (.text | strip_vs | swap($text_map) | sub("</span> "; "</span>  "))
+    .text = (.text | strip_vs | swap($text_map))
     | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map)) else . end
 ' 2>/dev/null || printf '%s' "$output"
