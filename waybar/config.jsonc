@@ -36,8 +36,8 @@
     "pulseaudio",
     "tray",
     "custom/nightlight",
-    "custom/settings",
     "custom/sidebar",
+    "custom/settings",
     "custom/power",
   ],
 
