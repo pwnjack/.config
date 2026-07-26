@@ -56,10 +56,16 @@
             "format": "{2}"
         },
         {
-          "type": "packages",
-          "key": "├─󰏖 ",
-          "keyColor": "33",
-          "format": "{1} Total Packages"
+            // Positional placeholders index fastfetch's own variable list, NOT
+            // this module's output: {1} is {am-system}, which is 0 here. Name
+            // the variable instead. No paru/AUR split on purpose -- paru
+            // installs into pacman's db, so the only accurate foreign count is
+            // `pacman -Qm`, which loads every sync db and costs ~0.3s against
+            // this fetch's 5ms total.
+            "type": "packages",
+            "key": "├─󰏖 ",
+            "keyColor": "33",
+            "format": "{pacman} packages"
         },
         {
             "type": "memory",
