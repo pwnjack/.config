@@ -1,4 +1,58 @@
-/* GENERAL SETTINGS */
+/* ══════════════════════════════════════════════════════════════════════
+   WAYBAR STYLE
+
+   SCALE
+     text      14px   every readout; the base size of every module
+     icon      +20%   glyphs are wrapped in <span size='large'> inside
+                      config.jsonc and the module scripts, giving ~16.8px
+                      against the 14px base. Modules that are nothing but
+                      a glyph take 17px from CSS directly instead.
+     gap-glyph ~11px   cpu, memory, gpu, disk, weather -- one space plus
+                       letter_spacing='4096' (4pt) on the glyph span
+              ~14px   volume, battery -- two spaces. Their glyphs carry
+                       ink out to the right (speaker waves, battery tip),
+                       so the same width reads tighter; the wider spacer
+                       is what makes all of them look equal.
+     gap-in    20px   between modules inside a group   (10px + 10px)
+     gap-out   30px   between groups                   (15px + 15px)
+     edge      16px   outermost module to the bar border
+
+   GTK CSS has no numeric variables and a waybar module is a single Pango
+   label — its glyph and its digits cannot be sized separately from here.
+   That is why the glyph span lives in the format string and the base size
+   lives in CSS. Change the grouped selector, never one module alone.
+
+   GROUPS
+     left     window · taskbar
+     center   workspaces | clock · weather · media
+     right    cpu·mem·gpu·disk | net | bt·bat | vol | tray | night·set·notif·power
+
+   network, volume and tray stand alone. Volume is a control rather than a
+   status readout, and on a desktop bluetooth and battery are hidden, which
+   left two bare glyphs -- network and volume -- adjacent at the inner gap
+   with no internal whitespace to separate them. They collided.
+
+   Division of labour: this file owns every gap BETWEEN modules. The gap
+   INSIDE a module -- between a glyph and the number it labels -- cannot
+   come from here, because a module is a single Pango label with no box
+   around its parts. That one gap lives in the format string.
+
+   Widths are constrained: FiraCode contains only U+0020. Every other space
+   character -- en, thin, hair -- is absent and gets silently rendered by a
+   fallback font at an unpredictable width, so the only honest tools are
+   whole spaces (8.6px each at 14px) and Pango letter_spacing, which is why
+   the tighter modules use the latter to land between one space and two.
+
+   The three gaps must ascend: a glyph and its number have to look like one
+   unit, closer to each other than to anything else. One space at text size
+   welded them together. Measured ink gaps are misleading here -- digit ink
+   sits nearer its box edge than glyph ink does, so a numerically larger gap
+   can still read as tighter. Trust the render: two spaces inside the label
+   (~14px), 20px between modules, 30px between groups.
+
+   Colour is pywal-driven throughout. The two alert states are the
+   deliberate exception and are marked where they appear.
+   ══════════════════════════════════════════════════════════════════════ */
 
 @import "colors.css";
 
@@ -15,14 +69,105 @@ window#waybar {
     opacity: 1;
 }
 
-/* WORKSPACES */
+/* ── SCALE: text tier ────────────────────────────────────────────────
+   Every module carrying digits or words. Glyphs inside these are
+   promoted by <span size='large'> in the format string. */
 
-#workspaces {
-    background-color: transparent;
+#window,
+#taskbar,
+#workspaces,
+#clock,
+#custom-weather,
+#custom-media,
+#cpu,
+#memory,
+#custom-gpu,
+#disk,
+#network,
+#bluetooth,
+#battery,
+#pulseaudio,
+#tray {
     font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
 }
+
+/* ── SCALE: icon tier ────────────────────────────────────────────────
+   Modules whose entire content is one glyph and which never render
+   text, so the size can come straight from CSS. */
+
+#custom-nightlight,
+#custom-settings,
+#custom-sidebar,
+#custom-power {
+    font-size: 17px;
+}
+
+/* ── RHYTHM ──────────────────────────────────────────────────────────
+   10px each side inside a group (= 20px gap), 15px on a group's outer
+   edge (= 30px between groups), 16px against the bar border. */
+
+#window,
+#taskbar,
+#workspaces,
+#clock,
+#custom-weather,
+#custom-media,
+#cpu,
+#memory,
+#custom-gpu,
+#disk,
+#network,
+#bluetooth,
+#battery,
+#pulseaudio,
+#tray,
+#custom-nightlight,
+#custom-settings,
+#custom-sidebar,
+#custom-power {
+    background: transparent;
+    color: @foreground;
+    margin: 4px 0px;
+    padding: 0px 10px;
+}
+
+/* group-opening edges */
+#clock,
+#cpu,
+#bluetooth,
+#custom-nightlight {
+    padding-left: 15px;
+}
+
+/* group-closing edges */
+#taskbar,
+#disk,
+#battery,
+#custom-media {
+    padding-right: 15px;
+}
+
+/* self-contained groups */
+#workspaces,
+#network,
+#pulseaudio,
+#tray {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* bar borders */
+#window {
+    padding-left: 16px;
+}
+
+#custom-power {
+    padding-right: 16px;
+}
+
+/* ── WORKSPACES ──────────────────────────────────────────────────────
+   ● / ○ are geometric Unicode, not Nerd Font glyphs — they render at
+   full size, so they stay at the text size rather than the icon size. */
 
 #workspaces button {
     border-radius: 100px;
@@ -32,7 +177,7 @@ window#waybar {
 }
 
 #workspaces button.active {
-    color: #fff;
+    color: @foreground;
     background-color: @color4;
 }
 
@@ -41,40 +186,17 @@ window#waybar {
     opacity: 0.4;
 }
 
-/* TOOLTIPS */
-
-tooltip {
-    border: 1px solid @foreground;
-    background-color: @background;
-    opacity: 1;
-}
-
-tooltip label {
-    color: #fff;
-}
-
-/* WINDOW */
-
-#window {
-    background: transparent;
-    margin: 4px 0px;
-    margin-left: 5px;
-    padding: 0 8px;
-    color: #fff;
-    font-size: 14px;
-}
-/* TASKBAR */
-
-#taskbar {
-    background: transparent;
-    margin: 4px 0px;
-    padding: 0 12px;
-}
+/* ── TASKBAR ─────────────────────────────────────────────────────────
+   icon-size is set in config.jsonc (16) to match the icon tier. */
 
 #taskbar button {
     margin: 4px 0px;
     border-radius: 8px;
     padding: 2px 5px;
+}
+
+#taskbar button:hover {
+    background: @color4;
 }
 
 #taskbar.empty {
@@ -84,23 +206,23 @@ tooltip label {
     margin: 0;
 }
 
-#taskbar button:hover {
-    background: @color4;
+/* ── TOOLTIPS ────────────────────────────────────────────────────────*/
+
+tooltip {
+    border: 1px solid @foreground;
+    background-color: @background;
+    opacity: 1;
 }
 
-/* NIGHT LIGHT */
-
-#custom-nightlight {
-    background-color: transparent;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
+tooltip label {
+    color: @foreground;
 }
 
-/* Night light state is signalled by emphasis, never by hue: the pywal palette
-   takes its colours from the wallpaper, so "amber means warm" holds for no
-   wallpaper in particular. Dim = neutral, full = warm, pill = manual override
-   (the schedule is not in charge right now). */
+/* ── NIGHT LIGHT ─────────────────────────────────────────────────────
+   State is signalled by emphasis, never by hue: the pywal palette takes
+   its colours from the wallpaper, so "amber means warm" holds for no
+   wallpaper in particular. Dim = neutral, full = warm, pill = manual
+   override (the schedule is not in charge right now). */
 
 #custom-nightlight.neutral {
     color: @color8;
@@ -117,103 +239,34 @@ tooltip label {
     border-radius: 8px;
 }
 
-/* HARDWARE GROUP */
+/* ── NETWORK ─────────────────────────────────────────────────────────*/
 
-#disk,
-#memory,
-#cpu,
-#custom-gpu {
-    background: transparent;
-    margin: 4px 0px;
-    color: @foreground;
-}
-
-#cpu {
-    padding-left: 5px;
-}
-
-#disk {
-    padding-right: 5px;
-}
-
-/* MEDIA */
-#custom-media {
-    color: @foreground;
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0 10px 0 20px;
-}
-
-/* NETWORK */
-
-#network {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 20px;
-}
-
-#network.ethernet {
-    background-color: transparent;
-    color: #fff;
-}
-
+#network.ethernet,
 #network.wifi {
-    background-color: transparent;
-    color: #fff;
+    color: @foreground;
 }
 
-/* BLUETOOTH */
-
-#bluetooth,
-#bluetooth.on,
-#bluetooth.connected {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
+#network.disconnected {
+    color: @color8;
 }
 
-#bluetooth.off {
-    background-color: transparent;
-    padding: 0px;
-    margin: 0px;
-}
+/* ── SOUND ───────────────────────────────────────────────────────────*/
 
-/* BATTERY (LAPTOP ONLY) (RIGHT) */
-
-#battery {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
-}
-
-#battery.critical:not(.charging) {
-    color: #ff0000;
-}
-
-/* SOUND */
-
-#pulseaudio {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 20px;
-}
-
+/* ALERT EXCEPTION: fixed red, not palette. A muted sink has to read as
+   a warning on every wallpaper, and pywal guarantees no palette slot
+   is legible as "danger". Same reasoning as #battery.critical. */
 #pulseaudio.muted {
-    background-color: transparent;
-    color: #ff0000;
+    color: #ff5555;
 }
 
-/* SYS TRAY */
+/* ── BATTERY ─────────────────────────────────────────────────────────*/
 
-#tray {
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0px 10px;
+/* ALERT EXCEPTION — see #pulseaudio.muted above. */
+#battery.critical:not(.charging) {
+    color: #ff5555;
 }
+
+/* ── SYS TRAY ────────────────────────────────────────────────────────*/
 
 #tray > .passive {
     -gtk-icon-effect: dim;
@@ -225,54 +278,31 @@ tooltip label {
 
 #tray menu {
     background-color: @background;
-    color: #fff;
+    color: @foreground;
 }
 
 #tray * :hover {
-    color: #fff;
-}
-
-/* SETTINGS */
-
-#custom-settings {
-    background: transparent;
     color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
 }
 
-/* SIDEBAR / NOTIFICATIONS */
+/* ── MEDIA ───────────────────────────────────────────────────────────
+   mediaexec.sh reports playerctl's status as the class, so a paused
+   track dims rather than competing with what is actually running. */
 
-#custom-sidebar {
-    background: transparent;
-    color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
+#custom-media.paused {
+    color: @color8;
 }
+
+/* ── NOTIFICATIONS ───────────────────────────────────────────────────*/
 
 #custom-sidebar.notification {
     color: @color4;
 }
 
-/* POWER */
-
-#custom-power {
-    background: transparent;
-    color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    margin-right: 5px;
-    padding: 0 20px;
-}
-
-/* CLOCK */
+/* ── CLOCK ───────────────────────────────────────────────────────────
+   Emphasis comes from weight, not size, so the clock stays in the
+   text tier. */
 
 #clock {
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0 20px;
-    font-size: 16px;
     font-weight: bold;
 }

@@ -36,8 +36,8 @@
     "pulseaudio",
     "tray",
     "custom/nightlight",
-    "custom/settings",
     "custom/sidebar",
+    "custom/settings",
     "custom/power",
   ],
 
@@ -67,13 +67,13 @@
   // Taskbar
   "wlr/taskbar": {
     "format": "{icon}",
-    "icon-size": 18,
+    "icon-size": 16,
     "tooltip-format": "{title}",
     "sort-by-app-id": false,
     "on-click": "activate",
     "on-click-middle": "close",
     "all-outputs": true,
-    "ignore-list": ["alactritty", "foot"],
+    "ignore-list": ["alacritty", "foot"],
   },
 
   // Hyprland Window
@@ -124,7 +124,7 @@
 
   // System tray
   "tray": {
-    "icon-size": 18,
+    "icon-size": 16,
     "spacing": 10,
   },
 
@@ -132,19 +132,23 @@
   "clock": {
     "format": "{:%H:%M}",
     "format-alt": "{:%d-%m-%Y}",
-    "on-click-right": "gnome-clocks",
     "tooltip": true,
     "tooltip-format": "<tt><small>{calendar}</small></tt>",
     "calendar": {
       "mode": "month",
       "mode-mon-col": 3,
       "on-scroll": 1,
+      // Hierarchy by alpha, never by hue. config.jsonc cannot reach the
+      // pywal palette -- @foreground is a CSS variable and these are Pango
+      // markup -- so a literal colour here would be the one thing on the bar
+      // that ignores the wallpaper. alpha dims whatever colour the tooltip
+      // already inherited from `tooltip label` in style.css.
       "format": {
-        "months": "<span color='#FFFFFF'>{}</span>",
-        "days": "<span color='#9c9c9c'>{}</span>",
-        "weeks": "<span color='#9c9c9c'>W{}</span>",
-        "weekdays": "<span color='#FFFFFF'>{}</span>",
-        "today": "<span color='#FFFFFF'><b>{}</b></span>",
+        "months": "{}",
+        "days": "{}",
+        "weeks": "<span alpha='55%'>W{}</span>",
+        "weekdays": "<span alpha='75%'>{}</span>",
+        "today": "<b>{}</b>",
       },
     },
     "actions": {
@@ -166,7 +170,7 @@
   // CPU
   "cpu": {
     "interval": 5,
-    "format": " {usage}%  ",
+    "format": "<span size='large' letter_spacing='4096'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "CPU {usage}% [{avg_frequency}GHz]\n\nCore0: {usage0}%  Core1: {usage1}%\nCore2: {usage2}%  Core3: {usage3}%\nCore4: {usage4}%  Core5: {usage5}%\nCore6: {usage6}%  Core7: {usage7}%",
@@ -175,7 +179,7 @@
   // Memory
   "memory": {
     "interval": 5,
-    "format": " {}%  ",
+    "format": "<span size='large' letter_spacing='4096'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "Memory {percentage}% [{used}GB / {total}GB]\n\nSwap: {swapPercentage}% [{swapUsed}GB / {swapTotal}GB]",
@@ -192,7 +196,7 @@
   // Disk
   "disk": {
     "interval": 30,
-    "format": " {percentage_used}%  ",
+    "format": "<span size='large' letter_spacing='4096'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
     "tooltip": true,
@@ -201,11 +205,14 @@
 
   // Network
   "network": {
-    "format": "󰲛 Offline",
-    "format-wifi": "",
-    "format-ethernet": "󰈀 󰈁",
-    "format-linked": "󰈀 󰈁",
-    "format-disconnected": "󰲛 Offline",
+    "format": "<span size='large'>󰲛</span>  Offline",
+    "format-wifi": "<span size='large'>{icon}</span>",
+    // Signal ramp, the way battery and pulseaudio already work.
+    // Dormant on this wired desktop; groundwork for a laptop host.
+    "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
+    "format-ethernet": "<span size='large'>󰈀</span>",
+    "format-linked": "<span size='large'>󰈀</span>",
+    "format-disconnected": "<span size='large'>󰲛</span>  Offline",
     "tooltip-format": "󰈀 {ifname} via {gwaddri}",
     "tooltip-format-wifi": " Connected \n\nIP: {ipaddr}\nStrength: {signalStrength}%\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
     "tooltip-format-ethernet": "󰈀 {ifname}\n\nIP: {ipaddr}\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
@@ -220,30 +227,30 @@
       "warning": 30,
       "critical": 15,
     },
-    "format": "{icon} {capacity}%",
-    "format-charging": " {capacity}%",
-    "format-plugged": " {capacity}%",
-    "format-alt": "{icon}  {time}",
-    "format-icons": [" ", " ", " ", " ", " "],
+    "format": "<span size='large'>{icon}</span>  {capacity}%",
+    "format-charging": "<span size='large'></span>  {capacity}%",
+    "format-plugged": "<span size='large'></span>  {capacity}%",
+    "format-alt": "<span size='large'>{icon}</span>  {time}",
+    "format-icons": ["", "", "", "", ""],
   },
 
   // Pulseaudio
   "pulseaudio": {
     "scroll-step": 2,
-    "format": "{icon} {volume}%",
-    "format-bluetooth": "{icon}  {volume}% ",
-    "format-bluetooth-muted": " Muted ",
-    "format-muted": " Muted",
+    "format": "<span size='large'>{icon}</span>  {volume}%",
+    "format-bluetooth": "<span size='large'>{icon}</span>  {volume}% <span size='large'></span>",
+    "format-bluetooth-muted": "<span size='large'></span>  Muted <span size='large'></span>",
+    "format-muted": "<span size='large'></span>  Muted",
     "format-source": "{volume}% ",
     "format-source-muted": "",
     "format-icons": {
-      "headphone": " ",
-      "hands-free": " ",
-      "headset": " ",
-      "phone": " ",
-      "portable": " ",
-      "car": " ",
-      "default": ["", " ", " ", " "],
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": ["", "", "", ""],
     },
     "tooltip-format": "{desc}\n\nVolume: {volume}%\nMic: {format_source}",
     "on-click": "pavucontrol",
@@ -253,9 +260,9 @@
   },
   // Bluetooth
   "bluetooth": {
-    "format": "",
-    "format-disabled": " ",
-    "format-off": " Off",
+    "format": "<span size='large'></span>",
+    "format-disabled": "<span size='large'> </span>",
+    "format-off": "<span size='large'></span>  Off",
     "interval": 30,
     "on-click": "blueman-manager",
     "format-no-controller": "",
@@ -275,9 +282,14 @@
   // Media
   "custom/media": {
     "interval": 1,
-    "max-length": 40,
+    "return-type": "json",
     "exec": "~/.config/scripts/hyprland/mediaexec.sh",
+    // Left-click switches scope (all players <-> options/mediaplayer),
+    // it is not a transport control -- hence the separate bindings.
     "on-click": "~/.config/scripts/hyprland/mediatoggle.sh",
+    "on-click-middle": "playerctl play-pause",
+    "on-scroll-up": "playerctl next",
+    "on-scroll-down": "playerctl previous",
   },
 
   "custom/sidebar": {
