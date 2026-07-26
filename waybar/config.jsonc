@@ -67,7 +67,7 @@
   // Taskbar
   "wlr/taskbar": {
     "format": "{icon}",
-    "icon-size": 18,
+    "icon-size": 16,
     "tooltip-format": "{title}",
     "sort-by-app-id": false,
     "on-click": "activate",
@@ -124,7 +124,7 @@
 
   // System tray
   "tray": {
-    "icon-size": 18,
+    "icon-size": 16,
     "spacing": 10,
   },
 
@@ -166,7 +166,7 @@
   // CPU
   "cpu": {
     "interval": 5,
-    "format": " {usage}%  ",
+    "format": "<span size='large'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "CPU {usage}% [{avg_frequency}GHz]\n\nCore0: {usage0}%  Core1: {usage1}%\nCore2: {usage2}%  Core3: {usage3}%\nCore4: {usage4}%  Core5: {usage5}%\nCore6: {usage6}%  Core7: {usage7}%",
@@ -175,7 +175,7 @@
   // Memory
   "memory": {
     "interval": 5,
-    "format": " {}%  ",
+    "format": "<span size='large'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "Memory {percentage}% [{used}GB / {total}GB]\n\nSwap: {swapPercentage}% [{swapUsed}GB / {swapTotal}GB]",
@@ -192,7 +192,7 @@
   // Disk
   "disk": {
     "interval": 30,
-    "format": " {percentage_used}%  ",
+    "format": "<span size='large'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
     "tooltip": true,
@@ -201,11 +201,11 @@
 
   // Network
   "network": {
-    "format": "󰲛 Offline",
-    "format-wifi": "",
-    "format-ethernet": "󰈀 󰈁",
-    "format-linked": "󰈀 󰈁",
-    "format-disconnected": "󰲛 Offline",
+    "format": "<span size='large'>󰲛</span> Offline",
+    "format-wifi": "<span size='large'></span>",
+    "format-ethernet": "<span size='large'>󰈀</span>",
+    "format-linked": "<span size='large'>󰈀</span>",
+    "format-disconnected": "<span size='large'>󰲛</span> Offline",
     "tooltip-format": "󰈀 {ifname} via {gwaddri}",
     "tooltip-format-wifi": " Connected \n\nIP: {ipaddr}\nStrength: {signalStrength}%\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
     "tooltip-format-ethernet": "󰈀 {ifname}\n\nIP: {ipaddr}\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
@@ -220,30 +220,30 @@
       "warning": 30,
       "critical": 15,
     },
-    "format": "{icon} {capacity}%",
-    "format-charging": " {capacity}%",
-    "format-plugged": " {capacity}%",
-    "format-alt": "{icon}  {time}",
-    "format-icons": [" ", " ", " ", " ", " "],
+    "format": "<span size='large'>{icon}</span> {capacity}%",
+    "format-charging": "<span size='large'></span> {capacity}%",
+    "format-plugged": "<span size='large'></span> {capacity}%",
+    "format-alt": "<span size='large'>{icon}</span> {time}",
+    "format-icons": ["", "", "", "", ""],
   },
 
   // Pulseaudio
   "pulseaudio": {
     "scroll-step": 2,
-    "format": "{icon} {volume}%",
-    "format-bluetooth": "{icon}  {volume}% ",
-    "format-bluetooth-muted": " Muted ",
-    "format-muted": " Muted",
+    "format": "<span size='large'>{icon}</span> {volume}%",
+    "format-bluetooth": "<span size='large'>{icon}</span> {volume}% <span size='large'></span>",
+    "format-bluetooth-muted": "<span size='large'></span> Muted <span size='large'></span>",
+    "format-muted": "<span size='large'></span> Muted",
     "format-source": "{volume}% ",
     "format-source-muted": "",
     "format-icons": {
-      "headphone": " ",
-      "hands-free": " ",
-      "headset": " ",
-      "phone": " ",
-      "portable": " ",
-      "car": " ",
-      "default": ["", " ", " ", " "],
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": ["", "", "", ""],
     },
     "tooltip-format": "{desc}\n\nVolume: {volume}%\nMic: {format_source}",
     "on-click": "pavucontrol",
@@ -253,9 +253,9 @@
   },
   // Bluetooth
   "bluetooth": {
-    "format": "",
-    "format-disabled": " ",
-    "format-off": " Off",
+    "format": "<span size='large'></span>",
+    "format-disabled": "<span size='large'> </span>",
+    "format-off": "<span size='large'></span> Off",
     "interval": 30,
     "on-click": "blueman-manager",
     "format-no-controller": "",

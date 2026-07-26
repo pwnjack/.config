@@ -1,4 +1,32 @@
-/* GENERAL SETTINGS */
+/* ══════════════════════════════════════════════════════════════════════
+   WAYBAR STYLE
+
+   SCALE
+     text      13px   every readout; the base size of every module
+     icon      +20%   glyphs are wrapped in <span size='large'> inside
+                      config.jsonc and the module scripts, giving ~15.6px
+                      against the 13px base. Modules that are nothing but
+                      a glyph take 16px from CSS directly instead.
+     gap-in     6px   between modules inside a group   (3px + 3px)
+     gap-out   16px   between groups                   (8px + 8px)
+     edge      12px   outermost module to the bar border
+
+   GTK CSS has no numeric variables and a waybar module is a single Pango
+   label — its glyph and its digits cannot be sized separately from here.
+   That is why the glyph span lives in the format string and the base size
+   lives in CSS. Change the grouped selector, never one module alone.
+
+   GROUPS
+     left     window · taskbar
+     center   workspaces | clock · weather · media
+     right    cpu·mem·gpu·disk | net·bt·bat·vol | tray | night·set·notif·power
+
+   All spacing comes from this file. Format strings carry no padding
+   spaces, so there is exactly one place to change a gap.
+
+   Colour is pywal-driven throughout. The two alert states are the
+   deliberate exception and are marked where they appear.
+   ══════════════════════════════════════════════════════════════════════ */
 
 @import "colors.css";
 
@@ -15,14 +43,103 @@ window#waybar {
     opacity: 1;
 }
 
-/* WORKSPACES */
+/* ── SCALE: text tier ────────────────────────────────────────────────
+   Every module carrying digits or words. Glyphs inside these are
+   promoted by <span size='large'> in the format string. */
 
-#workspaces {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
+#window,
+#taskbar,
+#workspaces,
+#clock,
+#custom-weather,
+#custom-media,
+#cpu,
+#memory,
+#custom-gpu,
+#disk,
+#network,
+#bluetooth,
+#battery,
+#pulseaudio,
+#tray {
+    font-size: 13px;
 }
+
+/* ── SCALE: icon tier ────────────────────────────────────────────────
+   Modules whose entire content is one glyph and which never render
+   text, so the size can come straight from CSS. */
+
+#custom-nightlight,
+#custom-settings,
+#custom-sidebar,
+#custom-power {
+    font-size: 16px;
+}
+
+/* ── RHYTHM ──────────────────────────────────────────────────────────
+   3px each side inside a group (= 6px gap), 8px on a group's outer
+   edge (= 16px between groups), 12px against the bar border. */
+
+#window,
+#taskbar,
+#workspaces,
+#clock,
+#custom-weather,
+#custom-media,
+#cpu,
+#memory,
+#custom-gpu,
+#disk,
+#network,
+#bluetooth,
+#battery,
+#pulseaudio,
+#tray,
+#custom-nightlight,
+#custom-settings,
+#custom-sidebar,
+#custom-power {
+    background: transparent;
+    color: @foreground;
+    margin: 4px 0px;
+    padding: 0px 3px;
+}
+
+/* group-opening edges */
+#clock,
+#cpu,
+#network,
+#custom-nightlight {
+    padding-left: 8px;
+}
+
+/* group-closing edges */
+#taskbar,
+#disk,
+#pulseaudio,
+#custom-media {
+    padding-right: 8px;
+}
+
+/* self-contained groups */
+#workspaces,
+#tray {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* bar borders */
+#window {
+    padding-left: 12px;
+}
+
+#custom-power {
+    padding-right: 12px;
+}
+
+/* ── WORKSPACES ──────────────────────────────────────────────────────
+   ● / ○ are geometric Unicode, not Nerd Font glyphs — they render at
+   full size, so they stay at the text size rather than the icon size. */
 
 #workspaces button {
     border-radius: 100px;
@@ -32,7 +149,7 @@ window#waybar {
 }
 
 #workspaces button.active {
-    color: #fff;
+    color: @foreground;
     background-color: @color4;
 }
 
@@ -41,40 +158,17 @@ window#waybar {
     opacity: 0.4;
 }
 
-/* TOOLTIPS */
-
-tooltip {
-    border: 1px solid @foreground;
-    background-color: @background;
-    opacity: 1;
-}
-
-tooltip label {
-    color: #fff;
-}
-
-/* WINDOW */
-
-#window {
-    background: transparent;
-    margin: 4px 0px;
-    margin-left: 5px;
-    padding: 0 8px;
-    color: #fff;
-    font-size: 14px;
-}
-/* TASKBAR */
-
-#taskbar {
-    background: transparent;
-    margin: 4px 0px;
-    padding: 0 12px;
-}
+/* ── TASKBAR ─────────────────────────────────────────────────────────
+   icon-size is set in config.jsonc (16) to match the icon tier. */
 
 #taskbar button {
     margin: 4px 0px;
     border-radius: 8px;
     padding: 2px 5px;
+}
+
+#taskbar button:hover {
+    background: @color4;
 }
 
 #taskbar.empty {
@@ -84,23 +178,23 @@ tooltip label {
     margin: 0;
 }
 
-#taskbar button:hover {
-    background: @color4;
+/* ── TOOLTIPS ────────────────────────────────────────────────────────*/
+
+tooltip {
+    border: 1px solid @foreground;
+    background-color: @background;
+    opacity: 1;
 }
 
-/* NIGHT LIGHT */
-
-#custom-nightlight {
-    background-color: transparent;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
+tooltip label {
+    color: @foreground;
 }
 
-/* Night light state is signalled by emphasis, never by hue: the pywal palette
-   takes its colours from the wallpaper, so "amber means warm" holds for no
-   wallpaper in particular. Dim = neutral, full = warm, pill = manual override
-   (the schedule is not in charge right now). */
+/* ── NIGHT LIGHT ─────────────────────────────────────────────────────
+   State is signalled by emphasis, never by hue: the pywal palette takes
+   its colours from the wallpaper, so "amber means warm" holds for no
+   wallpaper in particular. Dim = neutral, full = warm, pill = manual
+   override (the schedule is not in charge right now). */
 
 #custom-nightlight.neutral {
     color: @color8;
@@ -117,103 +211,34 @@ tooltip label {
     border-radius: 8px;
 }
 
-/* HARDWARE GROUP */
+/* ── NETWORK ─────────────────────────────────────────────────────────*/
 
-#disk,
-#memory,
-#cpu,
-#custom-gpu {
-    background: transparent;
-    margin: 4px 0px;
-    color: @foreground;
-}
-
-#cpu {
-    padding-left: 5px;
-}
-
-#disk {
-    padding-right: 5px;
-}
-
-/* MEDIA */
-#custom-media {
-    color: @foreground;
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0 10px 0 20px;
-}
-
-/* NETWORK */
-
-#network {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 20px;
-}
-
-#network.ethernet {
-    background-color: transparent;
-    color: #fff;
-}
-
+#network.ethernet,
 #network.wifi {
-    background-color: transparent;
-    color: #fff;
+    color: @foreground;
 }
 
-/* BLUETOOTH */
-
-#bluetooth,
-#bluetooth.on,
-#bluetooth.connected {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
+#network.disconnected {
+    color: @color8;
 }
 
-#bluetooth.off {
-    background-color: transparent;
-    padding: 0px;
-    margin: 0px;
-}
+/* ── SOUND ───────────────────────────────────────────────────────────*/
 
-/* BATTERY (LAPTOP ONLY) (RIGHT) */
-
-#battery {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 10px;
-}
-
-#battery.critical:not(.charging) {
-    color: #ff0000;
-}
-
-/* SOUND */
-
-#pulseaudio {
-    background-color: transparent;
-    font-size: 14px;
-    margin: 4px 0px;
-    padding: 0 20px;
-}
-
+/* ALERT EXCEPTION: fixed red, not palette. A muted sink has to read as
+   a warning on every wallpaper, and pywal guarantees no palette slot
+   is legible as "danger". Same reasoning as #battery.critical. */
 #pulseaudio.muted {
-    background-color: transparent;
-    color: #ff0000;
+    color: #ff5555;
 }
 
-/* SYS TRAY */
+/* ── BATTERY ─────────────────────────────────────────────────────────*/
 
-#tray {
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0px 10px;
+/* ALERT EXCEPTION — see #pulseaudio.muted above. */
+#battery.critical:not(.charging) {
+    color: #ff5555;
 }
+
+/* ── SYS TRAY ────────────────────────────────────────────────────────*/
 
 #tray > .passive {
     -gtk-icon-effect: dim;
@@ -225,54 +250,23 @@ tooltip label {
 
 #tray menu {
     background-color: @background;
-    color: #fff;
+    color: @foreground;
 }
 
 #tray * :hover {
-    color: #fff;
-}
-
-/* SETTINGS */
-
-#custom-settings {
-    background: transparent;
     color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
 }
 
-/* SIDEBAR / NOTIFICATIONS */
-
-#custom-sidebar {
-    background: transparent;
-    color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    padding: 0 10px;
-}
+/* ── NOTIFICATIONS ───────────────────────────────────────────────────*/
 
 #custom-sidebar.notification {
     color: @color4;
 }
 
-/* POWER */
-
-#custom-power {
-    background: transparent;
-    color: @foreground;
-    font-size: 18px;
-    margin: 4px 0px;
-    margin-right: 5px;
-    padding: 0 20px;
-}
-
-/* CLOCK */
+/* ── CLOCK ───────────────────────────────────────────────────────────
+   Emphasis comes from weight, not size, so the clock stays in the
+   text tier. */
 
 #clock {
-    background-color: transparent;
-    margin: 4px 0px;
-    padding: 0 20px;
-    font-size: 16px;
     font-weight: bold;
 }
