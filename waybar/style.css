@@ -257,6 +257,14 @@ tooltip label {
     color: @foreground;
 }
 
+/* ── MEDIA ───────────────────────────────────────────────────────────
+   mediaexec.sh reports playerctl's status as the class, so a paused
+   track dims rather than competing with what is actually running. */
+
+#custom-media.paused {
+    color: @color8;
+}
+
 /* ── NOTIFICATIONS ───────────────────────────────────────────────────*/
 
 #custom-sidebar.notification {

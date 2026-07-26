@@ -73,7 +73,7 @@
     "on-click": "activate",
     "on-click-middle": "close",
     "all-outputs": true,
-    "ignore-list": ["alactritty", "foot"],
+    "ignore-list": ["alacritty", "foot"],
   },
 
   // Hyprland Window
@@ -132,7 +132,6 @@
   "clock": {
     "format": "{:%H:%M}",
     "format-alt": "{:%d-%m-%Y}",
-    "on-click-right": "gnome-clocks",
     "tooltip": true,
     "tooltip-format": "<tt><small>{calendar}</small></tt>",
     "calendar": {
@@ -207,7 +206,10 @@
   // Network
   "network": {
     "format": "<span size='large'>󰲛</span> Offline",
-    "format-wifi": "<span size='large'></span>",
+    "format-wifi": "<span size='large'>{icon}</span>",
+    // Signal ramp, the way battery and pulseaudio already work.
+    // Dormant on this wired desktop; groundwork for a laptop host.
+    "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
     "format-ethernet": "<span size='large'>󰈀</span>",
     "format-linked": "<span size='large'>󰈀</span>",
     "format-disconnected": "<span size='large'>󰲛</span> Offline",
@@ -280,9 +282,14 @@
   // Media
   "custom/media": {
     "interval": 1,
-    "max-length": 40,
+    "return-type": "json",
     "exec": "~/.config/scripts/hyprland/mediaexec.sh",
+    // Left-click switches scope (all players <-> options/mediaplayer),
+    // it is not a transport control -- hence the separate bindings.
     "on-click": "~/.config/scripts/hyprland/mediatoggle.sh",
+    "on-click-middle": "playerctl play-pause",
+    "on-scroll-up": "playerctl next",
+    "on-scroll-down": "playerctl previous",
   },
 
   "custom/sidebar": {
