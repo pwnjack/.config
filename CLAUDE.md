@@ -95,6 +95,17 @@ Gotchas, all found by probing the binary rather than reading docs:
   - *In the panel* (GTK4 `icon-name` lookup), symbolic icons work, but **Papirus-Dark ships its symbolic `status/` set with the light theme's `#444444`**, so `night-light-symbolic` renders invisible on a dark plate even though `Gtk.IconTheme.has_icon` returns true. Only entries symlinked into `panel/` are correctly themed. Check the resolved SVG's `ColorScheme-Text` before trusting a symbolic icon.
   - *In notifications*, **swaync 0.12.6 renders nothing at all for Papirus-Dark's symbolic icons** — it reserves the icon slot and leaves it blank. `notify-send -i` must use the **non-symbolic** name (`weather-clear-night`, not `weather-clear-night-symbolic`). A name that renders in the panel is no evidence it renders in a toast; screenshot the toast.
 
+### Gaming (WoW / Battle.net)
+
+`docs/gaming-wow.md` is the single source for this — **read it before touching
+any game rule.** The launch chain is Faugus -> gamescope -> Battle.net -> WoW, so
+the Hyprland client is *gamescope*, not the game, and every rule in
+`rules.conf`'s `## GAME WINDOW RULES` block exists twice for that reason. The
+launcher side (`faugus-launcher/**`) is git-ignored because Faugus rewrites it
+every session, so the doc records that recipe as prose — including which flag
+fixed what, and which tuning ideas were measured and rejected (gamemode buys
+`nice -4` here and nothing else). Don't re-derive that survey.
+
 ### User Preferences (`options/`)
 
 Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `mediaplayer`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
