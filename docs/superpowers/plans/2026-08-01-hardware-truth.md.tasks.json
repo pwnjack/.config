@@ -1,0 +1,39 @@
+{
+  "planPath": "docs/superpowers/plans/2026-08-01-hardware-truth.md",
+  "specPath": "docs/superpowers/specs/2026-08-01-hardware-truth-design.md",
+  "tasks": [
+    {
+      "id": 1,
+      "subject": "Task 1: The battery module and its tests",
+      "status": "completed",
+      "description": "**Goal:** A script that turns sysfs into waybar JSON, with a test suite covering every boundary the spec names.\n\n**Files:**\n- Create: `scripts/waybar/battery.sh`\n- Create: `scripts/waybar/test-battery.sh`\n\n**Acceptance Criteria:**\n- Peripheral at 76% silent, exit 0\n- 24% -> low, 9% -> critical, exactly 25% -> silent, exactly 10% -> low\n- ONLINE=0 peripheral ignored at every capacity and absent from the tooltip\n- System battery always in text, including 100%\n- System battery with no ONLINE attribute not skipped\n- System 8% Charging -> ok; 8% Discharging -> critical\n- Both kinds present: system first, then low peripheral\n- Non-numeric CAPACITY skipped with no stderr\n- Model containing & escaped as &amp; in the tooltip\n- shellcheck -S warning clean on both files\n\n**Verify:** `./scripts/waybar/test-battery.sh` -> final line ends `0 failed`, exit 0\n\n```json:metadata\n{\"files\": [\"scripts/waybar/battery.sh\", \"scripts/waybar/test-battery.sh\"], \"verifyCommand\": \"./scripts/waybar/test-battery.sh\", \"acceptanceCriteria\": [\"test suite exits 0 with 0 failures\", \"peripheral below 25 shows, at/above 25 hides\", \"ONLINE=0 peripheral ignored at every capacity\", \"system battery always in text regardless of level\", \"charging system battery never yields an alert class\", \"ampersand in model name escaped in tooltip\", \"shellcheck -S warning clean on both files\"]}\n```"
+    },
+    {
+      "id": 2,
+      "subject": "Task 2: Wire it into the bar",
+      "status": "completed",
+      "blockedBy": [
+        1
+      ],
+      "description": "**Goal:** `custom/battery` renders in waybar with correct colours and spacing, and the built-in `battery` module is gone.\n\n**Files:**\n- Modify: `waybar/config.jsonc` \u2014 modules-right array, `\"battery\"` block at ~line 225\n- Modify: `waybar/style.css` \u2014 header map ~28, grouped selectors ~88/~121/~145, self-contained group ~157, battery section ~263\n\n**Acceptance Criteria:**\n- No `\"battery\"` left in config.jsonc\n- No `#battery` left in style.css\n- waybar starts with no `No batteries.` warning and no CSS parse error\n- #bluetooth and #custom-battery both self-contained at 15px each side\n- Header group map reads `... | net | bt | [bat] | vol | ...`\n- Forced-visible screenshot shows every OTHER module unmoved\n\n**Verify:** `killall waybar; setsid waybar > /tmp/wb.log 2>&1 & sleep 3; grep -iE \"batter|error|css\" /tmp/wb.log` -> no battery warning, no CSS error\n\n```json:metadata\n{\"files\": [\"waybar/config.jsonc\", \"waybar/style.css\"], \"verifyCommand\": \"killall waybar; sleep 1; setsid waybar > /tmp/wb.log 2>&1 < /dev/null & sleep 3; grep -iE 'batter|error|css' /tmp/wb.log\", \"acceptanceCriteria\": [\"no '\\\"battery\\\"' left in config.jsonc\", \"no '#battery' left in style.css\", \"waybar log free of 'No batteries.' and CSS errors\", \"bluetooth and custom-battery both self-contained at 15px\", \"other modules do not move when the battery module appears\"]}\n```"
+    },
+    {
+      "id": 3,
+      "subject": "Task 3: Delete the other two dead surfaces",
+      "status": "completed",
+      "description": "**Goal:** swaync stops configuring a backlight it cannot find, and the two brightness keybinds stop pretending.\n\n**Files:**\n- Modify: `swaync/config.json` \u2014 widgets array (~39), widget-config.backlight (~56)\n- Modify: `hypr/config/software/keybinds.conf:144-145`\n\n**Acceptance Criteria:**\n- No backlight reference left in swaync/config.json\n- `jq .` still parses swaync/config.json\n- Sidebar screenshot identical to the before-shot\n- No XF86MonBrightness binds left\n- Cheatsheet no longer lists the brightness rows (no edit to rofi/)\n\n**Verify:** `jq -e '.widgets | index(\"backlight\") == null' swaync/config.json && ! grep -q XF86MonBrightness hypr/config/software/keybinds.conf && echo OK`\n\n```json:metadata\n{\"files\": [\"swaync/config.json\", \"hypr/config/software/keybinds.conf\"], \"verifyCommand\": \"jq -e '.widgets | index(\\\"backlight\\\") == null' swaync/config.json && ! grep -q XF86MonBrightness hypr/config/software/keybinds.conf && echo OK\", \"acceptanceCriteria\": [\"no backlight reference left in swaync/config.json\", \"swaync/config.json still parses as JSON\", \"sidebar screenshot unchanged versus before-shot\", \"no XF86MonBrightness binds left\", \"cheatsheet no longer lists the brightness rows\"]}\n```"
+    },
+    {
+      "id": 4,
+      "subject": "Task 4: Document it, and verify every surface",
+      "status": "completed",
+      "blockedBy": [
+        1,
+        2,
+        3
+      ],
+      "description": "**Goal:** The change is recorded where the repo records changes, and every surface it touched has been looked at.\n\n**USER-ORDERED GATE \u2014 NON-SKIPPABLE.** This task was requested by the user in the current conversation. It MUST NOT be closed by walking around it, by declaring it \"verified inline\", or by substituting a cheaper check. Close only after every item in `acceptanceCriteria` has been re-validated independently, with output captured.\n\n**Files:**\n- Modify: `CHANGELOG.md` \u2014 new dated section at the top\n- Modify: `CLAUDE.md` \u2014 the scripts/ bullet list\n\n**Acceptance Criteria:**\n- test-battery.sh exits 0 with 0 failures\n- doctor.sh exits 0 with no new ERROR or WARN findings\n- shellcheck -S warning clean on both new scripts\n- waybar log free of `No batteries.` and CSS errors\n- Bar screenshot captured AND read, other modules confirmed unmoved\n- swaync screenshot captured AND read, compared to the before-shot\n- CHANGELOG has a `## [2026-08-01]` section\n- CLAUDE.md documents battery.sh and the SCOPE-selects-behaviour rule\n\n**Verify:** `./scripts/waybar/test-battery.sh && ./doctor.sh && shellcheck -S warning scripts/waybar/battery.sh scripts/waybar/test-battery.sh && echo ALL GREEN`\n\n```json:metadata\n{\"files\": [\"CHANGELOG.md\", \"CLAUDE.md\"], \"verifyCommand\": \"./scripts/waybar/test-battery.sh && ./doctor.sh && shellcheck -S warning scripts/waybar/battery.sh scripts/waybar/test-battery.sh && echo ALL GREEN\", \"acceptanceCriteria\": [\"test-battery.sh exits 0 with 0 failures\", \"doctor.sh exits 0 with no new findings\", \"shellcheck -S warning clean on both new scripts\", \"waybar log free of 'No batteries.' and CSS errors\", \"bar screenshot captured and read, other modules unmoved\", \"swaync screenshot captured and read, nothing lost versus before-shot\", \"CHANGELOG has a 2026-08-01 section\", \"CLAUDE.md documents battery.sh\"], \"userGate\": true, \"tags\": [\"user-gate\"], \"gateScope\": \"all-surfaces\", \"requireEvidenceTokens\": [[\"module-hidden\", \"bar-hidden.png\"], [\"module-shown\", \"bar-shown.png\"]]}\n```"
+    }
+  ],
+  "lastUpdated": "2026-08-01T17:13:09.768303+00:00"
+}

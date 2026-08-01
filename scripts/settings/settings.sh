@@ -117,7 +117,7 @@ customization() {
         echo "2. Change Cursor Theme                                󰇀"
         echo "-------------------------------------------------------"
         echo "3. Change Default Browser                             "
-        echo "4. Change Default Media Player                        "
+        echo "4. Change Media Icon                                  "
         echo "5. Change Default Terminal                            "
         echo "6. Change Default TUI Editor                          "
         echo "-------------------------------------------------------"
@@ -162,17 +162,9 @@ customization() {
                 ;;
             4)
                 clear
-                read -p "First, OPEN the media player you want to use and press ENTER."
-                clear
-                echo "Enter the name of the default media player you want to use."
-                echo "This needs to be the exact identifier used by playerctl."
-                echo "Below are your currently open media players."
-                echo
-                playerctl --list-all
-                echo
-                read -p "■ " choice
-                echo "$choice" > "$HOME/.config/options/mediaplayer"
-                clear
+                # There is no player to choose any more: waybar follows
+                # whichever player is actually playing. Only the glyph is a
+                # preference.
                 echo "(Optional) Enter an icon for the media player. This should be short, and preferably from nerdfonts.com."
                 echo "Leave this blank and we will use the default icon:  "
                 echo
