@@ -117,12 +117,11 @@ customization() {
         echo "2. Change Cursor Theme                                󰇀"
         echo "-------------------------------------------------------"
         echo "3. Change Default Browser                             "
-        echo "4. Change Media Icon                                  "
-        echo "5. Change Default Terminal                            "
-        echo "6. Change Default TUI Editor                          "
+        echo "4. Change Default Terminal                            "
+        echo "5. Change Default TUI Editor                          "
         echo "-------------------------------------------------------"
-        echo "7. Rofi Launcher Type                                 "
-        echo "8. Enable/Disable Desktop Clock                       󰌑"
+        echo "6. Rofi Launcher Type                                 "
+        echo "7. Enable/Disable Desktop Clock                       󰌑"
         echo "-------------------------------------------------------"
         echo "Q. Return                                             󰌑"
         echo "-------------------------------------------------------"
@@ -162,24 +161,6 @@ customization() {
                 ;;
             4)
                 clear
-                # There is no player to choose any more: waybar follows
-                # whichever player is actually playing. Only the glyph is a
-                # preference.
-                echo "(Optional) Enter an icon for the media player. This should be short, and preferably from nerdfonts.com."
-                echo "Leave this blank and we will use the default icon:  "
-                echo
-                read -p "■ " choice
-                if [[ -z "$choice" ]]; then
-                    echo "" > "$HOME/.config/options/mediaicon"
-                else
-                    echo "$choice" > "$HOME/.config/options/mediaicon"
-                fi
-                clear
-                read -p "Finished, press ENTER to continue."
-                clear
-                ;;
-            5)
-                clear
                 echo "Enter the name of the default terminal you want to use."
                 echo "This should be the command you use to launch the terminal."
                 echo "If you arent sure, its probably the same as the package name (e.g ghostty, alacritty, etc)."
@@ -192,7 +173,7 @@ customization() {
                 read -p "Finished, press ENTER to continue."
                 clear
                 ;;
-            6)
+            5)
                 clear
                 echo "Enter the name of the default TUI editor you want to use."
                 echo "This should be the command you use to launch the editor."
@@ -204,7 +185,7 @@ customization() {
                 read -p "Finished, press ENTER to continue."
                 clear
                 ;;
-            7)
+            6)
                 clear
                 echo "What rofi launcher style would you like to use?"
                 echo
@@ -225,7 +206,7 @@ customization() {
                 read -p "Finished, press ENTER to continue."
                 clear
                 ;;
-            8)
+            7)
                 clear
                 echo "What would you like to do?"
                 echo

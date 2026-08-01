@@ -39,11 +39,13 @@ pango() {
     printf '%s' "${s//>/\&gt;}"
 }
 
-# An empty options file is not a missing one: `cat` succeeds and returns "",
-# so a plain || fallback never fires. The file is user-editable and is
-# routinely left blank.
-icon=$(cat "$HOME/.config/options/mediaicon" 2>/dev/null)
-[ -z "$icon" ] && icon="$DEFAULT_ICON"
+# The glyph is not configurable. There used to be an options/mediaicon, but it
+# was only ever consulted when the module was pinned to a single player, and
+# the module was always in "all" mode -- so for its whole life it was read by
+# nothing. Wiring it up during a rewrite silently swapped the bar's note glyph
+# for whatever stale value the file held. One icon, in one place, is the honest
+# arrangement.
+icon="$DEFAULT_ICON"
 
 # MEDIA_SEP, not a tab: see the comment on it in medialib.sh.
 IFS="$MEDIA_SEP" read -r name status title artist album < <(media_snapshot)
@@ -51,10 +53,17 @@ IFS="$MEDIA_SEP" read -r name status title artist album < <(media_snapshot)
 # Nothing playing: stay silent so waybar hides the module.
 [ -z "$title" ] && exit 0
 
-# Truncate the title only. The old version measured icon+title together, so
-# the glyph ate into the character budget. Truncating before escaping is what
-# keeps a cut from landing inside an &amp;.
-short="$title"
+# "Artist - Title" when the player gives an artist, which for music is the half
+# that identifies the song -- Spotify titles like "Before Taxes (feat. The
+# 1978ers)" say nothing about who made it. Browsers put the channel here, so a
+# YouTube tab reads "Smoke - Inside Alcatraz", which is also what you want.
+label="$title"
+[ -n "$artist" ] && label="$artist - $title"
+
+# Truncate the whole label, not the title alone: the artist is part of the
+# width now, and the bar's budget is the same either way. Truncating before
+# escaping is what keeps a cut from landing inside an &amp;.
+short="$label"
 [ "${#short}" -gt "$MAXLEN" ] && short="${short:0:$MAXLEN}…"
 
 if [ "$mode" = "plain" ]; then

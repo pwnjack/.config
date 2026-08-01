@@ -14,8 +14,6 @@ const DefaultApps: CategoryDef = {
             description: "Launched with Super+Return", option: "terminal", placeholder: "ghostty" }),
         optionEntry({ id: "apps.editor", title: "TUI Editor", icon: "accessories-text-editor-symbolic",
             description: "Used by Super+N and the TUI settings", option: "editor", placeholder: "nvim" }),
-        optionEntry({ id: "apps.mediaicon", title: "Media Icon", icon: "emblem-music-symbolic",
-            description: "Nerd Font icon shown in waybar for the player", option: "mediaicon", placeholder: "" }),
         customRow({ id: "apps.launcher", title: "Launcher Style", icon: "view-app-grid-symbolic",
             description: "Rofi layout used by Super+Space",
             control: () => DropdownControl({
