@@ -296,8 +296,21 @@ The `>/dev/null` redirect and the "run X to see why" hint both go away:
 `test.sh` prints a failing suite's full output inline, so there is no second
 command to suggest.
 
-The `shellcheck` and `ags bundle` stanzas are untouched. A bundle is a build,
-not a test suite.
+The `shellcheck` and `ags bundle` stanzas keep their own logic — a bundle is a
+build, not a test suite — but both gain `--no-renames` behaviour, because they
+share the `staged()` helper and it needed the flag for its own reason: git
+reports a rename as a single `R` record, which `--diff-filter=ACM` drops
+entirely, so `git mv a.sh b.sh` slipped past shellcheck without being linted at
+all. Splitting the record yields the destination as an `A`, which is linted,
+and the source as a `D`, which `ACM` still excludes. For the `ags` stanza this
+is a strict improvement: the old filter returned an empty listing for every
+rename direction, so the stanza can now only fire more often, never less.
+
+One gap is knowingly left: the `ags` stanza still reads `staged()`, so deleting
+an `ags/` file — or moving one out of `ags/` — runs no bundle check, which are
+the two cases most able to break a build. Pointing it at the suite listing
+would close this; it is out of scope here because a bundle is not a test suite
+and the change belongs with whoever owns the panel.
 
 ### Deliberate non-goal
 
