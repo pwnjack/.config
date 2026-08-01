@@ -127,10 +127,19 @@ Exit 0 if every suite passed, 1 if any failed, 2 on a usage error.
 
 ### Its own tests
 
-`scripts/test/test-runner.sh`, which the discovery rule then picks up for free —
-the runner is self-hosting. It needs a root override so it can point discovery
-at a fixture repo instead of the live tree: `TEST_ROOT`, following the existing
+`test/test-runner.sh`, which the discovery rule then picks up for free — the
+runner is self-hosting. It needs a root override so it can point discovery at a
+fixture repo instead of the live tree: `TEST_ROOT`, following the existing
 `DOCTOR_ROOT` / `DOCTOR_CACHE` / `BATTERY_SYSFS` seam.
+
+**Why the repo root and not `scripts/test/`.** The owning-directory rule maps a
+top-level `test/` to the empty prefix — the whole repo — so these tests run
+whenever `test.sh` itself is staged. Under `scripts/test/` the owner would be
+`scripts/`, which does not contain the root-level `test.sh`, and a broken
+discovery rule could land through the gate untested. The cost is that this one
+suite runs on every commit; it drives fixtures rather than real suites, so it
+is fast, and a runner that gates every commit is worth verifying on every
+commit.
 
 ### Accepted limitations
 
@@ -299,26 +308,28 @@ runner picks it up.
 
 Each with its expected result:
 
-- `./test.sh --list` names exactly two suites, with owners `scripts/doctor/`
-  and `scripts/waybar/`.
-- `./test.sh` exits 0; both suites run — 213 + 35 assertions, roughly 1.8 s.
+- `./test.sh --list` names exactly three suites, with owners `scripts/doctor/`,
+  `scripts/waybar/` and the repo root.
+- `./test.sh` exits 0; every suite runs — 213 + 35 assertions plus the
+  runner's own, roughly 2 s.
 - A deliberately broken assertion makes `./test.sh` exit 1 and print that
   suite's output; then it is reverted.
-- `./test.sh --for rofi/powermenu.sh` exits 0 with "no suites cover the changed
-  files".
+- `./test.sh --for rofi/powermenu.sh` exits 0 and runs only the repo-root
+  suite. The "no suites cover the changed files" path is exercised in a
+  fixture that has no repo-root suite.
 - Staging a `scripts/waybar/` change and committing runs the battery suite and
-  nothing else.
+  the repo-root suite, and neither runs the doctor's.
 - `./doctor.sh` gains a "Waybar" group reporting exactly one notice — the
   orphaned `"user"` block — and still exits 0.
 - `shellcheck -S warning` stays clean across all tracked scripts, now including
-  the four new ones — `test.sh`, `scripts/test/test-runner.sh`,
+  the four new ones — `test.sh`, `test/test-runner.sh`,
   `scripts/doctor/checks/waybar.sh` and `scripts/doctor/test/test-waybar.sh`.
   The hook enforces this on the commit itself.
 
 ## Build order
 
-1. `test.sh` plus `scripts/test/test-runner.sh` — independently useful, and
-   adopts the orphaned battery suite immediately.
+1. `test.sh` plus `test/test-runner.sh` — independently useful, and adopts the
+   orphaned battery suite immediately.
 2. `scripts/doctor/checks/waybar.sh` plus
    `scripts/doctor/test/test-waybar.sh` — picked up by the existing doctor
    harness regardless of step 1.
