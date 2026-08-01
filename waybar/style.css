@@ -134,16 +134,9 @@ window#waybar {
 /* group-opening edges */
 #clock,
 #cpu,
-#bluetooth {
-    padding-left: 15px;
-}
-
-/* Also a group-opening edge, but the only one that paints a background
-   (the override pill below). A background fills the padding box, so its
-   extra 5px of separation is margin instead — padding would widen the
-   pill on one side and leave the glyph off-centre inside it. */
+#bluetooth,
 #custom-nightlight {
-    margin-left: 5px;
+    padding-left: 15px;
 }
 
 /* group-closing edges */
@@ -228,22 +221,23 @@ tooltip label {
 /* ── NIGHT LIGHT ─────────────────────────────────────────────────────
    State is signalled by emphasis, never by hue: the pywal palette takes
    its colours from the wallpaper, so "amber means warm" holds for no
-   wallpaper in particular. Dim = neutral, full = warm, pill = manual
-   override (the schedule is not in charge right now). */
+   wallpaper in particular. Dim = off, full = on — the same off/on
+   grammar as #network.disconnected and #tray > .passive, so the module
+   reads as one of the icons beside it rather than a control of its own.
 
-#custom-nightlight.neutral {
+   The glyph already carries the state (󰖙 sun / 󰖔 moon), so the two
+   -override classes are styled identically to their plain form: whether
+   the schedule or a manual toggle set the temperature is a distinction
+   for the tooltip, not one worth a coloured plate in the bar. */
+
+#custom-nightlight.neutral,
+#custom-nightlight.neutral-override {
     color: @color8;
 }
 
-#custom-nightlight.warm {
-    color: @foreground;
-}
-
-#custom-nightlight.neutral-override,
+#custom-nightlight.warm,
 #custom-nightlight.warm-override {
     color: @foreground;
-    background-color: @color4;
-    border-radius: 8px;
 }
 
 /* ── NETWORK ─────────────────────────────────────────────────────────*/
