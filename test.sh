@@ -27,9 +27,10 @@
 # component stripped, so scripts/doctor/test/run-tests.sh covers
 # scripts/doctor/ and scripts/waybar/test-battery.sh covers scripts/waybar/.
 # A suite directly under a top-level test/ maps to the empty prefix and so
-# covers the whole tree -- which is how this file's own tests run when test.sh
-# itself changes. This mapping lives here and nowhere else; the pre-commit hook
-# passes staged paths to --for rather than deciding for itself.
+# covers the whole tree, so it runs on EVERY commit. That is deliberate: it is
+# what makes this file's own tests gate a change to this file. This mapping
+# lives here and nowhere else; the pre-commit hook passes staged paths to --for
+# rather than deciding for itself.
 #
 # Output is CAPTURED, not streamed: the doctor's suite alone emits 222 lines,
 # and printing that on every commit is how a gate gets ignored. A failing
@@ -178,6 +179,21 @@ case "${1:-}" in
             _test_usage >&2
             exit 2
         fi
+        # Reject absolute paths rather than silently under-selecting. An
+        # absolute path matches no owning prefix but the repo root's empty
+        # one, so it would run only the repo-root suite and still print
+        # "1 suite passed" -- a green run that tested nothing it was aimed at.
+        for _test_arg in "${TEST_FOR[@]}"; do
+            case "$_test_arg" in
+                /*)
+                    printf 'test: --for takes repo-relative paths, got %s\n' "$_test_arg" >&2
+                    echo >&2
+                    _test_usage >&2
+                    exit 2
+                    ;;
+            esac
+        done
+        unset _test_arg
         ;;
     "")
         ;;

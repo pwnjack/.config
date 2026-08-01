@@ -98,6 +98,7 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 │   └── starship.toml.in        # Prompt template — edit this one
 ├── starship.toml               # Rendered prompt config (symlink)
 ├── nvim/                       # Editor config
+├── test/                       # Tests for the runner itself
 ├── install.sh                  # Fresh-system setup
 ├── doctor.sh                   # Health check (see Maintenance)
 └── test.sh                     # Test runner (see Maintenance)
@@ -143,7 +144,8 @@ sources. Bypass with `git commit --no-verify`.
 
 Run every test suite with `./test.sh`, or `./test.sh --list` to see what it
 found. Each suite is still runnable on its own —
-`./scripts/doctor/test/run-tests.sh`, `./scripts/waybar/test-battery.sh`.
+`./scripts/doctor/test/run-tests.sh`, `./scripts/waybar/test-battery.sh`,
+`./test/test-runner.sh`.
 
 ## Keybindings
 
