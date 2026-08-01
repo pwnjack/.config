@@ -36,7 +36,6 @@
   "widgets": [
     "label",
     "mpris",
-    "backlight",
     "volume",
     "dnd",
     "notifications"
@@ -52,10 +51,6 @@
     "mpris": {
       "image-size": 96,
       "blacklist": ["playerctld"]
-    },
-    "backlight": {
-      "label": " 󰃞   ",
-      "step": 5
     },
     "volume": {
       "label": " 󰕾  ",
