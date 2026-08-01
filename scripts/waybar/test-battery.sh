@@ -5,8 +5,9 @@
 # Standalone and runnable on its own, exit 1 on any failure. It executes the
 # script under test as a subprocess, because that is exactly how waybar runs
 # it -- unlike scripts/doctor/test/test-*.sh, which are sourced fragments
-# sharing one shell so that severity counters survive. Chunk D decides whether
-# the two styles get one runner.
+# sharing one shell so that severity counters survive. Both styles are kept:
+# ../../test.sh runs each suite as a subprocess and asks nothing of it beyond
+# an exit code, so neither had to be rewritten to fit the other.
 #
 # jq is used to read fields back out. That is not a new dependency: battery.sh
 # already requires it to emit the JSON in the first place.
