@@ -2,6 +2,46 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-08-01] - Hardware Truth
+
+### Added
+- **`scripts/waybar/battery.sh`** + `custom/battery`: reports every battery on
+  the machine by reading `/sys/class/power_supply` directly. waybar's own
+  module counts only `SCOPE=System`, so this desktop logged `No batteries.`
+  while a wireless mouse sat on the bus at 76%. `SCOPE` now selects behaviour
+  instead of filtering — peripherals stay hidden until they drop below 25%, a
+  system battery is always visible at every level.
+- **`scripts/waybar/test-battery.sh`**: 33 fixture-driven assertions over a fake
+  sysfs root (`BATTERY_SYSFS`), so the suite needs neither hardware nor root.
+
+### Removed
+- **waybar's built-in `battery` module**, its CSS, and `#battery.critical:not(.charging)`.
+- **swaync's `backlight` widget.** `/sys/class/backlight` is empty; swaync was
+  dropping the widget silently, so removing it changed nothing on screen.
+- **Both `XF86MonBrightness*` keybinds.** `brightnessctl`'s only devices on this
+  machine are the capslock, scrolllock and compose LEDs.
+
+### Notes
+- **A powered-off peripheral keeps its node and its last reading.** Switching
+  the mouse off left `CAPACITY=75` in place; only `POWER_SUPPLY_ONLINE` flipped
+  `1 → 0`. The scan skips present-and-`0`, not "not 1" — a laptop battery
+  usually has no `ONLINE` attribute at all, since it lives on the Mains adapter.
+- **Charge state is trusted for system batteries only.** The mouse reported
+  `Discharging` and then `Unknown` minutes apart while sitting still. For a
+  system battery `STATUS` is reliable, and charging suppresses the alert
+  classes — what the deleted `:not(.charging)` rule encoded.
+- **Two system batteries used to mask each other**, found in code review and
+  fixed before release: the scan overwrote rather than accumulated, so a
+  ThinkPad-style dual-battery machine would have shown the healthier one and
+  reported `ok` while the other sat at 5%. System batteries now accumulate and
+  the class takes the minimum across discharging ones.
+- **swaync cannot host a live readout.** Its only text widget, `label`, takes a
+  static string from `config.json`; there is no command-execution widget in
+  0.12.6. That is why this lives on the bar and not in the sidebar.
+- `bluetooth` and `battery` became self-contained 15px groups. A module that
+  hides itself cannot be load-bearing for a gap — verified by screenshot: every
+  module after it holds its exact x-position whether it shows or hides.
+
 ## [2026-07-26] - Night Light
 
 ### Added
