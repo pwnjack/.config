@@ -203,12 +203,19 @@ here rather than discovered later. `./doctor.sh` still exits 0.
 
 Take the first whitespace-delimited token of every `exec`, `on-click`,
 `on-click-right`, `on-click-middle`, `on-scroll-up` and `on-scroll-down` value,
-then apply three skips:
+then apply two skips:
 
 1. Tokens beginning `~/.config` or `$HOME/.config`. `references.sh` owns those;
    checking them here would report the same fact twice against the same file.
-2. Absolute paths, which are tested with `-x` rather than against `PATH`.
-3. Waybar's action vocabulary.
+2. Waybar's action vocabulary.
+
+Everything else, **including absolute paths**, goes through `command -v`. An
+earlier draft of this design gave absolute paths their own `[ -x ]` branch;
+that was dropped during implementation because `command -v` on an absolute path
+already *is* that test, and is stricter where they disagree — `[ -x /usr/bin ]`
+is true for a directory, so a handler naming a directory was reported as fine.
+Removing the branch also restored the `_way_have_cmd` seam for absolute paths,
+which had been bypassing it and were therefore untestable.
 
 **WARN**, matching `references.sh`'s reasoning that a broken single interaction
 is degradation rather than a broken session — and keeping `./doctor.sh` from
