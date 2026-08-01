@@ -67,7 +67,7 @@ A path is a suite entry point if:
 - its basename is `run-tests.sh`, **or**
 - it matches `test-*.sh` **and** its directory contains no `run-tests.sh`.
 
-The second clause is load-bearing: it keeps the doctor's six sourced fragments
+The second clause is load-bearing: it keeps the doctor's sourced fragments
 out of the listing, since running one standalone would fail. The rule stays
 correct when a third suite arrives in either style, so there is no list to
 maintain.

@@ -26,7 +26,7 @@
     {
       "id": 4,
       "subject": "Task 4: Documentation",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1,
         2,
@@ -35,5 +35,5 @@
       "description": "**Goal:** Every place that describes the test setup describes the one that now exists.\n\n**Files:**\n- Modify: `install.sh:291`\n- Modify: `README.md:135-140`\n- Modify: `CLAUDE.md` (Key Commands, doctor tree, Conventions)\n- Modify: `scripts/waybar/test-battery.sh:5-9`\n\n**Acceptance Criteria:**\n- [ ] No tracked file claims the hook runs only \"doctor tests\"\n- [ ] `CLAUDE.md` Key Commands lists `./test.sh`\n- [ ] `CLAUDE.md`'s doctor tree includes `waybar.sh` and `test-waybar.sh`\n- [ ] `CLAUDE.md` states the discovery convention, including the repo-root owner consequence\n- [ ] `test-battery.sh`'s header records the answer to the question it poses\n- [ ] `./doctor.sh` reports no new reference findings from the edited docs\n\n**Verify:** `grep -rn \"doctor tests\\|doctor's test suite\" install.sh README.md CLAUDE.md` -> no output\n\n**Steps:** See the plan document for the exact before/after text of each of the six edits.\n\n```json:metadata\n{\"files\": [\"install.sh\", \"README.md\", \"CLAUDE.md\", \"scripts/waybar/test-battery.sh\"], \"verifyCommand\": \"grep -rn 'doctor tests' install.sh README.md CLAUDE.md; ./doctor.sh; ./test.sh\", \"acceptanceCriteria\": [\"no stale 'doctor tests' claim remains\", \"CLAUDE.md lists ./test.sh\", \"doctor tree includes waybar.sh and test-waybar.sh\", \"discovery convention documented\", \"test-battery.sh header answers its own question\", \"doctor reports no new reference findings\"]}\n```"
     }
   ],
-  "lastUpdated": "2026-08-01T21:38:23.459193+00:00"
+  "lastUpdated": "2026-08-01T22:05:00.000000+00:00"
 }
