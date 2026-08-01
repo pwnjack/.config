@@ -85,9 +85,12 @@ entry() {
     printf '<span size="large">%s</span>  %s%%' "$1" "$2"
 }
 
-system_text=""
-system_worst=101      # capacity driving the class; 101 means "not alerting"
-low_worst=101
+declare -a system_text=()
+# capacity driving the class; empty means "not alerting" -- unlike a
+# sentinel number, no value CAPACITY can take (even a malformed one out of
+# sysfs's normal 0-100 range) can ever be mistaken for "nothing is alerting".
+system_worst=""
+low_worst=""
 declare -a low_text=()
 declare -a tips=()
 
@@ -112,42 +115,54 @@ for uevent in "$SYSFS"/*/uevent; do
         tips+=("$label  $u_cap%")
         if [ "$u_cap" -lt "$LOW" ]; then
             low_text+=("$(entry "$(device_icon "$u_model")" "$u_cap")")
-            [ "$u_cap" -lt "$low_worst" ] && low_worst="$u_cap"
+            if [ -z "$low_worst" ] || [ "$u_cap" -lt "$low_worst" ]; then
+                low_worst="$u_cap"
+            fi
         fi
     else
-        system_text="$(entry "$ICON_SYSTEM" "$u_cap")"
+        # Accumulate, don't overwrite: dual-battery laptops are a real target,
+        # and a second, healthier battery must never hide a nearly-flat one.
+        system_text+=("$(entry "$ICON_SYSTEM" "$u_cap")")
         case "$u_status" in
             Charging|Full)
                 tips+=("$label  $u_cap% ($u_status)")
                 ;;
             *)
                 tips+=("$label  $u_cap%")
-                # Only a discharging system battery can raise an alert.
-                system_worst="$u_cap"
+                # Only a discharging system battery can raise an alert; take
+                # the minimum across all of them so the worst one always wins.
+                if [ -z "$system_worst" ] || [ "$u_cap" -lt "$system_worst" ]; then
+                    system_worst="$u_cap"
+                fi
                 ;;
         esac
     fi
 done
 shopt -u nullglob
 
-parts=()
-[ -n "$system_text" ] && parts+=("$system_text")
+declare -a parts=()
+[ "${#system_text[@]}" -gt 0 ] && parts+=("${system_text[@]}")
 [ "${#low_text[@]}" -gt 0 ] && parts+=("${low_text[@]}")
 
 # Nothing worth saying: print nothing and let waybar hide the module, the same
 # idiom custom/media uses.
 [ "${#parts[@]}" -eq 0 ] && exit 0
 
-worst=101
-[ "$system_worst" -lt "$worst" ] && worst="$system_worst"
-[ "$low_worst" -lt "$worst" ] && worst="$low_worst"
+worst=""
+[ -n "$system_worst" ] && worst="$system_worst"
+if [ -n "$low_worst" ] && { [ -z "$worst" ] || [ "$low_worst" -lt "$worst" ]; }; then
+    worst="$low_worst"
+fi
 
-if [ "$worst" -lt "$CRITICAL" ]; then
-    class="critical"
-elif [ "$worst" -lt "$LOW" ]; then
-    class="low"
-else
-    class="ok"
+# Empty worst means nothing discharging ever qualified as an alert -- a
+# healthy or absent battery, or one that is charging/full.
+class="ok"
+if [ -n "$worst" ]; then
+    if [ "$worst" -lt "$CRITICAL" ]; then
+        class="critical"
+    elif [ "$worst" -lt "$LOW" ]; then
+        class="low"
+    fi
 fi
 
 text=""

@@ -187,6 +187,41 @@ out=$(run "$r")
 assert_field "$out" '.text | test("80%")' "false" "healthy peripheral stays out of the text"
 assert_contains "$out" '.tooltip' "80%" "healthy peripheral is still in the tooltip"
 
+# --- two low peripherals at once -------------------------------------------
+
+r=$(fixture)
+supply "$r" hidpp_battery_0 \
+    "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=Device" \
+    "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=24" \
+    "POWER_SUPPLY_MODEL_NAME=Mouse"
+supply "$r" hidpp_battery_1 \
+    "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=Device" \
+    "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=9" \
+    "POWER_SUPPLY_MODEL_NAME=Keyboard"
+out=$(run "$r")
+assert_contains "$out" '.text' "24%" "first low peripheral joins the text"
+assert_contains "$out" '.text' "9%" "second low peripheral joins the text"
+assert_field "$out" '.class' "critical" "class comes from the lower of two low peripherals"
+
+# --- two system batteries: dual-battery laptops are common, and the design
+# names them as a target. system_text and system_worst must accumulate, not
+# overwrite -- otherwise whichever battery the scan visits last wins outright,
+# and a healthy second battery can hide a nearly-flat first one completely.
+
+r=$(fixture)
+supply "$r" BAT0 \
+    "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=System" \
+    "POWER_SUPPLY_CAPACITY=5" "POWER_SUPPLY_STATUS=Discharging" \
+    "POWER_SUPPLY_MODEL_NAME=BAT0 nearly flat"
+supply "$r" BAT1 \
+    "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=System" \
+    "POWER_SUPPLY_CAPACITY=90" "POWER_SUPPLY_STATUS=Discharging" \
+    "POWER_SUPPLY_MODEL_NAME=BAT1 healthy"
+out=$(run "$r")
+assert_contains "$out" '.text' "5%" "nearly-flat system battery appears in text"
+assert_contains "$out" '.text' "90%" "healthy second system battery also appears in text"
+assert_field "$out" '.class' "critical" "class comes from the lower of two system batteries"
+
 # --- nothing to report -----------------------------------------------------
 
 r=$(fixture)
