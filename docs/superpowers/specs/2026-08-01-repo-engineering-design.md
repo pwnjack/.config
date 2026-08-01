@@ -67,7 +67,7 @@ A path is a suite entry point if:
 - its basename is `run-tests.sh`, **or**
 - it matches `test-*.sh` **and** its directory contains no `run-tests.sh`.
 
-The second clause is load-bearing: it keeps the doctor's six sourced fragments
+The second clause is load-bearing: it keeps the doctor's sourced fragments
 out of the listing, since running one standalone would fail. The rule stays
 correct when a third suite arrives in either style, so there is no list to
 maintain.
@@ -203,12 +203,19 @@ here rather than discovered later. `./doctor.sh` still exits 0.
 
 Take the first whitespace-delimited token of every `exec`, `on-click`,
 `on-click-right`, `on-click-middle`, `on-scroll-up` and `on-scroll-down` value,
-then apply three skips:
+then apply two skips:
 
 1. Tokens beginning `~/.config` or `$HOME/.config`. `references.sh` owns those;
    checking them here would report the same fact twice against the same file.
-2. Absolute paths, which are tested with `-x` rather than against `PATH`.
-3. Waybar's action vocabulary.
+2. Waybar's action vocabulary.
+
+Everything else, **including absolute paths**, goes through `command -v`. An
+earlier draft of this design gave absolute paths their own `[ -x ]` branch;
+that was dropped during implementation because `command -v` on an absolute path
+already *is* that test, and is stricter where they disagree — `[ -x /usr/bin ]`
+is true for a directory, so a handler naming a directory was reported as fine.
+Removing the branch also restored the `_way_have_cmd` seam for absolute paths,
+which had been bypassing it and were therefore untestable.
 
 **WARN**, matching `references.sh`'s reasoning that a broken single interaction
 is degradation rather than a broken session — and keeping `./doctor.sh` from
@@ -266,17 +273,51 @@ inline and multi-line array forms, the nested-key exclusion, and a stubbed
 ## Component 3 — hook wiring
 
 `scripts/hooks/pre-commit` loses its hardcoded `grep -q '^scripts/doctor/'`
-stanza. It builds a `STAGED_ALL` array in the pass it already makes over
-`staged()`, guards on that array being non-empty, and calls
-`./test.sh --for "${STAGED_ALL[@]}"`. All file-area-to-suite knowledge then
-lives in the runner's owning-directory rule, in one place.
+stanza. It builds a `STAGED_ALL` array, guards on that array being non-empty,
+and calls `./test.sh --for "${STAGED_ALL[@]}"`. All file-area-to-suite
+knowledge then lives in the runner's owning-directory rule, in one place.
+
+`STAGED_ALL` comes from its **own** listing, not from the existing `staged()`
+helper, and the difference is load-bearing. `staged()` filters
+`--diff-filter=ACM` because a deleted file cannot be linted — but a deletion is
+precisely when a suite most needs to run, since removing a covered script is
+one of the likeliest ways to break its tests. Reusing that filtered listing
+made the gate a silent no-op for deletion-only and rename-only commits, which
+also contradicted the contract `_test_covers` already documents ("the hook
+passes staged paths that may no longer exist on disk").
+
+The suite listing therefore uses `--no-renames` and no `ACM` filter.
+`--no-renames` rather than `--diff-filter=ACMRD`: the latter catches a rename
+only at its destination, while `--no-renames` splits an `R` record into `D`+`A`
+and yields both paths — which is what a rename *out of* an owned directory
+needs in order to still run that directory's suite.
+
+The cost is a second `git` invocation and a second loop. Correctness over the
+single pass.
+
+Deleting a script together with its suite stays green rather than failing
+loudly, and that is correct: discovery reads `git ls-files`, so the suite drops
+out of the index and there is nothing left to run.
 
 The `>/dev/null` redirect and the "run X to see why" hint both go away:
 `test.sh` prints a failing suite's full output inline, so there is no second
 command to suggest.
 
-The `shellcheck` and `ags bundle` stanzas are untouched. A bundle is a build,
-not a test suite.
+The `shellcheck` and `ags bundle` stanzas keep their own logic — a bundle is a
+build, not a test suite — but both gain `--no-renames` behaviour, because they
+share the `staged()` helper and it needed the flag for its own reason: git
+reports a rename as a single `R` record, which `--diff-filter=ACM` drops
+entirely, so `git mv a.sh b.sh` slipped past shellcheck without being linted at
+all. Splitting the record yields the destination as an `A`, which is linted,
+and the source as a `D`, which `ACM` still excludes. For the `ags` stanza this
+is a strict improvement: the old filter returned an empty listing for every
+rename direction, so the stanza can now only fire more often, never less.
+
+One gap is knowingly left: the `ags` stanza still reads `staged()`, so deleting
+an `ags/` file — or moving one out of `ags/` — runs no bundle check, which are
+the two cases most able to break a build. Pointing it at the suite listing
+would close this; it is out of scope here because a bundle is not a test suite
+and the change belongs with whoever owns the panel.
 
 ### Deliberate non-goal
 

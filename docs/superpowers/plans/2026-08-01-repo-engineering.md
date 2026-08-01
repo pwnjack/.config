@@ -1056,7 +1056,11 @@ if [ "${#STAGED_ALL[@]}" -gt 0 ]; then
 fi
 ```
 
-- [ ] **Step 3: Verify a waybar change runs only the battery suite**
+- [ ] **Step 3: Commit the hook change BEFORE running any probe**
+
+Do the lint and commit (Steps 7 and 8 below) first, then return here. The probes undo themselves with `git reset --hard HEAD~1`, which discards working-tree changes to tracked files — so an uncommitted hook edit sitting alongside a probe commit is destroyed by the first undo. Committing first also means the probes exercise exactly the hook that will ship.
+
+- [ ] **Step 4: Verify a waybar change runs only the battery suite**
 
 ```bash
 printf '\n# gate probe\n' >> scripts/waybar/battery.sh
@@ -1075,7 +1079,7 @@ git status --short
 
 Expected: `git status --short` prints nothing.
 
-- [ ] **Step 4: Verify an unrelated change runs neither area suite**
+- [ ] **Step 5: Verify an unrelated change runs neither area suite**
 
 ```bash
 printf '\n' >> README.md
@@ -1091,7 +1095,7 @@ Then:
 git reset --hard HEAD~1
 ```
 
-- [ ] **Step 5: Verify a failing suite blocks the commit**
+- [ ] **Step 6: Verify a failing suite blocks the commit**
 
 ```bash
 printf '\nexit 1\n' >> scripts/waybar/test-battery.sh
@@ -1111,7 +1115,7 @@ git status --short
 
 Expected: `git status --short` prints nothing.
 
-- [ ] **Step 6: Lint**
+- [ ] **Step 7: Lint**
 
 ```bash
 shellcheck -S warning scripts/hooks/pre-commit
@@ -1119,7 +1123,7 @@ shellcheck -S warning scripts/hooks/pre-commit
 
 Expected: no output, exit 0.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add scripts/hooks/pre-commit

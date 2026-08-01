@@ -99,7 +99,8 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 ├── starship.toml               # Rendered prompt config (symlink)
 ├── nvim/                       # Editor config
 ├── install.sh                  # Fresh-system setup
-└── doctor.sh                   # Health check (see Maintenance)
+├── doctor.sh                   # Health check (see Maintenance)
+└── test.sh                     # Test runner (see Maintenance)
 ```
 
 ## Maintenance
@@ -131,13 +132,18 @@ What it checks:
   resolving Hyprland's `$variable` indirection first
 - **Services** — autostart daemons actually running, who owns
   `org.freedesktop.Notifications`, and `install.sh` package drift
+- **Waybar** — every module on the bar has a config block, every block is on
+  the bar, and every command an `exec`, click or scroll handler invokes is
+  installed
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
-`core.hooksPath`) runs `shellcheck` on staged shell scripts, the doctor's test
-suite when `scripts/doctor/` changes, and `ags bundle` on staged panel
+`core.hooksPath`) runs `shellcheck` on staged shell scripts, the test suites
+covering whatever the commit touches, and `ags bundle` on staged panel
 sources. Bypass with `git commit --no-verify`.
 
-Run the doctor's own tests with `./scripts/doctor/test/run-tests.sh`.
+Run every test suite with `./test.sh`, or `./test.sh --list` to see what it
+found. Each suite is still runnable on its own —
+`./scripts/doctor/test/run-tests.sh`, `./scripts/waybar/test-battery.sh`.
 
 ## Keybindings
 

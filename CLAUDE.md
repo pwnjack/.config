@@ -17,8 +17,8 @@ Hyprland dotfiles repository for Arch Linux / CachyOS. The entire repo lives at 
 # Validate the live system (report-only; exits 1 only on ERROR findings)
 ./doctor.sh
 
-# Run the doctor's own test suite
-./scripts/doctor/test/run-tests.sh
+# Run every test suite in the repo (or --list to see which ones exist)
+./test.sh
 
 # Apply a new color scheme from wallpaper
 wal -i /path/to/wallpaper.jpg
@@ -149,6 +149,8 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Check modules must never run their loops in a pipeline (`cmd | while read`); the severity counters are shell variables and would be lost in the subshell, silently discarding every finding. Use `while read ...; do ... done < <(cmd)`. The test harness greps for this and fails the suite.
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.
 - `scripts/doctor/` and `docs/` are excluded from the doctor's literal-path scan: both deliberately contain example paths that do not exist.
+- `./test.sh` discovers suites rather than listing them: a tracked file is an entry point if it is named `run-tests.sh`, or matches `test-*.sh` and its directory has no `run-tests.sh`. Name a new suite either way and it is picked up — by the runner and by the pre-commit hook — with no registration step. A suite's *owning directory* is its own directory minus a trailing `test/` component, and that is what decides which commits run it; a top-level `test/` maps to the whole repo, which is why `test/test-runner.sh` runs on every commit. Each suite is run as `bash <path>` in its own subshell and the only contract is its exit code, so a sourced-fragment harness and a standalone script coexist unchanged.
+- `scripts/hooks/pre-commit` decides nothing about which suites to run — it passes the staged paths to `test.sh --for`. It builds two staged listings on purpose: `--diff-filter=ACM` for shellcheck and `ags bundle` (a deleted file cannot be linted) and an unfiltered one for suite selection (a deletion is exactly when a suite most needs to run). Both use `--no-renames`, or git's single `R` record hides one of the two paths.
 
 ## Doctor Architecture (`scripts/doctor/`)
 
@@ -160,12 +162,13 @@ scripts/doctor/
 │   ├── symlinks.sh          # check_symlinks   — from `git ls-files -s` mode 120000
 │   ├── references.sh        # check_references — from `source =` lines and literal ~/.config paths
 │   ├── binaries.sh          # check_binaries   — from keybinds.conf `exec,` and autostart `exec-once`
-│   └── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
+│   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
+│   └── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
-    └── test-*.sh            # One per module, sourced into one shared shell
+    └── test-*.sh            # One per module, test-waybar.sh included; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`) each live in their own tiny function so tests can stub them.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_way_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`) each live in their own tiny function so tests can stub them.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).
