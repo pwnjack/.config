@@ -284,12 +284,13 @@
     "interval": 1,
     "return-type": "json",
     "exec": "~/.config/scripts/hyprland/mediaexec.sh",
-    // Left-click switches scope (all players <-> options/mediaplayer),
-    // it is not a transport control -- hence the separate bindings.
-    "on-click": "~/.config/scripts/hyprland/mediatoggle.sh",
-    "on-click-middle": "playerctl play-pause",
-    "on-scroll-up": "playerctl next",
-    "on-scroll-down": "playerctl previous",
+    // Every binding is a transport control and every one goes through
+    // mediactl.sh, so they act on the player whose title is displayed --
+    // bare playerctl would pick by bus order and could hit a different one.
+    "on-click": "~/.config/scripts/hyprland/mediactl.sh play-pause",
+    "on-click-middle": "~/.config/scripts/hyprland/mediactl.sh play-pause",
+    "on-scroll-up": "~/.config/scripts/hyprland/mediactl.sh next",
+    "on-scroll-down": "~/.config/scripts/hyprland/mediactl.sh previous",
   },
 
   "custom/sidebar": {

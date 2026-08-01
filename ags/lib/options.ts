@@ -28,7 +28,7 @@ export function writeOption(name: string, value: string): void {
 }
 
 export const OPTIONS = [
-    "browser", "terminal", "editor", "mediaplayer", "mediaicon",
+    "browser", "terminal", "editor", "mediaicon",
     "launchertype", "font", "font-gtk", "cursortheme",
     "autologin", "clock", "randomwallpaper", "mainmonitor",
 ] as const

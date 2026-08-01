@@ -108,11 +108,12 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `mediaplayer`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `mediaicon`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
 
 ### Scripts (`scripts/`)
 
 - `hyprland/` — Startup, wallpaper switching (`wall.sh`), media control, night light (`nightlight.sh`), AI chatbox launcher
+  - Media: `medialib.sh` is a sourced helper that picks *which* player the waybar module follows (first `Playing`, else first with a title). `mediaexec.sh` renders it (waybar JSON, or one plain line for hyprlock with `--plain`) and `mediactl.sh` drives transport through the same choice, so the title shown and the player controlled can never diverge. There is deliberately no stored player preference — bare `playerctl` picks by bus registration order, and selecting per-poll is what removed the old left-click scope toggle.
 - `waybar/` — Bar management and toggling
 - `settings/` — Config utilities, updates, monitor detection
 - `fonts/` — Font application automation
