@@ -266,10 +266,31 @@ inline and multi-line array forms, the nested-key exclusion, and a stubbed
 ## Component 3 — hook wiring
 
 `scripts/hooks/pre-commit` loses its hardcoded `grep -q '^scripts/doctor/'`
-stanza. It builds a `STAGED_ALL` array in the pass it already makes over
-`staged()`, guards on that array being non-empty, and calls
-`./test.sh --for "${STAGED_ALL[@]}"`. All file-area-to-suite knowledge then
-lives in the runner's owning-directory rule, in one place.
+stanza. It builds a `STAGED_ALL` array, guards on that array being non-empty,
+and calls `./test.sh --for "${STAGED_ALL[@]}"`. All file-area-to-suite
+knowledge then lives in the runner's owning-directory rule, in one place.
+
+`STAGED_ALL` comes from its **own** listing, not from the existing `staged()`
+helper, and the difference is load-bearing. `staged()` filters
+`--diff-filter=ACM` because a deleted file cannot be linted — but a deletion is
+precisely when a suite most needs to run, since removing a covered script is
+one of the likeliest ways to break its tests. Reusing that filtered listing
+made the gate a silent no-op for deletion-only and rename-only commits, which
+also contradicted the contract `_test_covers` already documents ("the hook
+passes staged paths that may no longer exist on disk").
+
+The suite listing therefore uses `--no-renames` and no `ACM` filter.
+`--no-renames` rather than `--diff-filter=ACMRD`: the latter catches a rename
+only at its destination, while `--no-renames` splits an `R` record into `D`+`A`
+and yields both paths — which is what a rename *out of* an owned directory
+needs in order to still run that directory's suite.
+
+The cost is a second `git` invocation and a second loop. Correctness over the
+single pass.
+
+Deleting a script together with its suite stays green rather than failing
+loudly, and that is correct: discovery reads `git ls-files`, so the suite drops
+out of the index and there is nothing left to run.
 
 The `>/dev/null` redirect and the "run X to see why" hint both go away:
 `test.sh` prints a failing suite's full output inline, so there is no second
