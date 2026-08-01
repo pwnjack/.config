@@ -25,23 +25,36 @@ POWER_SUPPLY_SCOPE=Device
 
 **Not upower.** `upower -i` does expose a device type (`mouse`) that sysfs lacks, but it costs a daemon dependency, human-shaped output, and a fork plus D-Bus round trip per device per poll. Its own `icon-name` for this device is `battery-missing-symbolic`, which is simply wrong. A `case` over the model string covers mouse/keyboard/headset with a generic fallback that is merely unspecific rather than incorrect. Moving to upower later is a change inside one function.
 
-**No charge state.** Within two minutes of probing, sysfs reported `STATUS=Discharging` and then `Unknown`, with upower agreeing (`state: unknown`). Percentage is the only field that holds still, so the module shows only percentage. There is no counterpart to the old `#battery.critical:not(.charging)` rule.
+**No charge state for peripherals.** Within two minutes of probing, sysfs reported `STATUS=Discharging` and then `Unknown` for the mouse, with upower agreeing (`state: unknown`). Percentage is the only field that holds still for a device battery, so peripheral entries show only percentage and ignore `STATUS`. System batteries are the exception: their `STATUS` is trustworthy, and charging there suppresses the alert classes — which is what the old `#battery.critical:not(.charging)` rule encoded.
 
-**No state file.** The module is hidden above the threshold, so *the module appearing is the notification*. Nothing has to remember that it already warned, and nothing has to expire — the same stateless-by-construction property `nightlight.sh` has.
+**No state file.** For peripherals the module is hidden above the threshold, so *the module appearing is the notification*. Nothing has to remember that it already warned, and nothing has to expire — the same stateless-by-construction property `nightlight.sh` has. (On a machine with a system battery the module is always present, so there the appearing-is-the-signal property does not apply; the colour change carries it instead. Still no state.)
 
 ## Design
 
-### 1. New module: `scripts/waybar/devicebattery.sh`
+### 1. New module: `scripts/waybar/battery.sh`
 
 One script, one consumer, no sourced lib. (The `medialib.sh` split exists because two consumers — display and transport — had to agree on one choice; here there is one.)
 
-**Scan.** A single pass over `$DEVBAT_SYSFS/*/uevent`, default `/sys/class/power_supply`. Keep entries with `POWER_SUPPLY_TYPE=Battery` and a numeric `POWER_SUPPLY_CAPACITY`.
+Named `battery`, not `devicebattery`: it reports every battery on the machine, peripheral or not, and a name covering half its job would mislead the next reader. There is no collision with waybar's built-in module — that one is being deleted, and even alongside it the CSS ids differ (`#battery` vs `#custom-battery`).
 
-There is deliberately **no `SCOPE` filter**. Filtering to `SCOPE=Device` would make this desktop-only, and since waybar's `battery` module is being deleted, a laptop host would then show nothing at all. Taking every battery keeps one module truthful on any machine, so host layering (chunk C) never has to add a battery module back per-host.
+**Scan.** A single pass over `$BATTERY_SYSFS/*/uevent`, default `/sys/class/power_supply`. Keep entries with `POWER_SUPPLY_TYPE=Battery` and a numeric `POWER_SUPPLY_CAPACITY`.
 
-**Choice.** Lowest capacity wins the `text`. The tooltip lists every device with its level, not only the lowest.
+Skip any entry whose `POWER_SUPPLY_ONLINE` is **present and `0`**. Verified by switching the mouse off: the sysfs node persists and `CAPACITY` holds its last reading (75), so a stale percentage would otherwise be reported forever — a mouse left in a drawer at 8% would pin a critical badge to the bar for a device not in use. `ONLINE` flipped `1 → 0` and is the only field that did. The test is present-and-`0` rather than "not 1", because a laptop's internal battery generally carries no `ONLINE` attribute at all (it lives on the `Mains` adapter), and such a battery must not be skipped.
 
-**Output.** The script prints nothing and exits 0 unless some device is below `LOW=25`, so waybar hides the module — the same idiom `custom/media` uses. Otherwise it emits one line of JSON, `{text, tooltip, class}`. Both comparisons are strictly-less-than, on the lowest device: `capacity < 10` gives `class: critical`, else `capacity < 25` gives `class: low`. Exactly 25 is silent and exactly 10 is `low`. Rendering goes through `jq`, as in `mediaexec.sh`, because model names are vendor strings and `Corsair HS80 & Mouse` would be malformed Pango markup.
+**`SCOPE` selects behaviour, it does not filter.** Every battery is in scope; the attribute decides how it is shown:
+
+| `POWER_SUPPLY_SCOPE` | meaning | behaviour |
+|---|---|---|
+| `Device` | a peripheral — mouse, keyboard, headset | **auto-hiding**: contributes nothing until it drops below `LOW` |
+| `System`, or absent | the machine's own battery | **always visible**, at every level |
+
+A laptop battery is a permanent status readout, not an alert — you want to glance at it at 80%. A peripheral battery is the opposite: it is noise at 80% and only earns bar space when it is nearly out. One module covers both, so host layering (chunk C) never has to add a battery module back per-host, and no host list is involved — the kernel's own attribute drives it.
+
+**Choice and output.** The module renders, in order: the system battery if one exists, then any peripheral below `LOW`, e.g. `󰁽 64%  󰍽 18%`. If neither applies the script prints nothing and exits 0, so waybar hides the module — the same idiom `custom/media` uses. Otherwise it emits one line of JSON, `{text, tooltip, class}`, and the tooltip lists every device with its level, including ones not shown in the text.
+
+`class` is taken from the **most urgent** entry being displayed. Both comparisons are strictly-less-than: `capacity < 10` gives `critical`, else `capacity < 25` gives `low`, else `ok`. Exactly 25 is not low; exactly 10 is `low`, not critical.
+
+**Charging suppresses the alert classes, for system batteries only.** A system battery at 8% on AC is not an emergency, which is what the deleted `#battery.critical:not(.charging)` rule encoded and why it is worth preserving. It applies only where charge state is trustworthy: `STATUS` is reliable for a system battery, and demonstrably not for this mouse, which reported `Discharging` and then `Unknown` minutes apart while sitting still. Peripheral entries ignore `STATUS` entirely. Rendering goes through `jq`, as in `mediaexec.sh`, because model names are vendor strings and `Corsair HS80 & Mouse` would be malformed Pango markup.
 
 Thresholds and the glyph map are constants at the top of the script, the same shape as `MAXLEN`/`DEFAULT_ICON` in `mediaexec.sh`. They are deliberately **not** `options/` entries: that would mean an AGS panel row and a `settings.sh` case for a number nobody tunes twice.
 
@@ -51,13 +64,15 @@ Thresholds and the glyph map are constants at the top of the script, the same sh
 
 `style.css` documents the group map and warns that a hidden module leaves its neighbours colliding. An auto-hiding module must therefore not be load-bearing for any gap.
 
-The module takes `battery`'s old slot between `bluetooth` and `pulseaudio`, and **both `bluetooth` and `custom/devicebattery` become self-contained groups** at 15px on each side. Every neighbouring gap is then 30px whether the module is showing or not, so its appearance never reflows the bar. The `bt·bat` pair in the header map dissolves:
+The module takes `battery`'s old slot between `bluetooth` and `pulseaudio`, and **both `bluetooth` and `custom/battery` become self-contained groups** at 15px on each side. Every neighbouring gap is then 30px whether the module is showing or not, so its appearance never reflows the bar. The `bt·bat` pair in the header map dissolves:
 
 ```
-right  cpu·mem·gpu·disk | net | bt | [devbat] | vol | tray | night·set·notif·power
+right  cpu·mem·gpu·disk | net | bt | [bat] | vol | tray | night·set·notif·power
 ```
 
-`style.css` gains `#custom-devicebattery.low` (palette) and `#custom-devicebattery.critical` (fixed red), the latter under the existing ALERT EXCEPTION rationale: pywal cannot guarantee any palette slot reads as "danger."
+`style.css` gains `#custom-battery.low` (palette) and `#custom-battery.critical` (fixed red), the latter under the existing ALERT EXCEPTION rationale: pywal cannot guarantee any palette slot reads as "danger." `class: ok` deliberately gets **no rule** — it inherits `@foreground` from the grouped selector the module already belongs to, so a healthy system battery looks like every other readout on the bar.
+
+On this desktop the module is auto-hiding; on a laptop host it would be permanently present. The self-contained 15px grouping is what makes both cases correct without a second layout.
 
 The header's `gap-glyph` table lists `volume, battery` as the two-space cases, because those glyphs carry ink to the right. Whether the new glyph needs one space or two is decided by looking at a screenshot during implementation, and the table is updated to match.
 
@@ -79,23 +94,44 @@ The two brightness binds disappear from the Super+H cheatsheet automatically, si
 | no power supplies at all (VM) | silent, exit 0 |
 | `CAPACITY` empty or non-numeric | skip that device — otherwise `[ "$cap" -lt 25 ]` throws into waybar's log every 60s |
 | `uevent` unreadable, or device unplugged mid-scan | `2>/dev/null`, skip |
-| charge status | ignored entirely (see Decisions) |
+| peripheral powered off (`ONLINE=0`) | skipped; its stale `CAPACITY` is never reported |
+| peripheral charge status | ignored entirely (see Decisions) |
+| system battery on AC | alert classes suppressed, percentage still shown |
 
-**Open question, resolved by probing before code is written:** what a powered-off mouse reports. If the sysfs node disappears, nothing more is needed. If it lingers at `CAPACITY=0`, the module would scream critical every time the mouse is switched off, and the rule becomes "skip 0." Implementation begins by switching the mouse off and looking.
+**Resolved 2026-08-01 by probing, before any code:** a powered-off mouse does *not* drop its sysfs node, and does *not* report `CAPACITY=0`. It keeps its last reading (75) and flips `POWER_SUPPLY_ONLINE` from `1` to `0`. Both branches anticipated in the first draft of this spec were wrong, which is the argument for having probed rather than picked one.
 
 ## Testing
 
-`DEVBAT_SYSFS` (default `/sys/class/power_supply`) is the whole testability seam: one line, and the suite needs neither hardware nor root — tests point it at a temp directory of fake `uevent` files.
+`BATTERY_SYSFS` (default `/sys/class/power_supply`) is the whole testability seam: one line, and the suite needs neither hardware nor root — tests point it at a temp directory of fake `uevent` files.
 
-`scripts/waybar/test-devicebattery.sh`, dependency-free and exit-1-on-failure, following the conventions of `scripts/doctor/test/run-tests.sh` so chunk D can discover it unchanged. Cases:
+`scripts/waybar/test-battery.sh`, dependency-free and exit-1-on-failure, following the conventions of `scripts/doctor/test/run-tests.sh` so chunk D can discover it unchanged. Cases:
+
+*Peripherals (`SCOPE=Device`)*
 
 - nothing present → silent
 - one device above threshold → silent
 - exactly 25 → silent (the rule is `< LOW`)
-- 24 → `class: low`
+- 24 → shown, `class: low`
 - exactly 10 → `class: low` (the rule is `< CRITICAL`)
 - 9 → `class: critical`
-- two devices → lowest wins the text, both appear in the tooltip
+- `ONLINE=0` at 9% → silent, and absent from the text
+- two low devices → both in the text, `class` from the lower
+- one low, one healthy → only the low one in the text, both in the tooltip
+
+*System battery (`SCOPE=System` or absent)*
+
+- 64%, discharging → **shown**, `class: ok` — this is the "does not disappear" requirement
+- 64% with no `ONLINE` attribute → shown, not skipped by the `ONLINE` rule
+- 8%, discharging → `class: critical`
+- 8%, `STATUS=Charging` → shown, `class: ok` (charging suppresses the alert)
+
+*Both present*
+
+- system 64% + peripheral 18% → text shows both, system first
+- system 64% + peripheral 80% → text shows the system battery only
+
+*Parsing*
+
 - non-numeric capacity → skipped, no error output
 - model containing `&` → escaped, valid Pango
 
@@ -107,6 +143,7 @@ This is not ceremony: on 2026-08-01 the media module shipped two bugs — a tab-
 - `./doctor.sh` exits 0 with no new findings.
 - waybar restarted, log free of `No batteries.` and of module errors.
 - Screenshot of the bar with the module forced visible, confirming glyph spacing and that gaps are unchanged when it hides.
+- Mouse switched off with `BATTERY_SYSFS` pointed at real sysfs: module silent, despite `CAPACITY=75` still sitting in the node.
 - Screenshot of the swaync control center, confirming nothing changed visually when the dead `backlight` widget is removed.
 
 ## Out of scope
