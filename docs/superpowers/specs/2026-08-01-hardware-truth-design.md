@@ -50,7 +50,9 @@ Skip any entry whose `POWER_SUPPLY_ONLINE` is **present and `0`**. Verified by s
 
 A laptop battery is a permanent status readout, not an alert — you want to glance at it at 80%. A peripheral battery is the opposite: it is noise at 80% and only earns bar space when it is nearly out. One module covers both, so host layering (chunk C) never has to add a battery module back per-host, and no host list is involved — the kernel's own attribute drives it.
 
-**Choice and output.** The module renders, in order: the system battery if one exists, then any peripheral below `LOW`, e.g. `󰁽 64%  󰍽 18%`. If neither applies the script prints nothing and exits 0, so waybar hides the module — the same idiom `custom/media` uses. Otherwise it emits one line of JSON, `{text, tooltip, class}`, and the tooltip lists every device with its level, including ones not shown in the text.
+**Choice and output.** The module renders, in order: **every** system battery, then any peripheral below `LOW`, e.g. `󰁽 64%  󰍽 18%`.
+
+> **Amended 2026-08-01 after code review.** This section originally said "the system battery", singular, and the first implementation followed it literally — assigning rather than accumulating, so on a dual-battery machine the last one scanned won and could mask a nearly-flat sibling as `ok`. System batteries accumulate; the alert class takes the **minimum across discharging ones**. Do not re-derive the singular form from this document. If neither applies the script prints nothing and exits 0, so waybar hides the module — the same idiom `custom/media` uses. Otherwise it emits one line of JSON, `{text, tooltip, class}`, and the tooltip lists every device with its level, including ones not shown in the text.
 
 `class` is taken from the **most urgent** entry being displayed. Both comparisons are strictly-less-than: `capacity < 10` gives `critical`, else `capacity < 25` gives `low`, else `ok`. Exactly 25 is not low; exactly 10 is `low`, not critical.
 
@@ -93,7 +95,8 @@ The two brightness binds disappear from the Super+H cheatsheet automatically, si
 |---|---|
 | no power supplies at all (VM) | silent, exit 0 |
 | `CAPACITY` empty or non-numeric | skip that device — otherwise `[ "$cap" -lt 25 ]` throws into waybar's log every 60s |
-| `uevent` unreadable, or device unplugged mid-scan | `2>/dev/null`, skip |
+| `uevent` unreadable | `[ -r ]` guard, skip (verified with a `chmod 000` fixture) |
+| device unplugged between the glob and the read | the field reset leaves `u_type` empty, so the entry is skipped; bash may print one redirection error into waybar's log. Sub-millisecond window against a 60s tick, accepted |
 | peripheral powered off (`ONLINE=0`) | skipped; its stale `CAPACITY` is never reported |
 | peripheral charge status | ignored entirely (see Decisions) |
 | system battery on AC | alert classes suppressed, percentage still shown |

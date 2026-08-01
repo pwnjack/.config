@@ -103,7 +103,7 @@ PACKAGES=(
     # Theming
     "python-pywal" "qt5ct" "qt6ct" "nwg-look"
     # Applets and controls
-    "brightnessctl" "pavucontrol" "blueman" "nm-connection-editor"
+    "pavucontrol" "blueman" "nm-connection-editor"
     "gnome-calculator"
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"

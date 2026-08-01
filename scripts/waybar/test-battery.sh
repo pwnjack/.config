@@ -157,6 +157,18 @@ out=$(run "$r")
 assert_field "$out" '.class' "ok" "system battery at 8% charging is not an alert"
 assert_contains "$out" '.text' "8%" "charging system battery still shows its level"
 
+# "Not charging" is what a ThinkPad (and Dell/ASUS platform modules) report when
+# AC is connected but a charge_control_end_threshold is inhibiting the charge.
+# The machine is on mains, so it is not an emergency however low the number is.
+r=$(fixture)
+supply "$r" BAT0 \
+    "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=System" \
+    "POWER_SUPPLY_CAPACITY=8" "POWER_SUPPLY_STATUS=Not charging" \
+    "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
+out=$(run "$r")
+assert_field "$out" '.class' "ok" "system battery at 8% 'Not charging' is on mains, not an alert"
+assert_contains "$out" '.tooltip' "Not charging" "the tooltip says why it is not charging"
+
 # --- both kinds present ----------------------------------------------------
 
 r=$(fixture)

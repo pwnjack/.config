@@ -124,7 +124,13 @@ for uevent in "$SYSFS"/*/uevent; do
         # and a second, healthier battery must never hide a nearly-flat one.
         system_text+=("$(entry "$ICON_SYSTEM" "$u_cap")")
         case "$u_status" in
-            Charging|Full)
+            # "Not charging" means AC is connected but something is inhibiting
+            # the charge -- almost always a charge_control_end_threshold on a
+            # ThinkPad or a Dell/ASUS platform module. The machine is on mains,
+            # so however low the number is it is not an emergency, and treating
+            # it as discharging would raise exactly the false alarm that
+            # suppressing Charging exists to prevent.
+            Charging|Full|"Not charging")
                 tips+=("$label  $u_cap% ($u_status)")
                 ;;
             *)

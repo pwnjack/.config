@@ -239,7 +239,7 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot \
                hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
                ghostty fish starship neovim thunar yazi \
                btop fastfetch cava playerctl cliphist wl-clipboard python-pywal \
-               qt5ct qt6ct nwg-look brightnessctl pavucontrol blueman \
+               qt5ct qt6ct nwg-look pavucontrol blueman \
                jq ffmpeg inotify-tools zoxide ttf-firacode-nerd \
                ttf-cascadia-mono-nerd noto-fonts noto-fonts-emoji
 
