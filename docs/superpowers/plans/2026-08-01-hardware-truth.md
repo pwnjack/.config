@@ -950,6 +950,26 @@ module that reports the battery it actually has."
 
 ---
 
+## Amendments after code review
+
+**The Task 1 code block above has a bug. Do not copy it verbatim without applying this.**
+
+Found by the quality review of commit `8d9ac90`, reproduced directly:
+
+```
+BAT0 5% Discharging, BAT1 90% Discharging
+→ {"text": "…90%", "tooltip": "BAT0 …5%\nBAT1 …90%", "class": "ok"}
+```
+
+The non-`Device` branch assigns `system_text` and `system_worst` on every matching uevent instead of accumulating, so the last system battery scanned wins and can mask a critical one. Dual-battery laptops are common, and the spec names laptop hosts as a target — so this is a real gap, not a theoretical one.
+
+Fixes applied on top of the code block:
+
+1. System batteries accumulate into an array like peripherals do. Every system battery gets its own entry in `text`; the alert class takes the **minimum** across discharging ones. Ordering is unchanged (system batteries first, then low peripherals), and charging batteries still contribute text while being excluded from the class.
+2. The `worst=101` sentinel is replaced by an empty-string sentinel. The capacity guard only checks all-digits, so a malformed `CAPACITY=101` was indistinguishable from "nothing is alerting" and could have suppressed a real alert.
+3. Two tests added: "two low peripherals → both in text, class from the lower" (promised by the spec's Testing section and never written), and a regression test for the masking bug above.
+4. `parts=()` made consistent with the `declare -a` form used by its siblings.
+
 ## Notes for the implementer
 
 - **The pre-commit hook runs `shellcheck -S warning` on staged `*.sh`.** Both new files are staged in Task 1, so a warning there blocks that commit. Info-level findings (SC1091, SC2162) do not.
