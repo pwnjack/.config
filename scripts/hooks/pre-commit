@@ -17,8 +17,28 @@ REPO="$(git rev-parse --show-toplevel)"
 FAILED=0
 
 # Staged, excluding deletions — a deleted file cannot be linted.
+#
+# --no-renames as well, or a renamed file is never linted at all: git reports a
+# rename as a single R record, which ACM drops, so `git mv a.sh b.sh` slipped
+# past shellcheck entirely. Splitting it yields the destination as an A, which
+# is linted, and the source as a D, which ACM still excludes.
 staged() {
-    git diff --cached --name-only --diff-filter=ACM -z
+    git diff --cached --name-only --diff-filter=ACM --no-renames -z
+}
+
+# Every staged path, for choosing which test suites to run. Deliberately a
+# second listing rather than a reuse of staged(): a deleted file cannot be
+# linted, but a deletion is exactly when a suite most needs to run, and the ACM
+# filter above would hand suite selection an empty list for a commit that only
+# removes or only renames files — the gate silently doing nothing for the
+# change most able to break something.
+#
+# --no-renames, not --diff-filter=ACMRD: a rename is reported as one R record
+# naming only the destination, so ACMRD misses that the file LEFT its old
+# directory and that directory's suite never runs. --no-renames splits the R
+# into a D and an A, yielding both paths.
+staged_all() {
+    git diff --cached --name-only --no-renames -z
 }
 
 # --- shell scripts --------------------------------------------------------
@@ -46,13 +66,22 @@ if [ "${#STAGED_SH[@]}" -gt 0 ]; then
     fi
 fi
 
-# --- doctor's own test suite ---------------------------------------------
-# The suite is fast (~1s) and its whole purpose is catching regressions in the
-# checks. Run it whenever anything under scripts/doctor changes.
-if staged | tr '\0' '\n' | grep -q '^scripts/doctor/'; then
-    echo "pre-commit: doctor test suite"
-    if ! "$REPO/scripts/doctor/test/run-tests.sh" >/dev/null 2>&1; then
-        echo "pre-commit: doctor tests failed — run ./scripts/doctor/test/run-tests.sh to see why"
+# --- test suites ----------------------------------------------------------
+# Which suites cover which files is test.sh's business, not this hook's: the
+# owning-directory rule lives there, so a new suite needs no edit here. Passing
+# the staged paths keeps the existing principle that an unrelated pre-existing
+# failure never blocks an unrelated commit.
+#
+# The paths go through exactly as git reports them -- repo-relative. Prefixing
+# $REPO would leave them matching no owning directory but the repo root's, so
+# the hook would report a green run having tested nothing that was staged.
+#
+# Output is NOT redirected. test.sh prints one line per suite and a failing
+# suite's output in full, so there is no second command to suggest.
+mapfile -d '' -t STAGED_ALL < <(staged_all)
+
+if [ "${#STAGED_ALL[@]}" -gt 0 ]; then
+    if ! "$REPO/test.sh" --for "${STAGED_ALL[@]}"; then
         FAILED=1
     fi
 fi
