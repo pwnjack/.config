@@ -134,9 +134,16 @@ window#waybar {
 /* group-opening edges */
 #clock,
 #cpu,
-#bluetooth,
-#custom-nightlight {
+#bluetooth {
     padding-left: 15px;
+}
+
+/* Also a group-opening edge, but the only one that paints a background
+   (the override pill below). A background fills the padding box, so its
+   extra 5px of separation is margin instead — padding would widen the
+   pill on one side and leave the glyph off-centre inside it. */
+#custom-nightlight {
+    margin-left: 5px;
 }
 
 /* group-closing edges */
