@@ -15,7 +15,7 @@
 # module sits at 13px and promotes its glyph by a fifth. See waybar/style.css.
 # Because the markup counts toward waybar's max-length, that key is deliberately
 # absent from the module config -- truncation happens here instead, on the
-# title alone.
+# rendered "Artist - Title" label.
 #
 # Which player is shown is decided by medialib.sh, not by a stored preference.
 # All the click and scroll bindings are transport controls (mediactl.sh).
@@ -36,6 +36,10 @@ DEFAULT_ICON=$'\U000f075a'
 ICON_SONG=$'\U000f0388'      # music-note
 ICON_ARTIST=$'\U000f0803'    # account-music
 ICON_ALBUM=$'\U000f0025'     # album
+
+ICON_PLAYING=$'\U000f040a'   # play
+ICON_PAUSED=$'\U000f03e4'    # pause
+ICON_STOPPED=$'\U000f04db'   # stop
 
 mode="json"
 [ "$1" = "--plain" ] && mode="plain"
@@ -76,6 +80,15 @@ label="$title"
 short="$label"
 [ "${#short}" -gt "$MAXLEN" ] && short="${short:0:$MAXLEN}…"
 
+# playerctl reports Playing, Paused or Stopped. Anything else it ever invents
+# gets the stop glyph rather than no glyph, so the status line never loses its
+# left margin and the block stays aligned.
+case "$status" in
+    Playing) status_icon="$ICON_PLAYING" ;;
+    Paused)  status_icon="$ICON_PAUSED" ;;
+    *)       status_icon="$ICON_STOPPED" ;;
+esac
+
 if [ "$mode" = "plain" ]; then
     printf '%s  %s\n' "$(pango "$icon")" "$(pango "$short")"
     exit 0
@@ -91,7 +104,8 @@ jq -nc \
     --arg name "$name" \
     --arg i_song "$ICON_SONG" \
     --arg i_artist "$ICON_ARTIST" \
-    --arg i_album "$ICON_ALBUM" '
+    --arg i_album "$ICON_ALBUM" \
+    --arg i_status "$status_icon" '
     # Waybar parses every label as Pango markup, so an ampersand in a track
     # name -- "Simon & Garfunkel" -- is malformed markup and blanks the
     # module. Escape before embedding, same order as the shell pango() above.
@@ -109,6 +123,7 @@ jq -nc \
                    (if $album  == "" then empty
                     else ($i_album  + "  " + ($album  | pango)) end)]
                   | join("\n")
-                  + "\n\n" + ($status | pango) + " · " + ($name | pango)),
+                  + "\n\n" + $i_status + "  " + ($status | pango)
+                  + " · " + ($name | pango)),
         class: ($status | ascii_downcase)
     }'
