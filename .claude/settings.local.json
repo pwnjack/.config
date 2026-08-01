@@ -1,66 +1,4 @@
 {
-  "hooks": {
-    "Notification": [
-      {
-        "_paneflow_managed": true,
-        "hooks": [
-          {
-            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Notification",
-            "timeout": 5,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "_paneflow_managed": true,
-        "hooks": [
-          {
-            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PostToolUse",
-            "timeout": 5,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "_paneflow_managed": true,
-        "hooks": [
-          {
-            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PreToolUse",
-            "timeout": 5,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "_paneflow_managed": true,
-        "hooks": [
-          {
-            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Stop",
-            "timeout": 5,
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "_paneflow_managed": true,
-        "hooks": [
-          {
-            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook UserPromptSubmit",
-            "timeout": 5,
-            "type": "command"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(test:*)",
@@ -103,7 +41,65 @@
       "Bash(pacman -Qq)",
       "Bash(/bin/ls ~/.cache/wal/)",
       "Bash(pacman -Si rofi-emoji swayosd)",
-      "Bash(paru -Q awww aylurs-gtk-shell)"
+      "Bash(paru -Q awww aylurs-gtk-shell)",
+      "Bash(/usr/bin/ls *)"
+    ]
+  },
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Notification",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PostToolUse",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook PreToolUse",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook Stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/pwnjack/.cache/paneflow/bin/0.8.0/paneflow-ai-hook UserPromptSubmit",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }
