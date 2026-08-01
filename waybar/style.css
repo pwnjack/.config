@@ -275,8 +275,16 @@ tooltip label {
    The script never emits an alert class for a charging system battery, so
    the old :not(.charging) qualifier has no counterpart here. */
 
+/* ALERT EXCEPTION — see #pulseaudio.muted above. Both alert states are fixed
+   rather than palette, for the same reason and one more: @color3 was measured
+   at 5.0:1 against this bar where @foreground reaches 14.3:1, so a palette
+   `low` was THREE TIMES LESS prominent than a healthy battery — an alert that
+   de-emphasises. That is not a property of one wallpaper: pywal's color1-6 are
+   always saturated mid-tones while foreground is always a near-extreme, so the
+   inversion holds for most of them. Fixed amber restores the only escalation a
+   status colour can rely on: white, amber, red. */
 #custom-battery.low {
-    color: @color3;
+    color: #ffb86c;
 }
 
 /* ALERT EXCEPTION — see #pulseaudio.muted above. */
