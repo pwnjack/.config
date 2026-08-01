@@ -257,6 +257,27 @@ run "$root" --nonsense; out="$RUN_OUT"
 assert_eq "$RC" "2" "an unknown option exits 2"
 assert_contains "$out" "unknown option" "an unknown option says which"
 
+# An absolute path matches no owning prefix but the repo root's empty one, so
+# without this guard it runs only the repo-root suite and still reports a green
+# "1 suite passed" -- a targeted run that tested nothing it was aimed at.
+run "$root" --for "$root/scripts/waybar/battery.sh"; out="$RUN_OUT"
+assert_eq "$RC" "2" "an absolute --for path is a usage error"
+assert_contains "$out" "repo-relative" "an absolute --for path says what was wanted"
+# "Testing <root>", not "suite passed": the usage block printed on a usage
+# error itself contains the words "every suite passed", so that needle matches
+# the help text rather than a roll-up. The run header proves no suite started.
+assert_not_contains "$out" "Testing " "an absolute --for path starts no run at all"
+
+# --- an empty repository --------------------------------------------------
+# Distinct from the non-repository case below: git works, there is simply
+# nothing to run. Not a failure.
+empty="$(mktemp -d "$TMP/empty.XXXXXX")"
+git -C "$empty" init -q -b main
+run "$empty"; out="$RUN_OUT"
+assert_eq "$RC" "0" "a repo with no suites exits 0"
+assert_contains "$out" "no test suites found" "a repo with no suites says so"
+assert_not_contains "$out" "not a git repository" "an empty repo is not reported as a non-repository"
+
 # --- not a repository -----------------------------------------------------
 bare="$(mktemp -d "$TMP/bare.XXXXXX")"
 run "$bare"; out="$RUN_OUT"

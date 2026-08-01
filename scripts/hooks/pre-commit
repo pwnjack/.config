@@ -90,7 +90,12 @@ fi
 # `ags bundle` is the only compile gate available: there is no tsc, no
 # package.json and no node_modules in ags/. esbuild catches syntax errors but
 # NOT type errors, so tsconfig's `strict: true` is not enforced here.
-if staged | tr '\0' '\n' | grep -q '^ags/'; then
+#
+# staged_all(), not staged(): the ACM filter drops deletions, so removing a
+# module from ags/ — or moving one out of it — used to run no bundle check at
+# all, which are the two edits most able to break the build. The unfiltered
+# listing names the old path in both cases.
+if staged_all | tr '\0' '\n' | grep -q '^ags/'; then
     if command -v ags >/dev/null 2>&1; then
         echo "pre-commit: ags bundle"
         BUNDLE_OUT="$(mktemp)"

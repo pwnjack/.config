@@ -270,6 +270,24 @@ siblings, with fixture `config.jsonc` files covering each finding, both the
 inline and multi-line array forms, the nested-key exclusion, and a stubbed
 `_way_have_cmd`.
 
+### Accepted limitations
+
+Recorded in the module header too; repeated here because the header is not
+where a reader looks first.
+
+- A handler value containing an escaped quote is truncated at that quote. No
+  such value exists in this config.
+- Only the first token of a handler is checked, so `sh -c "foo"` is checked as
+  `sh`. Going deeper means parsing a shell command line out of JSON.
+- The two-space indent rule assumes the file keeps its current formatting. A
+  reformat that changes top-level indentation empties the block list, which
+  shows up immediately as every placed module being reported.
+- **A `group/*` module declares its children in a nested `"modules": [...]`
+  that `_way_placed` does not read**, so every child's config block would come
+  back as a false orphan INFO. Zero `group/*` modules exist in this config
+  today; this is a latent false-positive generator rather than a live one, and
+  the note is the mitigation, not a fix.
+
 ## Component 3 — hook wiring
 
 `scripts/hooks/pre-commit` loses its hardcoded `grep -q '^scripts/doctor/'`

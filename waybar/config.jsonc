@@ -271,13 +271,6 @@
     "tooltip-format-enumerate-connected-battery": " {device_alias}\t{device_battery_percentage}%",
   },
 
-  // Other
-  "user": {
-    "format": "{user}",
-    "interval": 60,
-    "icon": false,
-  },
-
   // Media
   "custom/media": {
     "interval": 1,
