@@ -32,7 +32,7 @@
     "disk",
     "network",
     "bluetooth",
-    "battery",
+    "custom/battery",
     "pulseaudio",
     "tray",
     "custom/nightlight",
@@ -221,17 +221,16 @@
     "on-click": "nm-connection-editor",
   },
 
-  // Battery
-  "battery": {
-    "states": {
-      "warning": 30,
-      "critical": 15,
-    },
-    "format": "<span size='large'>{icon}</span>  {capacity}%",
-    "format-charging": "<span size='large'></span>  {capacity}%",
-    "format-plugged": "<span size='large'></span>  {capacity}%",
-    "format-alt": "<span size='large'>{icon}</span>  {time}",
-    "format-icons": ["", "", "", "", ""],
+  // Battery — every battery on the machine, system or peripheral.
+  // The script decides what to show: peripherals stay hidden until they are
+  // low, a system battery is always visible. Empty output hides the module,
+  // the same idiom custom/media uses. Glyph and spacing live in the script
+  // because the text is assembled there.
+  "custom/battery": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 60,
+    "exec": "~/.config/scripts/waybar/battery.sh",
   },
 
   // Pulseaudio

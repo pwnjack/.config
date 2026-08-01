@@ -25,12 +25,13 @@
    GROUPS
      left     window · taskbar
      center   workspaces | clock · weather · media
-     right    cpu·mem·gpu·disk | net | bt·bat | vol | tray | night·set·notif·power
+     right    cpu·mem·gpu·disk | net | bt | [bat] | vol | tray | night·set·notif·power
 
-   network, volume and tray stand alone. Volume is a control rather than a
-   status readout, and on a desktop bluetooth and battery are hidden, which
-   left two bare glyphs -- network and volume -- adjacent at the inner gap
-   with no internal whitespace to separate them. They collided.
+   network, volume, bluetooth, battery and tray stand alone. Volume is a
+   control rather than a status readout. Bluetooth and battery stand alone
+   because battery hides itself whenever there is nothing to report — a
+   module that comes and goes cannot be load-bearing for a gap, so each
+   carries its own 15px on both sides and the rhythm holds either way.
 
    Division of labour: this file owns every gap BETWEEN modules. The gap
    INSIDE a module -- between a glyph and the number it labels -- cannot
@@ -85,7 +86,7 @@ window#waybar {
 #disk,
 #network,
 #bluetooth,
-#battery,
+#custom-battery,
 #pulseaudio,
 #tray {
     font-size: 14px;
@@ -118,7 +119,7 @@ window#waybar {
 #disk,
 #network,
 #bluetooth,
-#battery,
+#custom-battery,
 #pulseaudio,
 #tray,
 #custom-nightlight,
@@ -134,7 +135,6 @@ window#waybar {
 /* group-opening edges */
 #clock,
 #cpu,
-#bluetooth,
 #custom-nightlight {
     padding-left: 15px;
 }
@@ -142,14 +142,20 @@ window#waybar {
 /* group-closing edges */
 #taskbar,
 #disk,
-#battery,
 #custom-media {
     padding-right: 15px;
 }
 
-/* self-contained groups */
+/* self-contained groups.
+   #bluetooth and #custom-battery are here rather than paired as a group
+   because #custom-battery hides itself whenever there is nothing to report.
+   A module that comes and goes cannot be load-bearing for a gap: with 15px
+   on both sides of each, every neighbouring gap stays 30px whether the
+   battery is showing or not. */
 #workspaces,
 #network,
+#bluetooth,
+#custom-battery,
 #pulseaudio,
 #tray {
     padding-left: 15px;
@@ -255,15 +261,26 @@ tooltip label {
 
 /* ALERT EXCEPTION: fixed red, not palette. A muted sink has to read as
    a warning on every wallpaper, and pywal guarantees no palette slot
-   is legible as "danger". Same reasoning as #battery.critical. */
+   is legible as "danger". Same reasoning as #custom-battery.critical. */
 #pulseaudio.muted {
     color: #ff5555;
 }
 
 /* ── BATTERY ─────────────────────────────────────────────────────────*/
 
+/* class: ok deliberately has no rule — it inherits @foreground from the
+   grouped selector above, so a healthy battery looks like every other
+   readout on the bar.
+
+   The script never emits an alert class for a charging system battery, so
+   the old :not(.charging) qualifier has no counterpart here. */
+
+#custom-battery.low {
+    color: @color3;
+}
+
 /* ALERT EXCEPTION — see #pulseaudio.muted above. */
-#battery.critical:not(.charging) {
+#custom-battery.critical {
     color: #ff5555;
 }
 
