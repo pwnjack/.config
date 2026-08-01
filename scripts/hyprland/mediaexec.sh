@@ -27,6 +27,16 @@
 MAXLEN=38
 DEFAULT_ICON=$'\U000f075a'
 
+# Tooltip line markers. Deliberately not the bar's own glyph: a quarter note
+# against the bar's beamed note reads as "this line is the song" rather than
+# as a repeat of the module icon. Each was rendered and looked at before being
+# chosen -- nf-md-disc, the obvious first pick for the album line, is absent
+# from FiraCode Nerd Font and came out as a literal "H#" despite fc-list
+# reporting the codepoint as covered.
+ICON_SONG=$'\U000f0388'      # music-note
+ICON_ARTIST=$'\U000f0803'    # account-music
+ICON_ALBUM=$'\U000f0025'     # album
+
 mode="json"
 [ "$1" = "--plain" ] && mode="plain"
 
@@ -78,7 +88,10 @@ jq -nc \
     --arg artist "$artist" \
     --arg album "$album" \
     --arg status "$status" \
-    --arg name "$name" '
+    --arg name "$name" \
+    --arg i_song "$ICON_SONG" \
+    --arg i_artist "$ICON_ARTIST" \
+    --arg i_album "$ICON_ALBUM" '
     # Waybar parses every label as Pango markup, so an ampersand in a track
     # name -- "Simon & Garfunkel" -- is malformed markup and blanks the
     # module. Escape before embedding, same order as the shell pango() above.
@@ -86,9 +99,15 @@ jq -nc \
     {
         text: ("<span size=\"large\">" + ($icon | pango) + "</span>  "
                + ($short | pango)),
-        tooltip: ([($title | pango),
-                   (if $artist == "" then empty else ($artist | pango) end),
-                   (if $album  == "" then empty else ($album  | pango) end)]
+        # A glyph per line, so the three values are told apart by what they
+        # are rather than by the order they happen to be in. Absent fields
+        # still drop out entirely -- a lone album glyph beside nothing would
+        # be worse than the plain list this replaces.
+        tooltip: ([($i_song + "  " + ($title | pango)),
+                   (if $artist == "" then empty
+                    else ($i_artist + "  " + ($artist | pango)) end),
+                   (if $album  == "" then empty
+                    else ($i_album  + "  " + ($album  | pango)) end)]
                   | join("\n")
                   + "\n\n" + ($status | pango) + " · " + ($name | pango)),
         class: ($status | ascii_downcase)
