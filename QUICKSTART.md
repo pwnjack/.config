@@ -18,7 +18,7 @@ cd ~/dotfiles
 ## Essential Commands
 
 ### Window Manager
-- `SUPER + ENTER` - Open terminal (Ghostty)
+- `SUPER + ENTER` - Open terminal (whatever `options/terminal` names)
 - `SUPER + Q` - Close window
 - `SUPER + SPACE` - App launcher
 - `SUPER + L` - Lock screen
@@ -28,12 +28,20 @@ cd ~/dotfiles
 
 ### UI & Notifications
 - `SUPER + H` - Keybinds cheatsheet
-- `SUPER + SHIFT + B` - Toggle Waybar
+- `SUPER + SHIFT + B` - Restart Waybar
+- `SUPER + SHIFT + C` - Pick a screen colour, copy its hex value, and notify
+- `SUPER + SHIFT + D` - Toggle night light
+- `SUPER + CTRL + D` - Return night light to its schedule
+
+The night-light schedule lives in `~/.config/hypr/hyprsunset.conf`. Its Waybar
+module can also be left-clicked to toggle or right-clicked to follow the
+schedule.
 
 ### Workspaces
-- `SUPER + [1-9]` - Switch workspace
-- `SUPER + SHIFT + [1-9]` - Move window to workspace
-- `SUPER + Mouse Scroll` - Cycle workspaces
+- `SUPER + [1-9], 0, =` - Switch workspace (11 in total)
+- `SUPER + SHIFT + [1-9], 0, =` - Move window to workspace and follow
+- `SUPER + CTRL + [1-9], 0, =` - Move window to workspace, stay here
+- Scrolling over Waybar's workspace indicator cycles workspaces (no modifier)
 
 ### Color Scheme
 ```bash
@@ -114,7 +122,10 @@ hyprctl reload
 ### Screenshots
 - `SUPER + S` - Region selection (hyprshot)
 - `SUPER + ALT + S` - Region selection, then annotate in swappy
-- `SUPER + SHIFT + S` - Screenshot menu (monitor/window/region/annotate)
+- `SUPER + SHIFT + S` - Screenshot menu (monitor/window/region/annotate/settings)
+
+The screenshot menu's fourth entry opens the same annotation flow. Saved
+annotations land in `~/Pictures/Screenshots` with an `_annotated` suffix.
 
 ### Media Controls
 - `Media keys` - Play/pause, next, previous

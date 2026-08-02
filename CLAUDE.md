@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Hyprland dotfiles repository for Arch Linux / CachyOS. The entire repo lives at `~/.config` and is self-contained — all scripts, wallpapers, and user preferences are within this directory. Dynamic color theming is driven by pywal, which generates a 16-color palette from the active wallpaper and propagates it to Hyprland, Waybar, Rofi, SwayNC, and Mako.
+Hyprland dotfiles repository for Arch Linux / CachyOS. The entire repo lives at `~/.config` and is self-contained — all scripts, wallpapers, and user preferences are within this directory. Dynamic color theming is driven by pywal, which generates a 16-color palette from the active wallpaper and propagates it to Hyprland, Waybar, Rofi, and SwayNC.
 
 ## Key Commands
 
