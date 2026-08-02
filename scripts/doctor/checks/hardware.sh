@@ -65,7 +65,12 @@
 #
 # Alternation order is irrelevant: grep matches leftmost, and at offset 0 of
 # eDP-1 only eDP can begin a match, so eDP-1 is never read as a bare DP-1.
-DOCTOR_DRM_CONNECTOR_RE='(eDP|DP|HDMI-A|HDMI-B|DVI-D|DVI-I|DVI-A|LVDS|DSI|VGA|Virtual)-[0-9]+'
+# DisplayPort MST (Multi-Stream Transport) carries several downstream displays
+# on one physical link. DRM names each downstream branch by appending `-<N>`,
+# so a connector can be DP-1-1 (and its numeric suffix can repeat further down
+# a daisy chain); matching only DP-1 would both invent false warnings and hide
+# stale MST names when a plain DP-1 exists.
+DOCTOR_DRM_CONNECTOR_RE='(eDP|DP|HDMI-A|HDMI-B|DVI-D|DVI-I|DVI-A|LVDS|DSI|VGA|Virtual)-[0-9]+(-[0-9]+)*'
 
 # Overridable so the test suite can point the probe at a fake DRM tree instead
 # of the running machine. Same seam, for the same reason, as BATTERY_SYSFS in

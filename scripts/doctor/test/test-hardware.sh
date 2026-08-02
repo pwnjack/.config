@@ -71,6 +71,14 @@ assert_eq "$hw_probe" "DP-1 VGA-1 eDP-1 " \
 # simply false, so it counts as present.
 assert_contains "$hw_probe" "VGA-1" "an unknown-status node counts as present"
 
+# DisplayPort MST appends one numeric component per downstream branch. The
+# probe's shortest card-prefix strip already preserves that whole suffix.
+hw_mst_drm="$DOCTOR_TEST_TMP/drm-mst"
+hw_sysfs "$hw_mst_drm" "card1-DP-1-1:connected"
+DOCTOR_DRM_SYSFS="$hw_mst_drm"
+hw_mst_probe="$(_hw_present_outputs)"
+assert_eq "$hw_mst_probe" "DP-1-1" "probe preserves an MST connector name whole"
+
 # --- a fixture exercising every finding ------------------------------------
 hw_fixture="$(make_fixture)"
 DOCTOR_ROOT="$hw_fixture"
@@ -115,6 +123,38 @@ assert_contains "$hw_out" "hypr/plain-copy.conf names HDMI-A-9" \
 
 assert_eq "$DOCTOR_WARNINGS" "3" "exactly three warnings"
 assert_eq "$DOCTOR_ERRORS" "0" "a stale connector is never an error"
+
+# --- MST names are whole tokens, not a plain DP parent ----------------------
+hw_mst_good="$(make_fixture)"
+DOCTOR_ROOT="$hw_mst_good"
+hw_track "$hw_mst_good" "hypr/mst-good.conf" "monitor=DP-1-1,highrr,auto,1"
+hw_mst_good_drm="$DOCTOR_TEST_TMP/drm-mst-good"
+hw_sysfs "$hw_mst_good_drm" "card1-DP-1-1:connected"
+DOCTOR_DRM_SYSFS="$hw_mst_good_drm"
+
+doctor_reset
+check_hardware > "$hw_out_file" 2>&1
+hw_out="$(cat "$hw_out_file")"
+
+assert_not_contains "$hw_out" "hypr/mst-good.conf" "a present MST connector is not reported"
+assert_eq "$DOCTOR_WARNINGS" "0" "a present MST connector warns about nothing"
+
+hw_mst_stale="$(make_fixture)"
+DOCTOR_ROOT="$hw_mst_stale"
+hw_track "$hw_mst_stale" "hypr/mst-stale.conf" "monitor=DP-1-1,highrr,auto,1"
+hw_mst_stale_drm="$DOCTOR_TEST_TMP/drm-mst-stale"
+hw_sysfs "$hw_mst_stale_drm" "card1-DP-1:connected"
+DOCTOR_DRM_SYSFS="$hw_mst_stale_drm"
+
+doctor_reset
+check_hardware > "$hw_out_file" 2>&1
+hw_out="$(cat "$hw_out_file")"
+
+assert_contains "$hw_out" "hypr/mst-stale.conf names DP-1-1" \
+    "a stale MST connector is reported whole"
+assert_not_contains "$hw_out" "names DP-1, which" \
+    "a stale MST connector is not shortened to its plain DP parent"
+assert_eq "$DOCTOR_WARNINGS" "1" "a stale MST connector makes one warning"
 
 # --- a clean tree gets the all-clear, and nothing else ----------------------
 hw_clean="$(make_fixture)"
