@@ -105,7 +105,18 @@ if [ -n "$aur" ] && [ "$aur" -gt 0 ]; then
     tooltip+="$aur AUR"
 fi
 
-text="<span size=\"large\">$ICON</span>  $total"
+# The gap between glyph and count is set HERE, not in style.css: a waybar
+# module is a single Pango label, so the stylesheet owns the gaps BETWEEN
+# modules and the format string owns the one INSIDE.
+#
+# One plain space, and deliberately NOT the telemetry modules'
+# letter_spacing='4096' + space. That attribute is what CREATES their gap
+# rather than tightening it, so copying it verbatim moved the count further
+# out. This glyph is a circular arrow with little ink on its right edge, where
+# the cpu/disk glyphs are dense square blocks, so an equal metric gap reads
+# wider here -- the same effect battery.sh documents in reverse when it takes
+# two spaces to look equal.
+text="<span size=\"large\">$ICON</span> $total"
 
 # Both fields are ours -- a glyph and digits, no package names, no vendor
 # strings -- so unlike battery.sh's tooltip there is no arbitrary text to
