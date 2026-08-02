@@ -57,7 +57,7 @@ unset _doctor_module
 echo "Checking $DOCTOR_ROOT"
 
 # Every check derives its target list from git, so a non-repository root would
-# otherwise produce four separately-worded "found nothing" results instead of
+# otherwise produce six separately-worded "found nothing" results instead of
 # one clear explanation. Bail before any check runs.
 if ! doctor_require_repo; then
     summary
