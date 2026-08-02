@@ -274,7 +274,7 @@ Simple text files in `~/.config/options/`:
 ├── browser      # zen-browser
 ├── terminal     # ghostty
 ├── launchertype # vertical
-├── mainmonitor  # DP-1
+├── mainmonitor  # empty = no preference
 └── ...
 ```
 

@@ -64,7 +64,10 @@ echo "firefox" > ~/.config/options/browser
 # Change default terminal
 echo "ghostty" > ~/.config/options/terminal
 
-# Change primary monitor
+# Change primary monitor. Leave this EMPTY for no preference: hyprlock then
+# draws on every monitor, and wallpaper scripts use the first monitor awww
+# reports (what a single-monitor machine wants). scripts/settings/settings.sh
+# writes this file and hypr/config/hardware/primary.conf together.
 echo "HDMI-A-1" > ~/.config/options/mainmonitor
 
 # Edit keybindings

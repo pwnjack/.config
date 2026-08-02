@@ -108,7 +108,7 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.conf` is host-neutral for the same reason and uses `highrr`, not `preferred`: measured on this panel, `preferred` selected 2560x1440@59.951 while `highrr` selected 2560x1440@143.998.
 
 ### Scripts (`scripts/`)
 
@@ -163,12 +163,13 @@ scripts/doctor/
 │   ├── references.sh        # check_references — from `source =` lines and literal ~/.config paths
 │   ├── binaries.sh          # check_binaries   — from keybinds.conf `exec,` and autostart `exec-once`
 │   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
-│   └── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
+│   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
+│   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
-    └── test-*.sh            # One per module, test-waybar.sh included; sourced into one shared shell
+    └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_way_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`) each live in their own tiny function so tests can stub them.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_way_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

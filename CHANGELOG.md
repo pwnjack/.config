@@ -2,6 +2,62 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-08-02] - Host-Neutral Monitor Config
+
+### Added
+- **`scripts/doctor/checks/hardware.sh`** and
+  **`scripts/doctor/test/test-hardware.sh`**: the sixth doctor module compares
+  display outputs present in `/sys/class/drm` with connector names in tracked
+  files, so it also works from a TTY with no compositor. It warns, rather than
+  errors, for a possibly unplugged output and skips generated cache content
+  behind tracked symlinks, Markdown, `docs/`, and `scripts/doctor/`.
+
+### Changed
+- **`hypr/config/hardware/monitor.conf`** now has one host-neutral
+  `monitor=,highrr,auto,1` rule instead of naming this desktop's output and
+  carrying a `preferred` fallback.
+- **`hypr/config/hardware/primary.conf` and `options/mainmonitor`** now ship
+  empty: that means no monitor preference. `scripts/settings/settings.sh` and
+  the Super+I panel still write a real connector name when the user selects
+  one.
+- **`wall.sh`, `restore-wallpaper.sh`, `update_sddm_root.sh`, and
+  `watch_wallpaper.sh`** now branch explicitly on no preference; the three
+  `eDP-1` guesses are gone.
+
+### Fixed
+- **`sddm/watch_wallpaper.sh` no longer dies silently** when `mainmonitor` is
+  empty. Its inotify guard had compared every changed cache filename to the
+  empty preference, so none could match and SDDM wallpaper sync stopped.
+
+### Notes
+- **`preferred` is not "the best mode"; it is the EDID preferred timing.** On
+  this panel, applying the keywords and reading the resulting rate gave
+  `preferred` → 2560x1440@59.951 and `highrr` → 2560x1440@143.998. The old
+  catch-all was therefore a 60 Hz trap for a second monitor too.
+- **hyprlock cannot be dry-run.** `hyprlock -c <file>` aborts at the Wayland
+  connect in `hyprlock.cpp:63`, before parsing the config. Verify config
+  changes with a real `hyprlock --grace 30` launch; the grace window lets any
+  keypress dismiss the lock without a password. That is how `$monitor =` was
+  confirmed to expand correctly.
+- **The awww cache lookup is duplicated across three scripts on purpose.**
+  `sddm/update_sddm_root.sh` runs as root against another user's home, and
+  sourcing a helper from user-writable `~/.config/scripts/` would hand that
+  user a root shell.
+- **Animated awww wallpapers add a non-connector-named animation-frame file**
+  beside per-output cache entries. With no preference the inotify guard lets
+  it through, and `ls -t` can choose it first; `grep -oE '/.+$'` then fails to
+  extract a path and the existing fallback catches it. Both paths degrade
+  gracefully, and no animated wallpapers are in use here.
+- **DRM sysfs has three connector states, not two.** Only `disconnected` is a
+  definite absence; `unknown` is a driver that cannot hotplug-detect and is
+  treated as present, so the check never claims an output is missing when it
+  may be driving a display.
+- **Collapsing `monitor.conf` exposed a removal-menu footgun.**
+  `scripts/settings/advanced/monitor.sh` listed every `^monitor=` rule, so
+  the catch-all became the only entry and the obvious choice wiped all monitor
+  configuration. It now lists only output-naming rules (`^monitor=[^,]`) and
+  explains when there are none.
+
 ## [2026-08-01] - Hardware Truth
 
 ### Added
