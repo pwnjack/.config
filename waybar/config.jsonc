@@ -30,6 +30,7 @@
     "memory",
     "custom/gpu",
     "disk",
+    "custom/updates",
     "network",
     "bluetooth",
     "custom/battery",
@@ -201,6 +202,22 @@
     "on-click": "resources",
     "tooltip": true,
     "tooltip-format": "Disk {percentage_used}%\n\nUsed: {used} / {total}\nFree: {free}",
+  },
+
+  // Updates
+  // Hidden entirely when nothing is pending -- the module appearing IS the
+  // notice, the same stateless grammar custom/battery uses for peripherals.
+  // The interval is long because checkupdates syncs a private pacman DB over
+  // the network on every run; signal 9 is what makes a finished update clear
+  // the count immediately rather than up to half an hour later.
+  "custom/updates": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": 1800,
+    "signal": 9,
+    "exec": "~/.config/scripts/waybar/updates.sh",
+    "on-click": "~/.config/scripts/waybar/updates.sh update",
+    "on-click-right": "pkill -RTMIN+9 waybar",
   },
 
   // Network

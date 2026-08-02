@@ -113,7 +113,8 @@ hyprctl reload
 
 ### Screenshots
 - `SUPER + S` - Region selection (hyprshot)
-- `SUPER + SHIFT + S` - Screenshot menu (monitor/window/region)
+- `SUPER + ALT + S` - Region selection, then annotate in swappy
+- `SUPER + SHIFT + S` - Screenshot menu (monitor/window/region/annotate)
 
 ### Media Controls
 - `Media keys` - Play/pause, next, previous

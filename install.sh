@@ -89,7 +89,7 @@ fi
 PACKAGES=(
     # Hyprland ecosystem
     "hyprland" "hyprlock" "hypridle" "hyprpolkitagent"
-    "hyprshot" "hyprpicker" "hyprsunset"
+    "hyprshot" "hyprpicker" "hyprsunset" "swappy"
     # Bar, notifications, OSD, wallpaper
     "waybar" "swaync" "swayosd" "awww" "waypaper"
     # Launchers and menus
@@ -98,6 +98,8 @@ PACKAGES=(
     "ghostty" "fish" "starship" "neovim" "zed" "kwrite"
     # File managers and system tools
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch" "cava"
+    # checkupdates, for the waybar updates module
+    "pacman-contrib"
     # Clipboard, screenshots, media
     "cliphist" "wl-clipboard" "playerctl"
     # Theming
@@ -184,7 +186,7 @@ if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
         "hypr" "waybar" "swaync" "rofi"
         "fish" "ghostty" "nvim" "btop" "cava" "gtk-3.0" "gtk-4.0"
         "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list"
-        "fastfetch" "starship" "starship.toml"
+        "fastfetch" "starship" "starship.toml" "swappy"
     )
 
     for config in "${CONFIGS_TO_BACKUP[@]}"; do
