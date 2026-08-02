@@ -198,9 +198,11 @@ found. Each suite is still runnable on its own —
 | Key | Action |
 |-----|--------|
 | `Super + S` | Screenshot (region) |
+| `Super + Alt + S` | Screenshot (region) + annotate |
 | `Super + Shift + S` | Screenshot Menu |
 | `Super + Shift + L` | Power Menu |
 | `Super + C` | Clipboard History |
+| `Super + Shift + C` | Colour Picker (copies hex) |
 | `Super + .` | Emoji Picker |
 | `Super + Shift + W` | Random Wallpaper |
 | `Super + Ctrl + W` | Wallpaper Picker |
@@ -243,12 +245,12 @@ git reset origin/main   # marks repo files as tracked without touching them
 
 ```bash
 # Core (official/CachyOS repos)
-sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot \
+sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
                ghostty fish starship neovim thunar yazi \
                btop fastfetch cava playerctl cliphist wl-clipboard python-pywal \
                qt5ct qt6ct nwg-look pavucontrol blueman \
-               jq ffmpeg inotify-tools zoxide ttf-firacode-nerd \
+               jq ffmpeg inotify-tools zoxide pacman-contrib ttf-firacode-nerd \
                ttf-cascadia-mono-nerd noto-fonts noto-fonts-emoji
 
 # AUR / CachyOS-only (paru or yay)

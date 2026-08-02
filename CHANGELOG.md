@@ -2,6 +2,67 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-08-02] - Unwired Tools
+
+Closes the last of the four backlog chunks: three programs that were installed
+on this machine and reachable from nothing.
+
+### Added
+- **Colour picker** on `$Mod SHIFT+C` (`scripts/hyprland/colorpicker.sh`).
+  `hyprpicker` had been installed by `install.sh` and advertised in the README
+  while bound to nothing, so a fresh machine paid for it and got nothing. Copies
+  the hex and raises a toast. Corrects both defects in the `custom/hyprpicker`
+  module deleted in `d952dfa`: `color-select-symbolic` renders **blank** in
+  swaync 0.12.6, and the colour was passed as the notification title rather than
+  its body. Emits lowercase hex via `-l`, and guards `wl-copy` as well as
+  `hyprpicker` — an unguarded `wl-copy` is the one failure mode that actively
+  misinforms, claiming "Colour copied" when nothing was.
+- **Screenshot annotation** on `$Mod ALT+S` and as a fourth entry in the
+  `$Mod SHIFT+S` menu (`scripts/hyprland/screenshot-annotate.sh`), capturing a
+  region straight into `swappy`. `swappy` was installed with zero references
+  anywhere in the repo and was not even listed in `install.sh`. Existing capture
+  paths are untouched — annotation is opt-in, because an editor in front of
+  every capture taxes the quick grab that is most of what screenshots are for.
+  A tracked `swappy/config` points the save directory at
+  `$HOME/Pictures/Screenshots` with the same filename format as every other
+  screenshot; `$HOME`, not an absolute home path, per the host-neutral rule.
+- **Pending-updates module** on the bar between `disk` and `network`
+  (`scripts/waybar/updates.sh`), hidden entirely when nothing is due. This
+  machine has no working notifier: `~/.config/autostart/arch-update-tray.desktop`
+  names an uninstalled binary and Discover's carries `OnlyShowIn=KDE`. The AUR
+  helper is derived from `options/aurhelper` rather than hardcoded, and the
+  click opens the `scripts/settings/update.sh` that already existed rather than
+  duplicating it.
+- **`scripts/waybar/test-updates.sh`**, a sixteen-assertion suite discovered by
+  `test.sh` with no registration step.
+
+### Fixed
+- **`pacman-contrib` was missing from `install.sh`**, so on a fresh install
+  `checkupdates` would be absent, the repo count would silently fall to zero and
+  the new module would never appear — recreating the very problem it exists to
+  solve. Also added to the README package list, and `swappy` to
+  `CONFIGS_TO_BACKUP` so an existing config is not overwritten unbacked.
+- **`rofi/themes/screenshot/main.rasi` hardcoded `columns: 4`** with `lines: 1`,
+  which would have wrapped the fifth menu entry out of view. Now `columns: 5`.
+
+### Notes
+Three findings from probing binaries rather than trusting their `--help`, all
+recorded in the scripts themselves:
+- **`checkupdates` exits 2 and `paru -Qua` exits 1** to mean "nothing found",
+  so counting ignores exit status and counts lines. Gating on status would
+  report zero forever while looking perfectly healthy — the failure mode is
+  silence, which is why the suite pins all four status/output combinations.
+- **`hyprshot -s` is a no-op in raw mode**: `save_geometry()` returns before
+  `send_notification()` is reached. And `-r -s` parses only by accident —
+  hyprshot's short spec declares `r:` as taking a required argument, so `getopt`
+  binds `-s` as `-r`'s value. Reversing the two makes `getopt` fail, and
+  hyprshot never checks its exit status, so it would write a file and pipe
+  nothing. The script uses the unambiguous `--raw` and omits `-s`.
+- **The updates click signals waybar from inside the launched command**, not
+  after the terminal returns. `ghostty -e` does block (measured), but
+  `options/terminal` is user-configurable and a single-instance terminal would
+  return immediately, firing the refresh before the update began.
+
 ## [2026-08-02] - Host-Neutral Monitor Config
 
 ### Added
