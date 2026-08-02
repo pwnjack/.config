@@ -9,8 +9,9 @@
 # named Ghostty and Zen in text while the binds resolved $terminal and $browser
 # from options/.
 #
-# Usage: keybinds-cheatsheet.sh [--print]
-#   --print   write the sheet to stdout instead of opening rofi
+# Usage: keybinds-cheatsheet.sh [--print|--markdown]
+#   --print      write the sheet to stdout instead of opening rofi
+#   --markdown   write the same rows as markdown tables, for docs/keybindings.md
 #
 # How a line becomes a row:
 #
@@ -41,6 +42,10 @@ source "$root/scripts/lib/hypr-vars.sh"
 
 conf="$root/hypr/config/software/keybinds.conf"
 theme="$self_dir/themes/keybinds/main.rasi"
+
+# Read before the parse, because it changes how labels are built rather than
+# only how they are printed -- see _expand_vars.
+mode="${1:-}"
 
 if [ ! -f "$conf" ]; then
     echo "keybinds-cheatsheet: no keybinds at $conf" >&2
@@ -129,12 +134,24 @@ _mods_display() {
 
 # _expand_vars <text> -> text with every $var replaced by its resolved value.
 # This is what lets `# Terminal ($terminal)` read "Terminal (ghostty)".
+#
+# Markdown mode deliberately does NOT resolve the options-backed variables.
+# The rofi sheet is read by the person whose options/ it just read, so naming
+# their terminal is exactly right; docs/keybindings.md is committed and read by
+# everyone, where "ghostty" would freeze one machine's preference into the repo
+# as though it were fixed. Naming the file instead is true on every checkout,
+# and it is what the reader has to edit anyway. Variables from apptype.conf are
+# tracked config and identical on every checkout, so those still resolve.
 _expand_vars() {
     local text="$1" out="" name value rest
     while [[ "$text" =~ ^([^$]*)\$([A-Za-z_][A-Za-z0-9_]*)(.*)$ ]]; do
         name="${BASH_REMATCH[2]}"
         rest="${BASH_REMATCH[3]}"
-        value="$(hypr_resolve_var "$name" "$root")"
+        if [ "$mode" = "--markdown" ] && [ "$(hypr_var_origin "$name")" = "options" ]; then
+            value="\`options/$name\`"
+        else
+            value="$(hypr_resolve_var "$name" "$root")"
+        fi
         out="$out${BASH_REMATCH[1]}${value:-\$$name}"
         text="$rest"
     done
@@ -315,10 +332,38 @@ render() {
     done
 }
 
-if [ "${1:-}" = "--print" ]; then
-    render
-    exit 0
-fi
+# Markdown skin over the same ORDER walk render() uses, so docs/keybindings.md
+# and the rofi sheet come from one parse and cannot disagree. Only the
+# presentation differs: sections become `##` headings, the padding render()
+# needs for a monospace list is dropped, and a table replaces the columns.
+render_markdown() {
+    local i prev="" combo label
+    for i in "${!COMBOS[@]}"; do
+        if [ "${SECTIONS[i]}" != "$prev" ]; then
+            [ -n "$prev" ] && printf '\n'
+            printf '## %s\n\n| Key | Action |\n|-----|--------|\n' "${SECTIONS[i]}"
+            prev="${SECTIONS[i]}"
+        fi
+        # A `|` in either column would end the cell early. Neither the key
+        # display table nor any current label produces one, but labels come
+        # from config comments, so escaping is the difference between a new
+        # comment being rendered and it quietly breaking the table.
+        combo="$(_trim "${COMBOS[i]}")"
+        label="${LABELS[i]}"
+        printf '| `%s` | %s |\n' "${combo//|/\\|}" "${label//|/\\|}"
+    done
+}
+
+case "${1:-}" in
+    --print)
+        render
+        exit 0
+        ;;
+    --markdown)
+        render_markdown
+        exit 0
+        ;;
+esac
 
 render | rofi -dmenu \
     -p "Keybinds" \

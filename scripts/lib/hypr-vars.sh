@@ -12,6 +12,20 @@
 # it twice in one shell is harmless.
 #
 
+# hypr_var_origin <name> -> `options` or `apptype`.
+#
+# Which of the two sources below defines the variable. Split out so the list of
+# options-backed names exists once: hypr_resolve_var needs it to know where to
+# read, and the cheatsheet's markdown mode needs it to know which values are a
+# per-user preference rather than a repo constant. A second copy of this list
+# would be a second source of truth.
+hypr_var_origin() {
+    case "$1" in
+        terminal|browser) printf 'options' ;;
+        *)                printf 'apptype' ;;
+    esac
+}
+
 # hypr_resolve_var <name> <root> -> value on stdout, empty when undefined.
 #
 # `name` is the bare variable name, without the leading `$`. Two sources, in
@@ -26,8 +40,8 @@
 hypr_resolve_var() {
     local name="$1" root="$2" value=""
 
-    case "$name" in
-        terminal|browser)
+    case "$(hypr_var_origin "$name")" in
+        options)
             if [ -f "$root/options/$name" ]; then
                 value="$(head -n1 "$root/options/$name")"
             fi
