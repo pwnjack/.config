@@ -50,12 +50,14 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 │   ├── hyprland.conf           # Main config (sources modules)
 │   ├── hyprlock.conf           # Lock screen
 │   ├── hypridle.conf           # Idle management
+│   ├── hyprsunset.conf         # Night light schedule
 │   └── config/
 │       ├── colors.conf         # Pywal colors (symlink)
 │       ├── apptype.conf        # Default apps
 │       ├── cursortheme.conf    # Cursor theme
 │       ├── hardware/
 │       │   ├── monitor.conf    # Display setup
+│       │   ├── primary.conf    # $monitor (empty = no preference)
 │       │   └── input.conf      # Keyboard/mouse
 │       ├── looks/
 │       │   ├── decor.conf      # Borders, blur, rounding
@@ -153,66 +155,110 @@ found. Each suite is still runnable on its own —
 
 | Key | Action |
 |-----|--------|
-| `Super + Enter` | Terminal |
-| `Super + Space` | App Launcher |
-| `Super + Q` | Close Window |
-| `Super + L` | Lock Screen |
-| `Super + H` | Keybinds Cheatsheet |
+| `Super + Enter` | Terminal (`options/terminal`, ghostty by default) |
+| `Super + Space` | App launcher |
+| `Super + Q/W` | Close window |
+| `Super + L` | Lock screen |
+| `Super + H` | This cheatsheet |
 
 ### Applications
 
 | Key | Action |
 |-----|--------|
-| `Super + E` | File Manager |
-| `Super + B` | Browser |
-| `Super + N` | Neovim |
-| `Super + G` | Zed Editor |
+| `Super + E` | File manager (thunar) |
+| `Super + N` | Text editor (nvim) |
+| `Super + T` | Text editor (KWrite) |
+| `Super + B` | Web browser (`options/browser`, zen-browser by default) |
+| `Super + G` | Code editor (Zed) |
 | `Super + K` | Calculator |
-| `Super + A` | AI Assistant |
+| `Super + A` | AI assistant sidebar |
 
 ### Windows
 
 | Key | Action |
 |-----|--------|
-| `Super + V` | Toggle Floating |
-| `Super + F` | Fullscreen |
-| `Super + Shift + F` | Fullscreen (no gaps) |
-| `Super + O` | Toggle Split |
-| `Super + Shift + V` | Pin Window (PiP) |
-| `Alt + Arrows` | Move Focus |
-| `Alt + Shift + Arrows` | Move Window |
-| `Alt + Ctrl + Arrows` | Resize Window |
-| `Super + Tab` | Cycle Windows |
+| `Super + Shift + Q` | Exit Hyprland |
+| `Alt + F4` | Close window |
+| `Super + V` | Toggle floating |
+| `Super + F` | Toggle fullscreen |
+| `Super + Shift + F` | Fullscreen without gaps |
+| `Super + O` | Toggle split direction |
+| `Super + P` | Toggle pseudo-tiling |
+| `Super + Shift + V` | Pin window (always on top) |
+| `Alt + Arrows` | Move focus |
+| `Super + Tab` | Cycle to next window |
+| `Super + Shift + Tab` | Cycle to previous window |
+| `Alt + Ctrl + Arrows` | Resize window |
+| `Alt + Shift + Arrows` | Move window |
+| `Super + Mouse1` | Move window (drag) |
+| `Super + Mouse2` | Resize window (drag) |
 
 ### Workspaces
 
 | Key | Action |
 |-----|--------|
-| `Super + 1-9,0` | Switch Workspace |
-| `Super + Shift + 1-9,0` | Move to Workspace |
-| `Super + Left/Right` | Previous/Next |
-| `Super + Shift + Left/Right` | Move & Follow |
+| `Super + 1-9, 0, =` | Switch to workspace |
+| `Super + Shift + 1-9, 0, =` | Move window to workspace |
+| `Super + Ctrl + 1-9, 0, =` | Move window to workspace silently |
+| `Super + Left/Right` | Previous/next workspace |
+| `Super + Ctrl + Left/Right` | Move window to prev/next workspace, stay here |
+| `Super + Shift + Left/Right` | Move window to prev/next workspace and follow |
 
 ### Utilities
 
 | Key | Action |
 |-----|--------|
-| `Super + S` | Screenshot (region) |
-| `Super + Alt + S` | Screenshot (region) + annotate |
-| `Super + Shift + S` | Screenshot Menu |
-| `Super + Shift + L` | Power Menu |
-| `Super + C` | Clipboard History |
-| `Super + Shift + C` | Colour Picker (copies hex) |
-| `Super + .` | Emoji Picker |
-| `Super + Shift + W` | Random Wallpaper |
-| `Super + Ctrl + W` | Wallpaper Picker |
+| `Super + S` | Screenshot a region |
+| `Super + Alt + S` | Screenshot a region and annotate |
+| `Super + Shift + S` | Screenshot menu |
+| `Super + Shift + L` | Power menu |
+| `Super + C` | Clipboard history |
+| `Super + Shift + C` | Colour picker (copies hex) |
+| `Super + .` | Emoji picker |
+| `Super + Shift + N` | Toggle notification sidebar |
+| `Super + I` | Settings panel |
+| `Super + Shift + W` | Random wallpaper |
+| `Super + Ctrl + W` | Wallpaper picker |
+| `Ctrl + Shift + Esc` | System monitor |
+| `Super + Shift + D` | Toggle night light |
+| `Super + Ctrl + D` | Night light: follow schedule |
+
+The colour picker copies the selected screen pixel as a hex value and sends a
+notification. Annotation is also available as the fourth entry in the
+`Super + Shift + S` menu: it captures a region into swappy and saves finished
+images under `~/Pictures/Screenshots` with an `_annotated` suffix.
 
 ### Waybar
 
 | Key | Action |
 |-----|--------|
-| `Super + Shift + B` | Toggle Waybar |
-| `Super + Alt + B` | Hide Waybar |
+| `Super + Shift + B` | Restart Waybar |
+| `Super + Alt + B` | Show/hide Waybar |
+
+Waybar's pending-updates module appears between the disk and network readouts
+only when repository or AUR updates are available. Left-click the count to open
+`scripts/settings/update.sh` in the configured terminal; right-click to force a
+refresh. The AUR command comes from `options/aurhelper`, and repository update
+checks require `pacman-contrib` (`checkupdates`).
+
+The night-light module reflects the temperature applied by `hyprsunset`.
+Left-click it (or press `Super + Shift + D`) to switch between warm and neutral
+as a manual override — both are overrides, and the daemon reclaims either at
+the next scheduled boundary. Right-click it (or press `Super + Ctrl + D`) to
+hand control back to the schedule in `hypr/hyprsunset.conf` immediately.
+
+### Media Keys
+
+| Key | Action |
+|-----|--------|
+| `AudioRaiseVolume` | Volume up |
+| `AudioLowerVolume` | Volume down |
+| `AudioMute` | Mute output |
+| `AudioMicMute` | Mute microphone |
+| `Calculator` | Calculator |
+| `AudioNext` | Next track |
+| `AudioPause/AudioPlay` | Play/pause |
+| `AudioPrev` | Previous track |
 
 ## Installation
 
@@ -247,14 +293,16 @@ git reset origin/main   # marks repo files as tracked without touching them
 # Core (official/CachyOS repos)
 sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
-               ghostty fish starship neovim thunar yazi \
-               btop fastfetch cava playerctl cliphist wl-clipboard python-pywal \
-               qt5ct qt6ct nwg-look pavucontrol blueman \
-               jq ffmpeg inotify-tools zoxide pacman-contrib ttf-firacode-nerd \
-               ttf-cascadia-mono-nerd noto-fonts noto-fonts-emoji
+               ghostty fish starship neovim zed kwrite thunar yazi \
+               btop bottom fastfetch cava playerctl cliphist wl-clipboard \
+               python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
+               nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
+               zoxide atuin shellcheck pacman-contrib ttf-firacode-nerd \
+               ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
+               noto-fonts-emoji
 
 # AUR / CachyOS-only (paru or yay)
-paru -S zen-browser-bin waybar-weather awww waypaper aichat resources \
+paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources \
         aylurs-gtk-shell libastal-meta
 
 # Initialize pywal
