@@ -1,3 +1,18 @@
 [Default]
 save_dir=$HOME/Pictures/Screenshots
-save_filename_format=Screenshot_%Y-%m-%d_%H:%M:%S.png
+
+# The _annotated suffix is load-bearing, not decoration. This format used to
+# match hyprshot's exactly so annotated and plain shots would sort together --
+# which made a just-saved file indistinguishable from any of the fifty others
+# in the folder. The timestamp still leads, so the chronological sort is kept.
+save_filename_format=Screenshot_%Y-%m-%d_%H:%M:%S_annotated.png
+
+# swappy reports a successful save and a successful copy with NOTHING: no
+# toast, no dialog, and the window stays open. That is indistinguishable from
+# a dead button, and was reported as exactly that. Closing on success is the
+# only feedback the program can give.
+#
+# The trade-off, stated plainly: you can no longer save AND copy the same
+# annotation in one session, because the first of the two exits. Whichever you
+# click wins. Set this to false to get the old behaviour back.
+early_exit=true
