@@ -7,8 +7,15 @@
 
 sleep 1
 
+# options/mainmonitor is a preference, not a hardware fact. Empty means "no
+# preference", which resolves here to whatever awww reports first. The named
+# lookup is skipped outright rather than left to grep "^: :", so the empty case
+# is explicit instead of resting on a pattern that happens not to match.
 primary_monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)
-wallpaper=$(awww query | grep "^: $primary_monitor:" | sed 's/.*image: //')
+wallpaper=""
+if [ -n "$primary_monitor" ]; then
+    wallpaper=$(awww query | grep "^: $primary_monitor:" | sed 's/.*image: //')
+fi
 
 # Fallback: first monitor reported by awww
 if [ -z "$wallpaper" ]; then

@@ -22,9 +22,16 @@ if [ -f "$wp" ]; then
     exit 0
 fi
 
-# 2. Last wallpaper recorded in the awww cache for the main monitor
-monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null || echo "eDP-1")
-cache=$(ls -t "$HOME/.cache/awww/"*/"$monitor" 2>/dev/null | head -n1)
+# 2. Last wallpaper recorded in the awww cache for the main monitor.
+#    Empty preference means "no preference", so the newest entry for ANY
+#    monitor is taken. Nothing is guessed: this used to hardcode a laptop
+#    connector name, which is wrong on any machine that lacks one.
+monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)
+if [ -n "$monitor" ]; then
+    cache=$(ls -t "$HOME/.cache/awww/"*/"$monitor" 2>/dev/null | head -n1)
+else
+    cache=$(ls -t "$HOME/.cache/awww/"*/* 2>/dev/null | head -n1)
+fi
 if [ -f "$cache" ]; then
     wp=$(grep -oE '/.+$' "$cache")
     [ -f "$wp" ] && awww img "$wp" && exit 0

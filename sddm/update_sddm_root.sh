@@ -16,10 +16,21 @@ if [[ -z "$USER_HOME" ]] || [[ ! -d "$USER_HOME" ]]; then
     exit 1
 fi
 
-monitor=$(cat "$USER_HOME/.config/options/mainmonitor" 2>/dev/null || echo "eDP-1")
+# Empty preference means "no preference": the newest cache entry for ANY
+# monitor is taken. No connector name is guessed.
+monitor=$(cat "$USER_HOME/.config/options/mainmonitor" 2>/dev/null)
 
 # awww cache layout: ~/.cache/awww/<version>/<monitor>, line format: "<crop> <filter> <path>"
-cache_file=$(ls -t "$USER_HOME/.cache/awww/"*/"$monitor" 2>/dev/null | head -n1)
+#
+# This lookup is duplicated in scripts/hyprland/restore-wallpaper.sh and in
+# sddm/watch_wallpaper.sh, deliberately. THIS script runs as root against
+# another user's home, so sourcing a shared helper out of a user-writable
+# $USER_HOME/.config/scripts/ would hand that user a root shell.
+if [ -n "$monitor" ]; then
+    cache_file=$(ls -t "$USER_HOME/.cache/awww/"*/"$monitor" 2>/dev/null | head -n1)
+else
+    cache_file=$(ls -t "$USER_HOME/.cache/awww/"*/* 2>/dev/null | head -n1)
+fi
 wallpaper=$(grep -oE '/.+$' "$cache_file" 2>/dev/null)
 
 # Fallback: the current-wallpaper symlink maintained by wall.sh

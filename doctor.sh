@@ -48,7 +48,7 @@ esac
 # shellcheck source=scripts/doctor/lib.sh
 source "$DOCTOR_SELF_DIR/scripts/doctor/lib.sh"
 
-for _doctor_module in symlinks references binaries services waybar; do
+for _doctor_module in symlinks references binaries services waybar hardware; do
     # shellcheck source=/dev/null
     source "$DOCTOR_SELF_DIR/scripts/doctor/checks/$_doctor_module.sh"
 done
@@ -57,7 +57,7 @@ unset _doctor_module
 echo "Checking $DOCTOR_ROOT"
 
 # Every check derives its target list from git, so a non-repository root would
-# otherwise produce four separately-worded "found nothing" results instead of
+# otherwise produce six separately-worded "found nothing" results instead of
 # one clear explanation. Bail before any check runs.
 if ! doctor_require_repo; then
     summary
@@ -69,5 +69,6 @@ check_references
 check_binaries
 check_services
 check_waybar
+check_hardware
 
 summary
