@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(test:*)",
       "Bash(git rm:*)",
@@ -42,7 +43,8 @@
       "Bash(/bin/ls ~/.cache/wal/)",
       "Bash(pacman -Si rofi-emoji swayosd)",
       "Bash(paru -Q awww aylurs-gtk-shell)",
-      "Bash(/usr/bin/ls *)"
+      "Bash(/usr/bin/ls *)",
+      "Read(//home/pwnjack/.claude/**)"
     ]
   },
   "hooks": {
