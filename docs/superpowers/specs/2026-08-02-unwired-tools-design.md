@@ -130,20 +130,32 @@ established in chunk C.
 `swappy` is added to the package array in `install.sh`, where it is missing
 today, and to the README's package list.
 
-### To verify during implementation, not assume
+### Both open questions are now closed
 
-- That swappy's `save_dir` actually expands `$HOME`. The upstream sample config
-  is written that way, but this has not been measured on 0.x here. If it does
-  not expand, the fallback is to let swappy default and have the script pass an
-  explicit `-o`.
-- Whether `rofi/themes/screenshot/main.rasi` hardcodes a line count or height
-  that a fifth row would overflow.
+Resolved by probing during planning rather than left for implementation:
+
+- **`$HOME` does expand.** `/usr/bin/swappy` links `wordexp`, and its own
+  built-in default for `save_dir` is the literal string `$HOME/Desktop` — it
+  cannot work at all unless it expands. The implementation still confirms with
+  a real save rather than resting on `strings`.
+- **The rofi theme does need a change.** `rofi/themes/screenshot/main.rasi`
+  hardcodes `columns: 4; lines: 1`, so a fifth entry wraps out of view. It
+  becomes `columns: 5`; window width stays 600.
 
 ## Slice 3 — checkupdates
 
 New `scripts/waybar/updates.sh`, a sibling of `battery.sh` emitting the same
 `jq -nc` JSON shape, and a `custom/updates` module in `waybar/config.jsonc`
-placed after `disk` in `modules-right`.
+placed between `disk` and `network` in `modules-right`.
+
+That slot is chosen by the stylesheet's own rule, not by taste. `style.css`
+warns that "a module that comes and goes cannot be load-bearing for a gap",
+which is why `#custom-battery` is styled as a self-contained group with 15px
+on both sides. `#disk` already closes its group with `padding-right: 15px` and
+`#network` already carries 15px on both sides, so a self-contained
+`#custom-updates` between them yields a 30px gap whether it is showing or not.
+It belongs to the **text** tier (14px), not the icon tier, because it renders
+digits beside its glyph.
 
 ### Counting
 
@@ -172,9 +184,11 @@ to ship unnoticed, because the failure mode is silence.
 
 ### Rendering
 
-Zero updates emits `{"text": ""}`, which hides the module — the same mechanism
-`battery.sh` already relies on to keep peripherals hidden until they matter.
-The module appearing *is* the signal, which is what keeps it stateless.
+Zero updates **prints nothing and exits 0**, which hides the module. This is
+the established idiom here, not a new one: `battery.sh:155` does exactly this
+(`[ "${#parts[@]}" -eq 0 ] && exit 0`) and its comment names `custom/media` as
+the module it copied it from. The module appearing *is* the signal, which is
+what keeps it stateless.
 
 Non-zero renders the nerd-font glyph `󰚰` (`nf-md-update`) followed by the
 combined total, with a tooltip of `N repo · M AUR`. When no helper is
