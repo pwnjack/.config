@@ -79,10 +79,17 @@ device_icon() {
 
 # entry <icon> <capacity> — one rendered chunk of the bar text. The glyph is
 # promoted a fifth to match the bar scale (13px base); see waybar/style.css.
-# Two spaces, not one: like the volume glyph, a battery glyph carries ink to
-# the right and the wider spacer is what makes it look equal to its neighbours.
+#
+# ONE space between glyph and value. This used to be two, on the argument that
+# a battery glyph carries ink to the right and needed the wider spacer to look
+# equal to its neighbours. Screenshotting the bar with this module forced
+# visible (BATTERY_SYSFS, which is what that seam is for) showed the opposite:
+# beside cpu/memory/gpu/disk the two-space entries read as visibly detached
+# from their numbers. Every glyph+value module on this bar now uses one space.
+# The gap BETWEEN entries stays wider -- see the joiner below -- so two
+# batteries still read as two readouts rather than one run-on number.
 entry() {
-    printf '<span size="large">%s</span>  %s%%' "$1" "$2"
+    printf '<span size="large">%s</span> %s%%' "$1" "$2"
 }
 
 declare -a system_text=()
@@ -171,9 +178,12 @@ if [ -n "$worst" ]; then
     fi
 fi
 
+# Three spaces BETWEEN entries, against the one inside each — see entry().
+# The two gaps have to stay visibly different or "󰁹 64% 󰍽 18%" reads as one
+# run-on number; the separator must be the wider of the two, not equal to it.
 text=""
 for part in "${parts[@]}"; do
-    [ -n "$text" ] && text+="  "
+    [ -n "$text" ] && text+="   "
     text+="$part"
 done
 
