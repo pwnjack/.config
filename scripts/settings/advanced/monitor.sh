@@ -199,7 +199,19 @@ monitoradd() {
 }
 
 monitorremove() {
-    mapfile -t monitors < <(grep '^monitor=' "$CONFIG")
+    # Only list rules that name an output (monitor=<name>,...). The
+    # host-neutral catch-all (monitor=,...) has no name before the comma and
+    # is deliberately excluded here — it isn't a per-monitor override and
+    # removing it was never a sensible operation.
+    mapfile -t monitors < <(grep -E '^monitor=[^,]' "$CONFIG")
+
+    if [ ${#monitors[@]} -eq 0 ]; then
+        echo "No per-monitor rules are configured — only the host-neutral catch-all, which is not removable."
+        echo "Press ENTER to return."
+        read -p " ■ "
+        clear
+        return
+    fi
 
     echo "Below are the monitors currently configured."
     echo "Please enter the number of the monitor you would like to remove."
@@ -211,7 +223,7 @@ monitorremove() {
     done
 
     echo ""
-    echo -n " ■ " 
+    echo -n " ■ "
     read -r choice
 
     if [[ "$choice" == "0" ]]; then
