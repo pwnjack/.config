@@ -33,7 +33,7 @@
     {
       "id": 5,
       "subject": "Task 5: Doctor check for disconnected outputs",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1,
         4
@@ -43,7 +43,7 @@
     {
       "id": 6,
       "subject": "Task 6: Documentation",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1,
         2,
@@ -54,5 +54,5 @@
       "description": "**Goal:** Every doc that states the old behaviour states the new one, and the CHANGELOG records the measurement that drove it.\n\n**Files:**\n- Modify: `README.md:277`\n- Modify: `QUICKSTART.md:60-71`\n- Modify: `CLAUDE.md` (the `options/` paragraph and the Doctor Architecture tree)\n- Modify: `CHANGELOG.md`\n\n**Acceptance Criteria:**\n- [ ] No doc claims `mainmonitor` holds `DP-1` on a fresh checkout\n- [ ] `CLAUDE.md` states the empty-means-no-preference contract\n- [ ] `CLAUDE.md`'s doctor tree lists `hardware.sh`\n- [ ] The CHANGELOG records the `preferred` vs `highrr` measurement\n- [ ] `./doctor.sh` and `./test.sh` still pass\n\n**Verify:** `grep -rn 'mainmonitor' README.md QUICKSTART.md CLAUDE.md && ./doctor.sh && ./test.sh`\n\n**Steps:**\n1. README.md:277 -> `mainmonitor  # empty = no preference`\n2. QUICKSTART.md -> explain empty means no preference\n3. CLAUDE.md options paragraph -> the contract, and why `highrr` not `preferred`\n4. CLAUDE.md doctor tree -> add `hardware.sh`; `grep -niE 'fifth|five (check|module)'` -> no output\n5. CHANGELOG.md -> Changed / Added / Fixed / Notes entry\n6. Re-run doctor and test.sh\n7. Commit\n\n```json:metadata\n{\"files\": [\"README.md\", \"QUICKSTART.md\", \"CLAUDE.md\", \"CHANGELOG.md\"], \"verifyCommand\": \"./doctor.sh && ./test.sh\", \"acceptanceCriteria\": [\"no doc claims a DP-1 default\", \"CLAUDE.md states the empty contract\", \"CLAUDE.md lists hardware.sh\", \"CHANGELOG records the preferred-vs-highrr measurement\", \"doctor and test.sh still pass\"], \"planTask\": 6}\n```"
     }
   ],
-  "lastUpdated": "2026-08-02T12:41:24.004900+00:00"
+  "lastUpdated": "2026-08-02T13:12:23.285475+00:00"
 }
