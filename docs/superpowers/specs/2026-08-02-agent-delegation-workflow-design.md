@@ -73,13 +73,15 @@ Two findings from `~/.codex/models_cache.json` shape the model strategy:
 Four invariants the rest of the design serves. Where a later section conflicts
 with one of these, the invariant wins.
 
-1. **Adversarial review.** The reviewer is never from the same family as the
-   implementer.
+1. **Adversarial review.** Whenever both families are available, the reviewer is
+   never from the same family as the implementer. With only one family left the
+   guarantee degrades openly rather than pretending to hold.
 2. **Blind review.** The reviewer never sees the implementer's report.
 3. **Graceful degradation.** Losing Codex, or Herdr, or both, weakens the
-   workflow by one notch and never breaks it.
-4. **No hardcoded model identity.** Skills name roles and efforts; identity
-   resolves at delegation time.
+   workflow and never breaks it.
+4. **No hardcoded model identity.** Skills name roles and efforts. *Pinned*
+   identifiers are banned; *aliases* are required, because an alias is a moving
+   pointer and is what keeps a file correct across generations.
 
 ## Architecture
 
@@ -105,7 +107,10 @@ not a dependency.
 
 ### Adversarial review
 
-**The reviewer is never from the same family as the implementer.**
+**Whenever both families are available, the reviewer is never from the same
+family as the implementer.** The conditional is load-bearing: with only one
+family left the guarantee cannot hold, and the degraded form must be reported as
+degraded rather than described as if it were the full rule.
 
 | Implementer | Reviewer |
 |---|---|
@@ -159,30 +164,50 @@ judgement call is something the orchestrator can rationalise away, whereas a
 matching path in the diff is checkable. The orchestrator reconciles both reviews
 into one report.
 
+**When only one family is available**, dual review cannot be satisfied as
+written. It must not silently collapse to a single review: run two passes that
+are independent in every way still open — separate fresh sessions, different
+capability tiers — and tell the user the requirement was met in degraded form
+and which axis was missing. A trigger on this list is exactly when the user
+needs to know the guarantee was weaker than usual.
+
 ### Graceful degradation
 
-Capability is probed, never assumed. The best available adversarial pairing is
-selected:
-
-| Tier | Condition | Implementation | Review pairing |
-|---|---|---|---|
-| **A. Full** | Herdr live **and** Codex authed | Sonnet / Codex / opus | Cross-**family** |
-| **B. Claude-only** | Codex absent or unauthed | Sonnet / opus / haiku | Cross-**model** + fresh context: `opus` reviews Sonnet's work, `sonnet` reviews Opus's |
-| **C. No Herdr** | `$HERDR_ENV != 1` | native `Agent` tool | Cross-model rule via `Agent` |
-
-Detection:
+Capability is probed, never assumed. Crucially this is **two independent axes,
+not one ladder** — an earlier draft conflated them, which left the both-failed
+case undefined and never probed Herdr at all:
 
 ```bash
+# Axis 1 — mechanism: can a pane actually be driven?
+[ "${HERDR_ENV:-}" = "1" ] && command -v herdr >/dev/null 2>&1 && herdr agent list >/dev/null 2>&1
+
+# Axis 2 — reviewer: is Codex usable?
 command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1
 ```
 
-Probed lazily on first delegation and cached for the session. A delegation that
-fails on auth or quota degrades the session to tier B and announces it **once**.
+| Axis 1 — mechanism | Use |
+|---|---|
+| pass | Herdr panes |
+| fail | native `Agent` tool |
 
-Adversarial-ness degrades cross-family -> cross-model -> cross-context. It
-weakens by one notch at each step and never disappears. Tier C additionally
-removes the Herdr dependency that currently makes every one of these skills
-hard-fail outside a Herdr session.
+| Axis 2 — Codex | Review pairing |
+|---|---|
+| pass | Cross-**family** — the full guarantee |
+| fail | **Degraded:** cross-**model** + fresh context |
+
+The axes fail separately and every combination is legal, including both at once.
+
+`$HERDR_ENV` alone is not a mechanism probe: the variable can be set while the
+binary or session is gone, which selects panes and then fails on the first
+command. Probe the command.
+
+Probed lazily on first delegation and cached. A delegation failing on auth or
+quota flips axis 2 for the session and announces it **once**. Degraded review
+must never be reported as though the full guarantee held — cross-model review is
+still same-family review.
+
+Axis 1 also removes the Herdr dependency that currently makes every one of these
+skills hard-fail outside a Herdr session.
 
 ### Model selection: roles and efforts, never names
 
@@ -257,12 +282,28 @@ Prose alone is insufficient — the guard must survive an agent that rationalise
 
 Plus the effort constraint: **never `ultra`**.
 
+**Coverage is uneven, and pretending otherwise was a defect in an earlier
+draft.** No single mechanism carries all three layers:
+
+| Mechanism | Env var | System prompt | Brief marker | Standing contract |
+|---|---|---|---|---|
+| Claude pane | yes | yes | yes | `CLAUDE.md` leaf rule |
+| Codex pane | set, but **Codex never reads it** | n/a | yes | `~/.codex/AGENTS.md`, unconditional |
+| native `Agent` | no — inherits session env | n/a | **yes, the only one** | `CLAUDE.md`, keyed on the marker |
+
+Consequences stated plainly rather than papered over:
+
+- The env var is a **Claude-pane guard only**. Codex has no instruction to read
+  it and is covered by its always-leaf `AGENTS.md` instead.
+- The native `Agent` path rests on the brief marker, and its `CLAUDE.md`
+  backstop keys off that same marker — so the two are *not* independent.
+- A reused pane is never re-split or re-started, so it never receives
+  launch-time flags again. Only panes this workflow named may be reused; the
+  brief marker is what still applies unconditionally.
+
 Codex needs no guard of its own — its base instructions already refuse to spawn
 sub-agents unless an `AGENTS.md` asks. The contract file must therefore never
 ask, and that is a standing constraint on `~/.codex/AGENTS.md`.
-
-No single point of failure: layer 1 covers panes, layer 3 covers the `Agent`
-tool, layer 2 backstops both.
 
 ### Handoff contract
 
@@ -358,7 +399,13 @@ Only the last is a repo commit. Everything else is untracked home config.
   reviewer, and Claude-implemented code routes to Codex.
 - **Blind review:** inspect a review brief and confirm it contains no field from
   the implementer's report.
-- **Degradation:** with `codex` made unavailable on `PATH`, confirm routing
-  falls to tier B and still produces a cross-model review.
+- **Degradation, axis 2:** with a broken `codex` shadowing the real one on
+  `PATH`, confirm the probe fails and routing still produces a cross-model
+  review, announced as degraded.
+- **Degradation, axis 1:** confirm the mechanism probe tests the `herdr`
+  command, not merely `$HERDR_ENV`, so a set variable with a missing binary
+  selects the `Agent` tool rather than failing on the first pane command.
+- **`/new` really clears context:** tell a reused pane a token, `/new`, then ask
+  for it back. It must not know it.
 - `./doctor.sh` stays clean, in particular `check_symlinks` on the new
   `AGENTS.md`, and `./test.sh` passes.
