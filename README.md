@@ -34,11 +34,11 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 | Window Manager | Hyprland |
 | Status Bar | Waybar |
 | Launcher | Rofi |
-| Terminal | Ghostty |
+| Terminal | Ghostty (`options/terminal`) |
 | Notifications | SwayNC |
 | Lock Screen | Hyprlock |
 | File Manager | Thunar / Yazi |
-| Browser | Zen Browser |
+| Browser | Zen Browser (`options/browser`) |
 | Editor | Neovim |
 | Shell | Fish + Starship |
 
@@ -46,65 +46,24 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 
 ```
 ~/.config/
-├── hypr/
-│   ├── hyprland.conf           # Main config (sources modules)
-│   ├── hyprlock.conf           # Lock screen
-│   ├── hypridle.conf           # Idle management
-│   ├── hyprsunset.conf         # Night light schedule
-│   └── config/
-│       ├── colors.conf         # Pywal colors (symlink)
-│       ├── apptype.conf        # Default apps
-│       ├── cursortheme.conf    # Cursor theme
-│       ├── hardware/
-│       │   ├── monitor.conf    # Display setup
-│       │   ├── primary.conf    # $monitor (empty = no preference)
-│       │   └── input.conf      # Keyboard/mouse
-│       ├── looks/
-│       │   ├── decor.conf      # Borders, blur, rounding
-│       │   └── animations.conf # Window animations
-│       ├── setup/
-│       │   ├── envvars.conf    # Environment variables
-│       │   └── autostart.conf  # Startup applications
-│       └── software/
-│           ├── general.conf    # Misc settings
-│           ├── keybinds.conf   # Keyboard shortcuts
-│           └── rules.conf      # Window rules
-├── waybar/
-│   ├── config.jsonc            # Modules config
-│   ├── style.css               # Styling
-│   └── colors.css              # Pywal colors
-├── rofi/
-│   ├── config.rasi             # Main config
-│   ├── launcher.sh             # App launcher
-│   ├── powermenu.sh            # Power options
-│   ├── screenshot.sh           # Screenshot menu
-│   ├── keybinds-cheatsheet.sh  # Shortcuts reference
-│   └── themes/                 # Rofi theme files
-├── swaync/
-│   ├── config.json             # Notification settings
-│   └── *.css                   # Styling
-├── options/                    # User preferences (text files)
-├── scripts/                    # Utility scripts
-│   ├── doctor/                 # Health-check modules and their tests
-│   ├── theming/                # Pywal fan-out driver and palette loader
-│   └── hooks/                  # Tracked git hooks (see Maintenance)
-├── fish/                       # Shell config
-├── ghostty/                    # Terminal config
-├── btop/
-│   ├── btop.conf               # Monitor settings
-│   └── themes/pywal.theme      # Pywal colors (symlink)
-├── cava/
-│   ├── config.in               # Template — edit this one
-│   └── config                  # Rendered config (symlink)
-├── starship/
-│   └── starship.toml.in        # Prompt template — edit this one
-├── starship.toml               # Rendered prompt config (symlink)
-├── nvim/                       # Editor config
-├── test/                       # Tests for the runner itself
-├── install.sh                  # Fresh-system setup
-├── doctor.sh                   # Health check (see Maintenance)
-└── test.sh                     # Test runner (see Maintenance)
+├── hypr/          # Hyprland: modular config sourced from hyprland.conf,
+│                  # plus hyprlock, hypridle and hyprsunset
+├── waybar/        # Bar: config.jsonc, style.css, pywal colors
+├── rofi/          # Launcher, power/screenshot menus, keybinds cheatsheet
+├── swaync/        # Notification daemon and sidebar
+├── options/       # User preferences, one value per text file
+├── scripts/       # doctor/, theming/, waybar/, hyprland/, hooks/, docs/
+├── fish/ ghostty/ nvim/ btop/ cava/ starship/   # Per-app config
+├── docs/          # Deep dives (keybindings, gaming)
+├── test/          # Tests for the runner and the generated docs
+├── install.sh     # Fresh-system setup
+├── doctor.sh      # Health check (see Maintenance)
+└── test.sh        # Test runner (see Maintenance)
 ```
+
+`CLAUDE.md` carries the detailed `hypr/config/` breakdown and the design notes
+behind each piece. Files ending in `.in` are templates and their non-`.in`
+counterparts are generated symlinks — edit the template.
 
 ## Maintenance
 
@@ -144,121 +103,55 @@ A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 covering whatever the commit touches, and `ags bundle` on staged panel
 sources. Bypass with `git commit --no-verify`.
 
-Run every test suite with `./test.sh`, or `./test.sh --list` to see what it
-found. Each suite is still runnable on its own —
-`./scripts/doctor/test/run-tests.sh`, `./scripts/waybar/test-battery.sh`,
-`./test/test-runner.sh`.
+Run every test suite with `./test.sh`. Suites are discovered, not registered:
+`./test.sh --list` prints the current set and each one is runnable on its own,
+so naming a new file `test-*.sh` or `run-tests.sh` is the whole of adding one.
 
 ## Keybindings
 
-### Essential
-
 | Key | Action |
 |-----|--------|
-| `Super + Enter` | Terminal (`options/terminal`, ghostty by default) |
+| `Super + Enter` | Terminal (`options/terminal`) |
 | `Super + Space` | App launcher |
 | `Super + Q/W` | Close window |
 | `Super + L` | Lock screen |
-| `Super + H` | This cheatsheet |
+| `Super + H` | Keybinds cheatsheet |
 
-### Applications
+Those five are the ones worth memorising.
+**[docs/keybindings.md](docs/keybindings.md) has every binding**, grouped by
+section — or press `Super + H` for the same list, searchable, without leaving
+the desktop.
 
-| Key | Action |
-|-----|--------|
-| `Super + E` | File manager (thunar) |
-| `Super + N` | Text editor (nvim) |
-| `Super + T` | Text editor (KWrite) |
-| `Super + B` | Web browser (`options/browser`, zen-browser by default) |
-| `Super + G` | Code editor (Zed) |
-| `Super + K` | Calculator |
-| `Super + A` | AI assistant sidebar |
+Both are rendered from `hypr/config/software/keybinds.conf` by one parser, so
+neither can drift from the bindings it documents. After editing the config, run
+`./scripts/docs/generate-keybindings.sh`; `test/test-docs.sh` fails on a stale
+copy, so the pre-commit hook catches a forgotten regeneration.
 
-### Windows
+### Feature notes
 
-| Key | Action |
-|-----|--------|
-| `Super + Shift + Q` | Exit Hyprland |
-| `Alt + F4` | Close window |
-| `Super + V` | Toggle floating |
-| `Super + F` | Toggle fullscreen |
-| `Super + Shift + F` | Fullscreen without gaps |
-| `Super + O` | Toggle split direction |
-| `Super + P` | Toggle pseudo-tiling |
-| `Super + Shift + V` | Pin window (always on top) |
-| `Alt + Arrows` | Move focus |
-| `Super + Tab` | Cycle to next window |
-| `Super + Shift + Tab` | Cycle to previous window |
-| `Alt + Ctrl + Arrows` | Resize window |
-| `Alt + Shift + Arrows` | Move window |
-| `Super + Mouse1` | Move window (drag) |
-| `Super + Mouse2` | Resize window (drag) |
+The **colour picker** (`Super + Shift + C`) copies the selected screen pixel as
+a lowercase hex value and sends a notification.
 
-### Workspaces
+**Annotation** is opt-in, so the quick grab stays quick: `Super + Alt + S`
+captures a region straight into swappy, and the same flow is the fourth entry
+of the `Super + Shift + S` menu. Saved images land in `~/Pictures/Screenshots`
+with an `_annotated` suffix. swappy reports success by closing, which means you
+can save *or* copy one annotation, not both.
 
-| Key | Action |
-|-----|--------|
-| `Super + 1-9, 0, =` | Switch to workspace |
-| `Super + Shift + 1-9, 0, =` | Move window to workspace |
-| `Super + Ctrl + 1-9, 0, =` | Move window to workspace silently |
-| `Super + Left/Right` | Previous/next workspace |
-| `Super + Ctrl + Left/Right` | Move window to prev/next workspace, stay here |
-| `Super + Shift + Left/Right` | Move window to prev/next workspace and follow |
+The **pending-updates module** sits between the disk and network readouts and
+appears only when repository or AUR updates exist — the module showing up is
+the notification. Left-click opens `scripts/settings/update.sh` in your
+configured terminal; right-click forces a refresh. The AUR command comes from
+`options/aurhelper`, and repository checks need `pacman-contrib`
+(`checkupdates`).
 
-### Utilities
-
-| Key | Action |
-|-----|--------|
-| `Super + S` | Screenshot a region |
-| `Super + Alt + S` | Screenshot a region and annotate |
-| `Super + Shift + S` | Screenshot menu |
-| `Super + Shift + L` | Power menu |
-| `Super + C` | Clipboard history |
-| `Super + Shift + C` | Colour picker (copies hex) |
-| `Super + .` | Emoji picker |
-| `Super + Shift + N` | Toggle notification sidebar |
-| `Super + I` | Settings panel |
-| `Super + Shift + W` | Random wallpaper |
-| `Super + Ctrl + W` | Wallpaper picker |
-| `Ctrl + Shift + Esc` | System monitor |
-| `Super + Shift + D` | Toggle night light |
-| `Super + Ctrl + D` | Night light: follow schedule |
-
-The colour picker copies the selected screen pixel as a hex value and sends a
-notification. Annotation is also available as the fourth entry in the
-`Super + Shift + S` menu: it captures a region into swappy and saves finished
-images under `~/Pictures/Screenshots` with an `_annotated` suffix.
-
-### Waybar
-
-| Key | Action |
-|-----|--------|
-| `Super + Shift + B` | Restart Waybar |
-| `Super + Alt + B` | Show/hide Waybar |
-
-Waybar's pending-updates module appears between the disk and network readouts
-only when repository or AUR updates are available. Left-click the count to open
-`scripts/settings/update.sh` in the configured terminal; right-click to force a
-refresh. The AUR command comes from `options/aurhelper`, and repository update
-checks require `pacman-contrib` (`checkupdates`).
-
-The night-light module reflects the temperature applied by `hyprsunset`.
-Left-click it (or press `Super + Shift + D`) to switch between warm and neutral
+The **night-light module** reflects the temperature `hyprsunset` has actually
+applied. Left-click (or `Super + Shift + D`) switches between warm and neutral
 as a manual override — both are overrides, and the daemon reclaims either at
-the next scheduled boundary. Right-click it (or press `Super + Ctrl + D`) to
-hand control back to the schedule in `hypr/hyprsunset.conf` immediately.
+the next scheduled boundary. Right-click (or `Super + Ctrl + D`) hands control
+back to the schedule in `hypr/hyprsunset.conf` immediately.
 
-### Media Keys
-
-| Key | Action |
-|-----|--------|
-| `AudioRaiseVolume` | Volume up |
-| `AudioLowerVolume` | Volume down |
-| `AudioMute` | Mute output |
-| `AudioMicMute` | Mute microphone |
-| `Calculator` | Calculator |
-| `AudioNext` | Next track |
-| `AudioPause/AudioPlay` | Play/pause |
-| `AudioPrev` | Previous track |
+`Super + Shift + B` restarts Waybar; `Super + Alt + B` shows and hides it.
 
 ## Installation
 
