@@ -41,28 +41,28 @@
 - Create: `~/.codex/AGENTS.md`
 
 **Acceptance Criteria:**
-- [ ] Never instructs Codex to spawn sub-agents (its base instructions refuse by default; this file must not grant the exception)
-- [ ] States: never commit, never push, never `git add`
-- [ ] States the report-file protocol as a mandated final action, including on failure
-- [ ] Instructs reading repo-root `AGENTS.md`/`CLAUDE.md` when present
-- [ ] Contains no model identifier and no `ultra`
+- [x] Never instructs Codex to spawn sub-agents (its base instructions refuse by default; this file must not grant the exception)
+- [x] States: never commit, never push, never `git add`
+- [x] States the report-file protocol as a mandated final action, including on failure
+- [x] Instructs reading repo-root `AGENTS.md`/`CLAUDE.md` when present
+- [x] Contains no model identifier and no `ultra`
 
 **Verify:** `cd $(mktemp -d) && git init -q && codex exec --sandbox read-only "Summarise your operating contract in 3 bullets."` → returns the contract in a repo that has no local `AGENTS.md`
 
 **Steps:**
 
-- [ ] **Step 1: Write the contract**
+- [x] **Step 1: Write the contract**
 
 Cover, in order: you may be driven by an orchestrating agent; you are a leaf worker and must not delegate; never commit/push/stage; read repo-root `AGENTS.md` or `CLAUDE.md` if present; when the prompt names a report path, writing it is your mandated final action even if you failed; `blockers` and `concerns` are required and an empty array asserts genuinely none.
 
-- [ ] **Step 2: Confirm the no-sub-agent constraint is not accidentally granted**
+- [x] **Step 2: Confirm the no-sub-agent constraint is not accidentally granted**
 
 ```bash
 grep -inE 'sub-?agent|delegate|spawn' ~/.codex/AGENTS.md
 ```
 Expected: only prohibitions, no grants.
 
-- [ ] **Step 3: Run the fresh-repo verify above**
+- [x] **Step 3: Run the fresh-repo verify above**
 
 ---
 
@@ -74,21 +74,21 @@ Expected: only prohibitions, no grants.
 - Create: `~/.claude/skills/_shared/handoff.md`
 
 **Acceptance Criteria:**
-- [ ] Brief template with the `[LEAF WORKER — DO NOT DELEGATE]` marker
-- [ ] Report JSON schema exactly as specced
-- [ ] Report path convention `/tmp/codex-handoff/<slug>-<timestamp>.json`
-- [ ] Missing-report failure mode: re-prompt once, then fall back to scrollback and say so
-- [ ] Capability probe one-liner for the degradation ladder
-- [ ] Explicit statement that the reviewer never receives implementer report fields
-- [ ] A directory without `SKILL.md` does not register as a broken skill
+- [x] Brief template with the `[LEAF WORKER — DO NOT DELEGATE]` marker
+- [x] Report JSON schema exactly as specced
+- [x] Report path convention `/tmp/codex-handoff/<slug>-<timestamp>.json`
+- [x] Missing-report failure mode: re-prompt once, then fall back to scrollback and say so
+- [x] Capability probe one-liner for the degradation ladder
+- [x] Explicit statement that the reviewer never receives implementer report fields
+- [x] A directory without `SKILL.md` does not register as a broken skill
 
 **Verify:** `ls ~/.claude/skills/` shows `_shared`, and starting a new Claude session produces no skill-loading error naming it
 
 **Steps:**
 
-- [ ] **Step 1: Write the file** with sections: Brief template, Report schema, Report path, Missing-report handling, Capability probe, Blindness rule.
+- [x] **Step 1: Write the file** with sections: Brief template, Report schema, Report path, Missing-report handling, Capability probe, Blindness rule.
 
-- [ ] **Step 2: Confirm skill discovery ignores it**
+- [x] **Step 2: Confirm skill discovery ignores it**
 
 ```bash
 claude --help >/dev/null 2>&1 && echo "cli ok"
@@ -105,23 +105,23 @@ Then start a fresh session and confirm `_shared` does not appear as a skill or r
 - Create: `~/.claude/skills/delegate-implement/SKILL.md`
 
 **Acceptance Criteria:**
-- [ ] Reads the shared contract rather than restating it
-- [ ] Takes executor (codex | claude-pane | agent-tool) and capability tier as inputs
-- [ ] Codex start passes `-c model_reasoning_effort=<effort>` and **omits `-m`** by default
-- [ ] Claude pane start passes `--model <alias>` and `--append-system-prompt` with the leaf directive
-- [ ] Pane split sets `--env CLAUDE_AGENT_DEPTH=1`
-- [ ] Reuses a named delegate pane when idle, sending `/new` first; splits only when absent; never closes
-- [ ] Reads the **report file**, not scrollback, as the primary channel
-- [ ] Contains no model identifier and no `ultra`
-- [ ] Re-runs the verification commands itself rather than trusting `tests_run`
+- [x] Reads the shared contract rather than restating it
+- [x] Takes executor (codex | claude-pane | agent-tool) and capability tier as inputs
+- [x] Codex start passes `-c model_reasoning_effort=<effort>` and **omits `-m`** by default
+- [x] Claude pane start passes `--model <alias>` and `--append-system-prompt` with the leaf directive
+- [x] Pane split sets `--env CLAUDE_AGENT_DEPTH=1`
+- [x] Reuses a named delegate pane when idle, sending `/new` first; splits only when absent; never closes
+- [x] Reads the **report file**, not scrollback, as the primary channel
+- [x] Contains no model identifier and no `ultra`
+- [x] Re-runs the verification commands itself rather than trusting `tests_run`
 
 **Verify:** `grep -nE 'gpt-5|claude-(opus|sonnet|haiku)-[0-9]|ultra' ~/.claude/skills/delegate-implement/SKILL.md` → no output
 
 **Steps:**
 
-- [ ] **Step 1: Write the skill** with Preconditions (capability probe), Step 1 pane discovery/reuse, Step 2 start with executor-specific argv, Step 3 brief handoff, Step 4 outcome handling (idle/blocked/timeout), Step 5 read report file, Step 6 independent verification, Step 7 report to user.
+- [x] **Step 1: Write the skill** with Preconditions (capability probe), Step 1 pane discovery/reuse, Step 2 start with executor-specific argv, Step 3 brief handoff, Step 4 outcome handling (idle/blocked/timeout), Step 5 read report file, Step 6 independent verification, Step 7 report to user.
 
-- [ ] **Step 2: Record the exact start commands**
+- [x] **Step 2: Record the exact start commands**
 
 ```bash
 # Codex: default model from config.toml, effort is the dial
@@ -132,7 +132,7 @@ herdr agent start claude --kind claude --pane <p> -- --model <alias> \
   --append-system-prompt 'You are a leaf worker. Do not delegate, spawn subagents, or start other agents. Implement the task yourself.'
 ```
 
-- [ ] **Step 3: Run the drift-proofing grep above**
+- [x] **Step 3: Run the drift-proofing grep above**
 
 ---
 
@@ -144,25 +144,25 @@ herdr agent start claude --kind claude --pane <p> -- --model <alias> \
 - Create: `~/.claude/skills/delegate-review/SKILL.md`
 
 **Acceptance Criteria:**
-- [ ] Pairing table: Claude-implemented -> Codex reviewer; Codex-implemented -> Claude `opus` reviewer
-- [ ] Review brief carries **only** diff, goal and acceptance criteria
-- [ ] Explicitly forbids passing `summary`, `tests_run`, `blockers` or `concerns` into the review brief
-- [ ] Codex reviews run at effort `high` (`xhigh` when subtle), in a fresh session
-- [ ] Enumerated dual-review triggers, with both reviews reconciled by the orchestrator
-- [ ] Findings verified against the actual code before being relayed
-- [ ] Contains no model identifier and no `ultra`
+- [x] Pairing table: Claude-implemented -> Codex reviewer; Codex-implemented -> Claude `opus` reviewer
+- [x] Review brief carries **only** diff, goal and acceptance criteria
+- [x] Explicitly forbids passing `summary`, `tests_run`, `blockers` or `concerns` into the review brief
+- [x] Codex reviews run at effort `high` (`xhigh` when subtle), in a fresh session
+- [x] Enumerated dual-review triggers, with both reviews reconciled by the orchestrator
+- [x] Findings verified against the actual code before being relayed
+- [x] Contains no model identifier and no `ultra`
 
 **Verify:** `grep -nE 'gpt-5|claude-(opus|sonnet|haiku)-[0-9]|ultra' ~/.claude/skills/delegate-review/SKILL.md` → no output
 
 **Steps:**
 
-- [ ] **Step 1: Write the pairing and blindness rules** as the first section, before mechanics, since they are the invariants.
+- [x] **Step 1: Write the pairing and blindness rules** as the first section, before mechanics, since they are the invariants.
 
-- [ ] **Step 2: Write the dual-review trigger list** verbatim from the spec: auth/secrets/crypto/permissions, migrations/schema, destructive ops, public API or config contracts, the delegation workflow itself.
+- [x] **Step 2: Write the dual-review trigger list** verbatim from the spec: auth/secrets/crypto/permissions, migrations/schema, destructive ops, public API or config contracts, the delegation workflow itself.
 
-- [ ] **Step 3: Write the mechanics** reusing the shared contract, with the review report using the same schema and findings in `concerns`.
+- [x] **Step 3: Write the mechanics** reusing the shared contract, with the review report using the same schema and findings in `concerns`.
 
-- [ ] **Step 4: Run the drift-proofing grep above**
+- [x] **Step 4: Run the drift-proofing grep above**
 
 ---
 
@@ -174,29 +174,29 @@ herdr agent start claude --kind claude --pane <p> -- --model <alias> \
 - Rewrite: `~/.claude/skills/auto-subagent-routing/SKILL.md`
 
 **Acceptance Criteria:**
-- [ ] Role table: orchestrator, complex, workhorse (Sonnet), well-specified (Codex), bulk, review
-- [ ] Adversarial pairing rule stated as an invariant
-- [ ] Degradation ladder tiers A/B/C with the probe command, cached per session, degrading on auth/quota failure with a single announcement
-- [ ] Superpowers translation table
-- [ ] Model resolution: aliases for Claude, config default for Codex, `priority` resolution only when a non-default is genuinely wanted
-- [ ] `ultra` forbidden
-- [ ] Applies outside Herdr via tier C, rather than hard-failing
+- [x] Role table: orchestrator, complex, workhorse (Sonnet), well-specified (Codex), bulk, review
+- [x] Adversarial pairing rule stated as an invariant
+- [x] Degradation ladder tiers A/B/C with the probe command, cached per session, degrading on auth/quota failure with a single announcement
+- [x] Superpowers translation table
+- [x] Model resolution: aliases for Claude, config default for Codex, `priority` resolution only when a non-default is genuinely wanted
+- [x] `ultra` forbidden
+- [x] Applies outside Herdr via tier C, rather than hard-failing
 
 **Verify:** `grep -nE 'gpt-5|claude-(opus|sonnet|haiku)-[0-9]' ~/.claude/skills/auto-subagent-routing/SKILL.md` → no output; `grep -c 'ultra' …` → only the prohibition
 
 **Steps:**
 
-- [ ] **Step 1: Write the invariants section** (adversarial, blind, degrade, no hardcoded identity).
+- [x] **Step 1: Write the invariants section** (adversarial, blind, degrade, no hardcoded identity).
 
-- [ ] **Step 2: Write the role and pairing tables.**
+- [x] **Step 2: Write the role and pairing tables.**
 
-- [ ] **Step 3: Write the degradation ladder**, including:
+- [x] **Step 3: Write the degradation ladder**, including:
 
 ```bash
 command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1
 ```
 
-- [ ] **Step 4: Write the superpowers translation table**, noting that its instructions describe a role, not a mechanism, and that its own priority order authorises this.
+- [x] **Step 4: Write the superpowers translation table**, noting that its instructions describe a role, not a mechanism, and that its own priority order authorises this.
 
 ---
 
@@ -211,18 +211,18 @@ command -v codex >/dev/null 2>&1 && codex login status >/dev/null 2>&1
 - Rewrite: `~/.claude/skills/claude-review/SKILL.md`
 
 **Acceptance Criteria:**
-- [ ] Each is a thin alias naming its executor and deferring to the delegate skill
-- [ ] Each keeps a `description` that still triggers on the same user phrasings
-- [ ] None restates the brief template, report schema or pane mechanics
-- [ ] `claude-review` notes that pairing may override an explicit executor request, and says so to the user rather than silently
+- [x] Each is a thin alias naming its executor and deferring to the delegate skill
+- [x] Each keeps a `description` that still triggers on the same user phrasings
+- [x] None restates the brief template, report schema or pane mechanics
+- [x] `claude-review` notes that pairing may override an explicit executor request, and says so to the user rather than silently
 
 **Verify:** `wc -l ~/.claude/skills/{codex,claude}-{implement,review}/SKILL.md` → each well under 40 lines
 
 **Steps:**
 
-- [ ] **Step 1: Rewrite all four** as aliases.
+- [x] **Step 1: Rewrite all four** as aliases.
 
-- [ ] **Step 2: Confirm no duplicated contract text survives**
+- [x] **Step 2: Confirm no duplicated contract text survives**
 
 ```bash
 grep -l 'files_changed' ~/.claude/skills/*/SKILL.md
@@ -239,19 +239,19 @@ Expected: only `delegate-implement` and `delegate-review`, if at all — ideally
 - Modify: `~/.claude/CLAUDE.md`
 
 **Acceptance Criteria:**
-- [ ] Routing detail is replaced by a pointer to `auto-subagent-routing`
-- [ ] Retains the superpowers-priority framing that authorises the override
-- [ ] **Adds the leaf-worker rule:** if `CLAUDE_AGENT_DEPTH` is set and >= 1, never delegate or spawn — do the work directly
-- [ ] Retains the note that the hook does not fire on the Codex path
-- [ ] No model identifier
+- [x] Routing detail is replaced by a pointer to `auto-subagent-routing`
+- [x] Retains the superpowers-priority framing that authorises the override
+- [x] **Adds the leaf-worker rule:** if `CLAUDE_AGENT_DEPTH` is set and >= 1, never delegate or spawn — do the work directly
+- [x] Retains the note that the hook does not fire on the Codex path
+- [x] No model identifier
 
 **Verify:** `grep -n 'CLAUDE_AGENT_DEPTH' ~/.claude/CLAUDE.md` → present
 
 **Steps:**
 
-- [ ] **Step 1: Rewrite the subagent-routing section** as a pointer plus the leaf rule.
+- [x] **Step 1: Rewrite the subagent-routing section** as a pointer plus the leaf rule.
 
-- [ ] **Step 2: Confirm the leaf rule is unconditional** and does not depend on `$HERDR_ENV`, since tier C runs outside Herdr.
+- [x] **Step 2: Confirm the leaf rule is unconditional** and does not depend on `$HERDR_ENV`, since tier C runs outside Herdr.
 
 ---
 
@@ -263,18 +263,18 @@ Expected: only `delegate-implement` and `delegate-review`, if at all — ideally
 - Modify: `~/.claude/hooks/auto-subagent-reminder.sh`
 
 **Acceptance Criteria:**
-- [ ] References `auto-subagent-routing` and the delegate skills, not the old four
-- [ ] Mentions the adversarial-review rule
-- [ ] Stays advisory, non-blocking
-- [ ] Keeps the existing comment explaining why it is `PreToolUse` on `Agent` and why it does not fire on the Codex path
+- [x] References `auto-subagent-routing` and the delegate skills, not the old four
+- [x] Mentions the adversarial-review rule
+- [x] Stays advisory, non-blocking
+- [x] Keeps the existing comment explaining why it is `PreToolUse` on `Agent` and why it does not fire on the Codex path
 
 **Verify:** `sh ~/.claude/hooks/auto-subagent-reminder.sh | jq .` with `HERDR_ENV=1` → valid JSON; with `HERDR_ENV` unset → no output
 
 **Steps:**
 
-- [ ] **Step 1: Update the payload text.**
+- [x] **Step 1: Update the payload text.**
 
-- [ ] **Step 2: Run both verify cases**
+- [x] **Step 2: Run both verify cases**
 
 ```bash
 HERDR_ENV=1 sh ~/.claude/hooks/auto-subagent-reminder.sh | jq .
@@ -291,17 +291,17 @@ env -u HERDR_ENV sh ~/.claude/hooks/auto-subagent-reminder.sh; echo "rc=$?"
 - Create: `~/.config/AGENTS.md` (relative symlink -> `CLAUDE.md`)
 
 **Acceptance Criteria:**
-- [ ] Relative target, not absolute (absolute is a doctor warning)
-- [ ] Tracked by git as mode 120000
-- [ ] `./doctor.sh` reports no new finding
-- [ ] `./test.sh` passes
-- [ ] The workflow still functions with this file deleted — it is an optional layer
+- [x] Relative target, not absolute (absolute is a doctor warning)
+- [x] Tracked by git as mode 120000
+- [x] `./doctor.sh` reports no new finding
+- [x] `./test.sh` passes
+- [x] The workflow still functions with this file deleted — it is an optional layer
 
 **Verify:** `git ls-files -s AGENTS.md` → mode `120000`; `./doctor.sh; echo "rc=$?"` → rc 0
 
 **Steps:**
 
-- [ ] **Step 1: Create the link**
+- [x] **Step 1: Create the link**
 
 ```bash
 ln -s CLAUDE.md ~/.config/AGENTS.md
@@ -310,15 +310,15 @@ git -C ~/.config ls-files -s AGENTS.md
 ```
 Expected: `120000 … AGENTS.md`
 
-- [ ] **Step 2: Confirm the doctor stays clean**
+- [x] **Step 2: Confirm the doctor stays clean**
 
 ```bash
 cd ~/.config && ./doctor.sh; echo "rc=$?"
 ```
 
-- [ ] **Step 3: Confirm the reference scan is not confused** by the same content appearing under two tracked paths. If `check_references` double-reports, note it and decide whether to exclude `AGENTS.md` or dedupe by realpath.
+- [x] **Step 3: Confirm the reference scan is not confused** by the same content appearing under two tracked paths. If `check_references` double-reports, note it and decide whether to exclude `AGENTS.md` or dedupe by realpath.
 
-- [ ] **Step 4: Run the suites**
+- [x] **Step 4: Run the suites**
 
 ```bash
 cd ~/.config && ./test.sh
@@ -333,19 +333,19 @@ cd ~/.config && ./test.sh
 **Files:** none — verification only
 
 **Acceptance Criteria:**
-- [ ] Fresh-repo delegation produces a report file
-- [ ] Recursion guard holds
-- [ ] Adversarial pairing routes both directions correctly
-- [ ] Review brief is blind
-- [ ] Failed task still reports `status: "failed"` with populated `blockers`
-- [ ] Degradation to tier B works with `codex` off `PATH`
-- [ ] No model identifiers, no `ultra`, anywhere in the skills
+- [x] Fresh-repo delegation produces a report file
+- [x] Recursion guard holds
+- [x] Adversarial pairing routes both directions correctly
+- [x] Review brief is blind
+- [x] Failed task still reports `status: "failed"` with populated `blockers`
+- [x] Degradation to tier B works with `codex` off `PATH`
+- [x] No model identifiers, no `ultra`, anywhere in the skills
 
 **Verify:** every command below produces its expected result
 
 **Steps:**
 
-- [ ] **Step 1: Fresh repo**
+- [x] **Step 1: Fresh repo**
 
 ```bash
 d=$(mktemp -d) && git -C "$d" init -q
@@ -353,27 +353,27 @@ d=$(mktemp -d) && git -C "$d" init -q
 ls /tmp/codex-handoff/
 ```
 
-- [ ] **Step 2: Recursion guard** — delegate a task phrased so a naive agent would sub-delegate ("implement X, using a subagent for the tests"); confirm the worker does it directly.
+- [x] **Step 2: Recursion guard** — delegate a task phrased so a naive agent would sub-delegate ("implement X, using a subagent for the tests"); confirm the worker does it directly.
 
-- [ ] **Step 3: Pairing, both directions** — one Codex-implemented change (expect a Claude `opus` review) and one Sonnet-implemented change (expect a Codex review).
+- [x] **Step 3: Pairing, both directions** — one Codex-implemented change (expect a Claude `opus` review) and one Sonnet-implemented change (expect a Codex review).
 
-- [ ] **Step 4: Blindness** — inspect the review brief actually sent:
+- [x] **Step 4: Blindness** — inspect the review brief actually sent:
 
 ```bash
 grep -iE 'summary|tests_run|blockers|concerns' <the review brief text>
 ```
 Expected: no match.
 
-- [ ] **Step 5: Failure path** — delegate an impossible task; confirm the report exists with `status: "failed"` and a non-empty `blockers`.
+- [x] **Step 5: Failure path** — delegate an impossible task; confirm the report exists with `status: "failed"` and a non-empty `blockers`.
 
-- [ ] **Step 6: Degradation**
+- [x] **Step 6: Degradation**
 
 ```bash
 PATH=/usr/bin:/bin command -v codex   # confirm how it resolves
 # then run routing with codex masked and confirm tier B is chosen and announced once
 ```
 
-- [ ] **Step 7: Static invariants**
+- [x] **Step 7: Static invariants**
 
 ```bash
 grep -rnE 'gpt-5|claude-(opus|sonnet|haiku)-[0-9]' ~/.claude/skills/ ; echo "rc=$?"
