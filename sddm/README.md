@@ -8,7 +8,7 @@ Scripts that keep the SDDM login screen background in sync with your desktop wal
 |------|---------|
 | `watch_wallpaper.sh` | Watches for awww wallpaper changes (started via Hyprland autostart) |
 | `update_sddm.sh` | User-side updater; delegates to the installed root-owned helper via sudo |
-| `update_sddm_root.sh` | Tracked source for the privileged helper; converts the wallpaper into the SDDM theme background |
+| `update_sddm_root.sh` | Tracked source for the privileged helper; decodes as the target user, then atomically installs the SDDM theme background as root |
 | `setup-sudo.sh` | Installs or upgrades the root-owned helper and its passwordless-sudo rule |
 | `default.conf` | Reference SDDM configuration (copy to `/etc/sddm.conf` if desired) |
 
@@ -32,11 +32,14 @@ installation path does not close that boundary. `setup-sudo.sh` installs from
 `$SCRIPT_DIR/update_sddm_root.sh`, which is user-writable here, so anything able
 to change that source gains root execution the next time the user runs setup.
 
-On this host the SDDM theme directory is also user-owned. Until its ownership
-is corrected, the passwordless grant remains a root-write primitive because
-the helper writes `Backgrounds/wallpaper.jpg` as root beneath a directory the
-user controls. The helper also passes a user-selected wallpaper to ffmpeg while
-running as root.
+The helper still runs as root because it must write
+`Backgrounds/wallpaper.jpg`, but wallpaper discovery and `ffmpeg` decoding run
+as the target user. Root creates a temporary output in the theme's
+`Backgrounds` directory and atomically renames it only after a successful
+decode, so a failed conversion preserves the existing greeter image. The
+resolved theme and `Backgrounds` directories must remain root-owned; otherwise
+an unprivileged user could substitute the temporary or destination path used
+by the privileged rename.
 
 ### 2. Test it
 
@@ -55,9 +58,11 @@ and whether the greeter image is older than the newest awww cache trigger.
 2. **Wallpaper detection**: the updater reads the awww cache
    (`~/.cache/awww/<version>/<monitor>`), falling back to the
    `~/.config/options/wallpaper` symlink.
-3. **Conversion**: `ffmpeg` writes the image to
-   `/usr/share/sddm/themes/<theme>/Backgrounds/wallpaper.jpg` for the theme
-   configured in `/etc/sddm.conf` (default: `sddm-astronaut-theme`).
+3. **Conversion**: `ffmpeg` decodes the image as the target user and streams a
+   JPEG to a root-created temporary file for the theme configured in
+   `/etc/sddm.conf` (default: `sddm-astronaut-theme`). Root then atomically
+   renames that file to
+   `/usr/share/sddm/themes/<theme>/Backgrounds/wallpaper.jpg`.
 
 ## Troubleshooting
 

@@ -108,10 +108,13 @@ from `$SCRIPT_DIR/update_sddm_root.sh` in the user's home, so anything able to
 change that source gains root execution the next time setup is run. Re-run
 setup only after reviewing source changes. The SDDM doctor check uses the
 effective `sudo -l` grant, validates the installed helper and resolved theme
-directory ownership, and detects stalled propagation. On this host the theme
-directory is user-owned, so the grant remains a password-free root-write
-primitive until that ownership is corrected. The helper also gives ffmpeg a
-user-controlled wallpaper path while running as root.
+directory ownership, and detects stalled propagation. The helper remains
+privileged only for its destination: wallpaper discovery and ffmpeg decoding
+run as the target user, while root creates a temporary JPEG inside the theme's
+`Backgrounds` directory and atomically renames it over the greeter background
+after a successful decode. The resolved theme and `Backgrounds` directories
+must remain root-owned so an unprivileged user cannot substitute either side
+of that privileged rename.
 
 ### Gaming (WoW / Battle.net)
 
