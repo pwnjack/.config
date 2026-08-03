@@ -95,6 +95,24 @@ Gotchas, all found by probing the binary rather than reading docs:
   - *In the panel* (GTK4 `icon-name` lookup), symbolic icons work, but **Papirus-Dark ships its symbolic `status/` set with the light theme's `#444444`**, so `night-light-symbolic` renders invisible on a dark plate even though `Gtk.IconTheme.has_icon` returns true. Only entries symlinked into `panel/` are correctly themed. Check the resolved SVG's `ColorScheme-Text` before trusting a symbolic icon.
   - *In notifications*, **swaync 0.12.6 renders nothing at all for Papirus-Dark's symbolic icons** — it reserves the icon slot and leaves it blank. `notify-send -i` must use the **non-symbolic** name (`weather-clear-night`, not `weather-clear-night-symbolic`). A name that renders in the panel is no evidence it renders in a toast; screenshot the toast.
 
+### SDDM Greeter Wallpaper Sync
+
+`sddm/watch_wallpaper.sh` follows awww changes and asks `sddm/update_sddm.sh`
+to refresh the greeter background. The passwordless-sudo target is a root-owned
+copy installed under `/usr/local/bin`, while the tracked
+`sddm/update_sddm_root.sh` remains its source and upgrade path. This separation
+prevents the automatic NOPASSWD path from running a user-writable script as
+root; the rule installed by setup pins the helper's sole argument to the
+invoking username. The manual path remains privileged: `setup-sudo.sh` installs
+from `$SCRIPT_DIR/update_sddm_root.sh` in the user's home, so anything able to
+change that source gains root execution the next time setup is run. Re-run
+setup only after reviewing source changes. The SDDM doctor check uses the
+effective `sudo -l` grant, validates the installed helper and resolved theme
+directory ownership, and detects stalled propagation. On this host the theme
+directory is user-owned, so the grant remains a password-free root-write
+primitive until that ownership is corrected. The helper also gives ffmpeg a
+user-controlled wallpaper path while running as root.
+
 ### Gaming (WoW / Battle.net)
 
 `docs/gaming-wow.md` is the single source for this — **read it before touching
@@ -164,6 +182,7 @@ scripts/doctor/
 │   ├── references.sh        # check_references — from `source =` lines and literal ~/.config paths
 │   ├── binaries.sh          # check_binaries   — from keybinds.conf `exec,` and autostart `exec-once`
 │   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
+│   ├── sddm.sh              # check_sddm       — from sddm/setup-sudo.sh and the live SDDM configuration
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
 │   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
 └── test/
@@ -171,6 +190,6 @@ scripts/doctor/
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_way_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

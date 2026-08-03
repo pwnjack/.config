@@ -19,7 +19,8 @@ mkdir -p "$cache_dir"
 # Function to update SDDM wallpaper
 update_sddm() {
     if [[ -f "$update_script" ]]; then
-        "$update_script" >/dev/null 2>&1 &
+        "$update_script" >/dev/null \
+            2> >(logger -t sddm-wallpaper-sync) &
     fi
 }
 
@@ -51,4 +52,3 @@ else
         fi
     done
 fi
-

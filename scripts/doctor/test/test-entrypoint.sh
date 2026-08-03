@@ -12,6 +12,11 @@
 
 ep_bin="$REPO_DIR/doctor.sh"
 
+# Entry-point fixtures describe repository state, not this runner's display
+# manager. Keep the host-gated SDDM check silent in the subprocesses below.
+DOCTOR_SDDM_DISPLAY_MANAGER=other
+export DOCTOR_SDDM_DISPLAY_MANAGER
+
 assert_eq "$([ -x "$ep_bin" ] && echo yes || echo no)" "yes" "doctor.sh is executable"
 
 # --- --help ---------------------------------------------------------------
@@ -80,3 +85,7 @@ assert_not_contains "$ep_notrepo_out" "▸ Symlinks" \
 
 # --- the root is reported so the user knows what was inspected ------------
 assert_contains "$ep_clean_out" "$ep_clean" "the report names the tree it checked"
+
+# Later sourced files must see the real host unless they install their own
+# stubs, so do not leak the entry-point-only seam through the shared shell.
+unset DOCTOR_SDDM_DISPLAY_MANAGER
