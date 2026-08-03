@@ -1,16 +1,18 @@
 #!/bin/bash
 #
 # SDDM Wallpaper Sudo Setup
-# Grants passwordless sudo for update_sddm_root.sh only, so the wallpaper
-# watcher can sync the SDDM background automatically in the background.
-#
-# Note: this trusts ~/.config/sddm/update_sddm_root.sh to run as root.
-# Anything that can write to that file gains root access, so keep your
-# home directory permissions sane.
+# Installs a root-owned copy of update_sddm_root.sh, then grants passwordless
+# sudo for that installed copy only. The wallpaper watcher can therefore sync
+# in the background without making a user-writable script root-equivalent.
+# The manual installer still reads that user-writable source before invoking
+# sudo, so callers must review it before approving an installation or upgrade.
 #
 
 SUDOERS_FILE="/etc/sudoers.d/sddm-wallpaper"
-ROOT_SCRIPT="$HOME/.config/sddm/update_sddm_root.sh"
+INSTALLED_HELPER="/usr/local/bin/sddm-wallpaper-update"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_SCRIPT="$SCRIPT_DIR/update_sddm_root.sh"
 
 echo "Setting up passwordless sudo for SDDM wallpaper updates..."
 echo ""
@@ -20,35 +22,94 @@ if [[ ! -f "$ROOT_SCRIPT" ]]; then
     exit 1
 fi
 
-if [[ -f "$SUDOERS_FILE" ]] && sudo -n "$ROOT_SCRIPT" "$USER" 2>/dev/null; then
-    echo "Passwordless sudo is already configured!"
-    exit 0
+listing_has_current_grant() {
+    local listing="$1"
+
+    printf '%s\n' "$listing" | awk -v command="$INSTALLED_HELPER $USER" '
+        {
+            marker = "NOPASSWD: "
+            position = index($0, marker)
+            if (position == 0) next
+            granted = substr($0, position + length(marker))
+            count = split(granted, entries, /,/)
+            for (i = 1; i <= count; i++) {
+                sub(/^[[:space:]]+/, "", entries[i])
+                sub(/[[:space:]]+$/, "", entries[i])
+                if (entries[i] == "ALL" || entries[i] == command) found = 1
+            }
+        }
+        END { exit !found }
+    '
+}
+
+sudo_listing=$(sudo -n -l 2>/dev/null || true)
+helper_current=false
+grant_current=false
+
+if [[ ! -L "$INSTALLED_HELPER" ]] &&
+   cmp -s "$ROOT_SCRIPT" "$INSTALLED_HELPER" &&
+   [[ "$(stat -c '%U:%G %a' "$INSTALLED_HELPER" 2>/dev/null)" = "root:root 755" ]]; then
+    helper_current=true
+fi
+if listing_has_current_grant "$sudo_listing"; then
+    grant_current=true
 fi
 
-# Build the sudoers rule for the current user
-tmpfile=$(mktemp)
-trap 'rm -f "$tmpfile"' EXIT
-printf '%s ALL=(root) NOPASSWD: %s\n' "$USER" "$ROOT_SCRIPT" > "$tmpfile"
-
-# Verify syntax before installing
-if ! sudo visudo -c -f "$tmpfile" >/dev/null; then
-    echo "✗ Generated sudoers rule failed validation"
-    exit 1
+# Build and validate a replacement rule only when the effective grant has
+# drifted. A fully configured run must never ask for a password merely to
+# validate the rule it already uses.
+tmpfile=""
+trap '[[ -z "$tmpfile" ]] || rm -f "$tmpfile"' EXIT
+if ! $grant_current; then
+    tmpfile=$(mktemp)
+    printf '%s ALL=(root) NOPASSWD: %s %s\n' \
+        "$USER" "$INSTALLED_HELPER" "$USER" > "$tmpfile"
+    if ! sudo visudo -c -f "$tmpfile" >/dev/null; then
+        echo "✗ Generated sudoers rule failed validation"
+        exit 1
+    fi
 fi
 
-if sudo install -m 0440 -o root -g root "$tmpfile" "$SUDOERS_FILE"; then
-    echo "✓ Installed $SUDOERS_FILE"
+if $helper_current; then
+    echo "✓ Root-owned helper is already current"
 else
-    echo "✗ Failed to install sudoers file"
-    exit 1
+    if sudo install -m 0755 -o root -g root "$ROOT_SCRIPT" "$INSTALLED_HELPER"; then
+        echo "✓ Installed root-owned helper at $INSTALLED_HELPER"
+    else
+        echo "✗ Failed to install root-owned helper"
+        exit 1
+    fi
+fi
+
+if $grant_current; then
+    echo "✓ Passwordless sudo rule is already current"
+else
+    if sudo install -m 0440 -o root -g root "$tmpfile" "$SUDOERS_FILE"; then
+        echo "✓ Installed $SUDOERS_FILE"
+    else
+        echo "✗ Failed to install sudoers file"
+        exit 1
+    fi
 fi
 
 # Test it
-if sudo -n "$ROOT_SCRIPT" "$USER" 2>/dev/null; then
+verify_ok=true
+if sudo -n "$INSTALLED_HELPER" "$USER" 2>/dev/null; then
     echo "✓ Passwordless sudo is now working!"
     echo ""
     echo "The SDDM wallpaper has been updated to your current wallpaper."
 else
+    verify_ok=false
     echo "⚠ Passwordless sudo may not be working yet. Try running:"
-    echo "  sudo $ROOT_SCRIPT $USER"
+    echo "  sudo $INSTALLED_HELPER $USER"
 fi
+
+if printf '%s\n' "$sudo_listing" | \
+   grep -qE 'NOPASSWD:.*Backgrounds/wallpaper\.jpg'; then
+    echo ""
+    echo "Note: sudo still lists an obsolete NOPASSWD rule for Backgrounds/wallpaper.jpg."
+    echo "Find it with: sudo grep -R -nF 'Backgrounds/wallpaper.jpg' /etc/sudoers /etc/sudoers.d"
+    echo "Then review and remove that legacy rule from the matching sudoers file."
+fi
+
+$verify_ok || exit 1
