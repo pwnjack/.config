@@ -1,7 +1,7 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import { execAsync } from "ags/process"
-import { setKeyword } from "./hyprctl"
+import { luaValue, setKeyword } from "./hyprctl"
 
 const OVERRIDES_PATH = GLib.get_home_dir() + "/.config/hypr/config/overrides.lua"
 
@@ -77,12 +77,6 @@ export function getOverride(keyword: string): string | null {
 
 export function hasOverride(keyword: string): boolean {
     return getOverride(keyword) !== null
-}
-
-function luaValue(value: string | number | boolean): string {
-    if (typeof value === "boolean") return value ? "true" : "false"
-    if (typeof value === "number") return String(value)
-    return JSON.stringify(value)
 }
 
 function configCall(keyword: string, value: string | number | boolean): string {

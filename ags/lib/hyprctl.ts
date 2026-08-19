@@ -12,9 +12,35 @@ function execSync(cmd: string): string {
     }
 }
 
+export function luaValue(value: string | number | boolean): string {
+    if (typeof value === "boolean") return value ? "true" : "false"
+    if (typeof value === "number") return String(value)
+    if (value === "true" || value === "false") return value
+    if (/^-?(?:\d+\.?\d*|\.\d+)$/.test(value)) return value
+    return JSON.stringify(value)
+}
+
 export function setKeyword(keyword: string, value: string | number | boolean): void {
-    const val = typeof value === "boolean" ? (value ? "true" : "false") : String(value)
-    execAsync(["hyprctl", "keyword", keyword, val]).catch(console.error)
+    let expression: string
+
+    if (keyword === "animation") {
+        const [leaf, enabled, speed, bezier, ...styleParts] = String(value).split(",")
+        const fields = [
+            `leaf = ${JSON.stringify(leaf)}`,
+            `enabled = ${enabled !== "0"}`,
+            `speed = ${Number(speed)}`,
+            `bezier = ${JSON.stringify(bezier)}`,
+        ]
+        const style = styleParts.join(",")
+        if (style) fields.push(`style = ${JSON.stringify(style)}`)
+        expression = `hl.animation({ ${fields.join(", ")} })`
+    } else {
+        let nested = luaValue(value)
+        for (const key of keyword.split(":").reverse()) nested = `{ ${key} = ${nested} }`
+        expression = `hl.config(${nested})`
+    }
+
+    execAsync(["hyprctl", "eval", expression]).catch(console.error)
 }
 
 export function getOption(name: string): string {

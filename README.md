@@ -98,6 +98,8 @@ What it checks:
 - **Waybar** — every module on the bar has a config block, every block is on
   the bar, and every command an `exec`, click or scroll handler invokes is
   installed
+- **Hyprctl Lua compatibility** — tracked runtime calls do not use the removed
+  `hyprctl keyword` or positional dispatcher forms
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 `core.hooksPath`) runs `shellcheck` on staged shell scripts, the test suites

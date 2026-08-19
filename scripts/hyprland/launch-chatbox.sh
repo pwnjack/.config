@@ -13,7 +13,7 @@ WINDOW_ADDR=$(hyprctl clients -j | jq -r '.[] | select(.workspace.name == "speci
 
 if [ -n "$WINDOW_ADDR" ]; then
 	# Window exists, just toggle the special workspace
-	hyprctl dispatch togglespecialworkspace aichat
+	hyprctl dispatch 'hl.dsp.workspace.toggle_special("aichat")'
 else
 	# Get monitor dimensions
 	MONITOR_HEIGHT=$(hyprctl monitors -j | jq -r '.[0].height')
@@ -27,7 +27,7 @@ else
 	Y_POS=$PADDING
 
 	# Launch ghostty with aichat (themed config and persistent session)
-	hyprctl dispatch exec "[float;workspace special:aichat] ghostty --config-file=$HOME/.config/ghostty/ai-sidebar -e aichat -s assistant"
+	hyprctl dispatch "hl.dsp.exec_cmd([[ghostty --config-file=$HOME/.config/ghostty/ai-sidebar -e aichat -s assistant]], { float = true, workspace = [[special:aichat]] })"
 
 	# Wait for window to appear and retry getting the address
 	for _ in 1 2 3 4 5; do
@@ -38,7 +38,7 @@ else
 
 	if [ -n "$WINDOW_ADDR" ]; then
 		# Apply size and position
-		hyprctl dispatch resizewindowpixel exact $SIDEBAR_WIDTH $SIDEBAR_HEIGHT,address:$WINDOW_ADDR
-		hyprctl dispatch movewindowpixel exact $X_POS $Y_POS,address:$WINDOW_ADDR
+		hyprctl dispatch "hl.dsp.window.resize({ x = $SIDEBAR_WIDTH, y = $SIDEBAR_HEIGHT, relative = false, window = [[address:$WINDOW_ADDR]] })"
+		hyprctl dispatch "hl.dsp.window.move({ x = $X_POS, y = $Y_POS, relative = false, window = [[address:$WINDOW_ADDR]] })"
 	fi
 fi

@@ -192,12 +192,13 @@ scripts/doctor/
 │   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
 │   ├── sddm.sh              # check_sddm       — from sddm/setup-sudo.sh and the live SDDM configuration
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
+│   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
 │   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hctl_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

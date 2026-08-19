@@ -1,0 +1,74 @@
+#!/bin/bash
+#
+# Runtime hyprctl compatibility for Hyprland's Lua config provider.
+#
+# Hyprland's Lua provider does not accept `hyprctl keyword`, and dispatchers
+# must be passed as Lua expressions rather than the legacy positional form.
+# Scan every tracked text file so panel code, Waybar handlers and scripts are
+# covered automatically. Documentation and the doctor's own fixtures are
+# excluded because both intentionally discuss obsolete examples.
+#
+# This is a WARN: one control or action is broken when invoked, but Hyprland
+# and the rest of the session continue to run.
+
+# _hctl_uses_lua_provider
+# The tracked entrypoint is the source of truth; do not infer this from the
+# currently running compositor, which may be older than the checked-out tree.
+_hctl_uses_lua_provider() {
+    git -C "$DOCTOR_ROOT" ls-files --error-unmatch -- hypr/hyprland.lua >/dev/null 2>&1
+}
+
+# _hctl_check_file <root-relative-file>
+_hctl_check_file() {
+    local file="$1" full="$DOCTOR_ROOT/$1" quoted_full line trimmed line_no=0
+    local shell_keyword_re='hyprctl[[:space:]]+keyword([[:space:]]|$)'
+    local shell_dispatch_re='hyprctl[[:space:]]+dispatch[[:space:]]+[A-Za-z_]'
+    local array_keyword_re="['\"]hyprctl['\"][[:space:]]*,[[:space:]]*['\"]keyword['\"]"
+    local array_dispatch_re="['\"]hyprctl['\"][[:space:]]*,[[:space:]]*['\"]dispatch['\"][[:space:]]*,[[:space:]]*['\"][A-Za-z_][A-Za-z0-9_-]*['\"]"
+
+    [ -f "$full" ] || return 0
+    [ -L "$full" ] && return 0
+    LC_ALL=C grep -Iq . "$full" 2>/dev/null || return 0
+    quoted_full="$(doctor_q "$full")"
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        line_no=$((line_no + 1))
+        trimmed="${line#"${line%%[![:space:]]*}"}"
+        case "$trimmed" in
+            \#*|'--'*|'//'*) continue ;;
+        esac
+
+        if [[ "$line" =~ $shell_keyword_re ]] \
+            || [[ "$line" =~ $shell_dispatch_re ]] \
+            || [[ "$line" =~ $array_keyword_re ]] \
+            || [[ "$line" =~ $array_dispatch_re ]]; then
+            warn "$file:$line_no uses hyprctl syntax removed by the Lua config provider" \
+                "replace the call in $quoted_full with hyprctl eval or a Lua dispatcher expression"
+        fi
+    done < "$full"
+}
+
+check_hyprctl() {
+    group "Hyprctl Lua compatibility"
+
+    local before_e="$DOCTOR_ERRORS" before_w="$DOCTOR_WARNINGS" before_n="$DOCTOR_NOTICES"
+    local file
+
+    if ! _hctl_uses_lua_provider; then
+        ok "the tracked configuration does not use Hyprland's Lua provider"
+        return 0
+    fi
+
+    while IFS= read -r -d '' file; do
+        case "$file" in
+            docs/*|scripts/doctor/*|*.md) continue ;;
+        esac
+        _hctl_check_file "$file"
+    done < <(git -C "$DOCTOR_ROOT" ls-files -z 2>/dev/null)
+
+    if [ "$DOCTOR_ERRORS" = "$before_e" ] \
+        && [ "$DOCTOR_WARNINGS" = "$before_w" ] \
+        && [ "$DOCTOR_NOTICES" = "$before_n" ]; then
+        ok "tracked runtime calls use the Lua-compatible hyprctl API"
+    fi
+}

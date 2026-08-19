@@ -22,8 +22,8 @@ const Monitors: CategoryDef = {
         const term = readOption("terminal") || "ghostty"
         cards.push(ActionChip({
             icon: "utilities-terminal-symbolic", label: "Advanced setup (resolution, position, rotation)",
-            onClicked: () => execAsync(["hyprctl", "dispatch", "exec",
-                `${term} -e ${HOME}/.config/scripts/settings/advanced/monitor.sh`]).catch(console.error),
+            onClicked: () => execAsync([term, "-e",
+                `${HOME}/.config/scripts/settings/advanced/monitor.sh`]).catch(console.error),
         }))
         return cards
     },

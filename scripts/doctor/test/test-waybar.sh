@@ -90,7 +90,7 @@ way_config "$way_fixture" '{
     "on-click-right": "$HOME/.config/scripts/hyprland/mediactl.sh",
     "on-click": "missing-tool",
     "on-click-middle": "/opt/absent/tool",
-    "on-scroll-up": "hyprctl dispatch workspace r-1",
+    "on-scroll-up": "hyprctl dispatch '\''hl.dsp.focus({ workspace = \"r-1\" })'\''",
   },
 
   "unplaced-block": {

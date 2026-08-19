@@ -15,7 +15,7 @@ const HOME = GLib.get_home_dir()
 
 function terminalExec(script: string) {
     const term = readOption("terminal") || "ghostty"
-    execAsync(["hyprctl", "dispatch", "exec", `${term} -e ${script}`]).catch(console.error)
+    execAsync([term, "-e", script]).catch(console.error)
 }
 
 function categoryPage(catId: string): Gtk.Widget {

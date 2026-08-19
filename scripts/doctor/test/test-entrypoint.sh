@@ -59,6 +59,7 @@ assert_contains "$ep_out" "Config references" "the references check ran"
 assert_contains "$ep_out" "Binaries" "the binaries check ran"
 assert_contains "$ep_out" "Services" "the services check ran"
 assert_contains "$ep_out" "Waybar" "the waybar check ran"
+assert_contains "$ep_out" "Hyprctl Lua compatibility" "the hyprctl compatibility check ran"
 assert_contains "$ep_out" "Hardware" "the hardware check ran"
 
 # --- a tree with no ERRORs ------------------------------------------------

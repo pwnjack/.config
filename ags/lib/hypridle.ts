@@ -24,7 +24,8 @@ export function readTimeouts(): HypridleTimeouts {
             if (!timeoutMatch) continue
             const timeout = parseInt(timeoutMatch[1])
             if (block.includes("hyprlock")) lock = timeout
-            if (block.includes("dpms off")) dpms = timeout
+            if (block.includes("dpms off")
+                || /hl\.dsp\.dpms\(\{\s*action\s*=\s*["']off["']/.test(block)) dpms = timeout
         }
 
         return { lock, dpms }
@@ -45,7 +46,7 @@ export function writeTimeouts(timeouts: HypridleTimeouts): void {
 general {
     lock_cmd = pidof hyprlock || hyprlock       # Avoid starting multiple hyprlock instances
     before_sleep_cmd = loginctl lock-session    # Lock before system suspend
-    after_sleep_cmd = hyprctl dispatch dpms on  # Turn on display after wake
+    after_sleep_cmd = hyprctl dispatch 'hl.dsp.dpms({action = "on"})'  # Turn on display after wake
     ignore_dbus_inhibit = false                 # Respect inhibit requests (e.g., video playback)
 }
 
@@ -59,8 +60,8 @@ listener {
 # Turn off monitor after inactivity
 listener {
     timeout = ${timeouts.dpms}
-    on-timeout = hyprctl dispatch dpms off
-    on-resume = hyprctl dispatch dpms on
+    on-timeout = hyprctl dispatch 'hl.dsp.dpms({action = "off"})'
+    on-resume = hyprctl dispatch 'hl.dsp.dpms({action = "on"})'
 }
 `
     try {

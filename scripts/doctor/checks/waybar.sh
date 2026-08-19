@@ -60,7 +60,7 @@
 
 # Waybar's own action keywords. They sit exactly where a command would, and are
 # NOT separable by module: hyprland/workspaces carries "on-click": "activate"
-# and "on-scroll-up": "hyprctl dispatch workspace r-1" in the same block.
+# and a `hyprctl dispatch 'hl.dsp.focus(...)'` scroll handler in the same block.
 #
 # This is upstream waybar vocabulary, not a second source of truth for anything
 # in this repo, so no change here can make it stale -- only a waybar release
