@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Renders docs/keybindings.md from hypr/config/software/keybinds.conf.
+# Renders docs/keybindings.md from hypr/config/software/keybinds.lua.
 #
 # README used to carry the full table by hand. It drifted, exactly the way the
 # rofi cheatsheet drifted before it was made self-rendering: bindings the config
@@ -36,7 +36,7 @@ render() {
 
 # Keybindings
 
-Every row below is rendered from `hypr/config/software/keybinds.conf` by the
+Every row below is rendered from `hypr/config/software/keybinds.lua` by the
 same parse that `Super + H` shows at runtime, so this file cannot disagree with
 the bindings it documents. To change a binding, edit the config and regenerate:
 

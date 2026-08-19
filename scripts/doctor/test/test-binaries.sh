@@ -34,33 +34,35 @@ mkdir -p "$bin_fixture/hypr/config/software" \
 echo "bash" > "$bin_fixture/options/terminal"
 echo "absent-browser-qq" > "$bin_fixture/options/browser"
 
-cat > "$bin_fixture/hypr/config/apptype.conf" <<'BIN_EOF'
-$fileManager = ls        # GUI file manager
-$textEditor = cat        # Text editor
-$polkitAgent = absent-polkit-qq  # Authentication agent
+cat > "$bin_fixture/hypr/config/apptype.lua" <<'BIN_EOF'
+return {
+    fileManager = "ls",
+    textEditor = "cat",
+    polkitAgent = "absent-polkit-qq",
+}
 BIN_EOF
 
-cat > "$bin_fixture/hypr/config/software/keybinds.conf" <<'BIN_EOF'
-bind = $Mod, RETURN, exec, $terminal
-bind = $Mod, B, exec, $browser
-bind = $Mod, E, exec, $fileManager
-bind = $Mod, X, exec, absent-bin-qq
-bind = $Mod, Y, exec, absent-bin-qq --flag
-bind = $Mod, A, exec, ~/.config/scripts/thing.sh
-bind = $Mod, D, exec, $HOME/.config/scripts/other.sh
-bind = $Mod, Z, exec, $undefinedVariable
-bind = $Mod, Q, killactive,
-bind = $Mod, F, fullscreen
-bind = $Mod, S, exec, cat -n /dev/null
-bind = $Mod, P, exec, ls | absent-pipe-qq -x
-bindel = ,XF86AudioRaiseVolume, exec, env FOO=1
+cat > "$bin_fixture/hypr/config/software/keybinds.lua" <<'BIN_EOF'
+hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(apps.terminal))
+hl.bind("SUPER + B", hl.dsp.exec_cmd(apps.browser))
+hl.bind("SUPER + E", hl.dsp.exec_cmd(apps.fileManager))
+hl.bind("SUPER + X", hl.dsp.exec_cmd("absent-bin-qq"))
+hl.bind("SUPER + Y", hl.dsp.exec_cmd("absent-bin-qq --flag"))
+hl.bind("SUPER + A", hl.dsp.exec_cmd("~/.config/scripts/thing.sh"))
+hl.bind("SUPER + D", hl.dsp.exec_cmd("$HOME/.config/scripts/other.sh"))
+hl.bind("SUPER + Z", hl.dsp.exec_cmd(apps.undefinedVariable))
+hl.bind("SUPER + Q", hl.dsp.window.close())
+hl.bind("SUPER + F", hl.dsp.window.fullscreen())
+hl.bind("SUPER + S", hl.dsp.exec_cmd("cat -n /dev/null"))
+hl.bind("SUPER + P", hl.dsp.exec_cmd("ls | absent-pipe-qq -x"))
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("env FOO=1"), { locked = true, repeating = true })
 BIN_EOF
 
-cat > "$bin_fixture/hypr/config/setup/autostart.conf" <<'BIN_EOF'
-exec-once = env
-exec-once = absent-daemon-qq &
-exec-once = $polkitAgent
-exec-once = $HOME/.config/scripts/hyprland/startup.sh
+cat > "$bin_fixture/hypr/config/setup/autostart.lua" <<'BIN_EOF'
+hl.exec_cmd("env")
+hl.exec_cmd("absent-daemon-qq")
+hl.exec_cmd(apps.polkitAgent)
+hl.exec_cmd("$HOME/.config/scripts/hyprland/startup.sh")
 BIN_EOF
 
 git -C "$bin_fixture" add -A
@@ -71,9 +73,9 @@ DOCTOR_ROOT="$bin_fixture"
 # --- variable resolution ------------------------------------------------
 assert_eq "$(_bin_resolve_var terminal)" "bash" "\$terminal resolves from options/"
 assert_eq "$(_bin_resolve_var browser)" "absent-browser-qq" "\$browser resolves from options/"
-assert_eq "$(_bin_resolve_var fileManager)" "ls" "\$fileManager resolves from apptype.conf"
-assert_eq "$(_bin_resolve_var textEditor)" "cat" "apptype.conf trailing comment is stripped"
-assert_eq "$(_bin_resolve_var polkitAgent)" "absent-polkit-qq" "\$polkitAgent resolves from apptype.conf"
+assert_eq "$(_bin_resolve_var fileManager)" "ls" "\$fileManager resolves from apptype.lua"
+assert_eq "$(_bin_resolve_var textEditor)" "cat" "\$textEditor resolves from apptype.lua"
+assert_eq "$(_bin_resolve_var polkitAgent)" "absent-polkit-qq" "\$polkitAgent resolves from apptype.lua"
 assert_eq "$(_bin_resolve_var undefinedVariable)" "" "unknown variable resolves to empty"
 
 # --- findings -----------------------------------------------------------
@@ -118,7 +120,7 @@ assert_eq "$(grep -cF "'absent-bin-qq', which is not installed" "$bin_out_file")
 # --- fix hints ----------------------------------------------------------
 assert_contains "$bin_out" "pacman -S absent-bin-qq" \
     "missing binary hint names the package to install"
-assert_contains "$bin_out" "hypr/config/apptype.conf" \
+assert_contains "$bin_out" "hypr/config/apptype.lua" \
     "unresolvable variable hint points at where to define it"
 
 # --- ok is the all-clear and nothing else -------------------------------
@@ -129,9 +131,9 @@ mkdir -p "$bin_clean_fixture/hypr/config/software" \
          "$bin_clean_fixture/hypr/config/setup" \
          "$bin_clean_fixture/options"
 echo "bash" > "$bin_clean_fixture/options/terminal"
-printf 'bind = $Mod, RETURN, exec, $terminal\nbind = $Mod, S, exec, cat\n' \
-    > "$bin_clean_fixture/hypr/config/software/keybinds.conf"
-printf 'exec-once = env\n' > "$bin_clean_fixture/hypr/config/setup/autostart.conf"
+printf 'hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(apps.terminal))\nhl.bind("SUPER + S", hl.dsp.exec_cmd("cat"))\n' \
+    > "$bin_clean_fixture/hypr/config/software/keybinds.lua"
+printf 'hl.exec_cmd("env")\n' > "$bin_clean_fixture/hypr/config/setup/autostart.lua"
 git -C "$bin_clean_fixture" add -A
 git -C "$bin_clean_fixture" commit -qm "fixture"
 
@@ -152,16 +154,20 @@ _bin_unit_exists() { [ "$1" = "real-unit-qq.service" ]; }
 bin_unit_fixture="$(make_fixture)"
 mkdir -p "$bin_unit_fixture/hypr/config/setup" "$bin_unit_fixture/hypr/config"
 # $viaVar mirrors how this repo actually writes it: the unit is reached
-# through a Hyprland variable, so the check must resolve it rather than
+# through an application-table reference, so the check must resolve it rather than
 # skipping the token for starting with '$'.
-printf '$viaVar = bogus-via-var-qq.service\n' > "$bin_unit_fixture/hypr/config/apptype.conf"
-cat > "$bin_unit_fixture/hypr/config/setup/autostart.conf" <<'BIN_EOF'
-exec-once = systemctl --user start real-unit-qq.service
-exec-once = systemctl --user start bogus-unit-qq.service
-exec-once = systemctl --user restart another-bogus-qq.service
-exec-once = systemctl --user start $viaVar
-exec-once = systemctl --user daemon-reload
-exec-once = env
+cat > "$bin_unit_fixture/hypr/config/apptype.lua" <<'BIN_EOF'
+return {
+    viaVar = "bogus-via-var-qq.service",
+}
+BIN_EOF
+cat > "$bin_unit_fixture/hypr/config/setup/autostart.lua" <<'BIN_EOF'
+hl.exec_cmd("systemctl --user start real-unit-qq.service")
+hl.exec_cmd("systemctl --user start bogus-unit-qq.service")
+hl.exec_cmd("systemctl --user restart another-bogus-qq.service")
+hl.exec_cmd("systemctl --user start " .. apps.viaVar)
+hl.exec_cmd("systemctl --user daemon-reload")
+hl.exec_cmd("env")
 BIN_EOF
 git -C "$bin_unit_fixture" add -A
 git -C "$bin_unit_fixture" commit -qm "fixture"

@@ -2,8 +2,8 @@
 #
 # Config reference integrity: every path a tracked file points at must exist.
 #
-# Nothing is enumerated here. The conf files to walk come from
-# `git ls-files -- '*.conf'`, the source targets come out of those files, the
+# Nothing is enumerated here. The conf and Lua files to walk come from git, the
+# source/require targets come out of those files, the
 # literal ~/.config paths come out of every tracked file, and wall.sh's optional
 # colour scripts come out of wall.sh's own loop header. A config added tomorrow
 # is covered the moment it is committed.
@@ -44,11 +44,11 @@
 # means a feature is degraded. That line falls between the two kinds of
 # reference this check finds:
 #
-#   A missing `source =` target is an ERROR. Hyprland fails the line outright
-#   and the whole module — keybinds, rules, monitors — never loads.
+#   A missing `source =` or require() target is an ERROR. The owning Hypr
+#   program loses that module — keybinds, rules, monitors, or lock styling.
 #
-#   A missing pywal cache is an ERROR. colors.conf dangles and every themed
-#   component loses its palette at once.
+#   A missing pywal cache is an ERROR. colors.lua/colors.conf dangle and the
+#   Hyprland or Hyprlock palette is unavailable.
 #
 #   A missing literal ~/.config/... reference is a WARN. A script or config
 #   pointing at a file that is not there breaks that one feature when it is
@@ -75,7 +75,7 @@
 #   - Inline comments are stripped from a source line at the first #, so a
 #     target legitimately containing # would be truncated. Hyprland has no
 #     escape for it either.
-#   - A reference reachable two ways (hypr/hyprland.conf's source line and
+#   - A reference reachable two ways (hypr/hyprland.lua's require call and
 #     scripts/settings/settings.sh's literal $HOME/.config/hypr/... path) is
 #     reported once per referrer. Both findings are true and each names a
 #     different file to fix.
@@ -144,6 +144,12 @@ _ref_source_targets() {
         | sed 's/[[:space:]]*#.*$//; s/[[:space:]]*$//'
 }
 
+# _ref_require_targets <file>
+# Lua modules are dot-separated and resolved from the hypr/ configuration root.
+_ref_require_targets() {
+    sed -nE 's/.*require\("([A-Za-z0-9_.-]+)"\).*/\1/p' "$1" 2>/dev/null
+}
+
 # _ref_wall_optional
 # wall.sh's existence-guarded colour fan-out, one path per line, taken from the
 # loop header that iterates it.
@@ -197,6 +203,25 @@ _ref_check_sources() {
     done < <(git -C "$DOCTOR_ROOT" ls-files -z -- '*.conf' 2>/dev/null)
 }
 
+# _ref_check_requires — Hyprland's Lua module chain.
+_ref_check_requires() {
+    local lua module rel full
+
+    while IFS= read -r -d '' lua; do
+        [ -f "$DOCTOR_ROOT/$lua" ] || continue
+        [ -L "$DOCTOR_ROOT/$lua" ] && continue
+
+        while IFS= read -r module; do
+            [ -n "$module" ] || continue
+            rel="hypr/${module//./\/}.lua"
+            full="$DOCTOR_ROOT/$rel"
+            [ -e "$full" ] && continue
+            err "$lua requires $module, but $rel does not exist" \
+                "restore $(doctor_q "$full"), or drop the require from $(doctor_q "$DOCTOR_ROOT/$lua")"
+        done < <(_ref_require_targets "$DOCTOR_ROOT/$lua")
+    done < <(git -C "$DOCTOR_ROOT" ls-files -z -- 'hypr/*.lua' 'hypr/**/*.lua' 2>/dev/null)
+}
+
 # _ref_check_literals — literal ~/.config paths anywhere in the tracked tree.
 _ref_check_literals() {
     local wall="scripts/hyprland/wall.sh" optional
@@ -230,14 +255,18 @@ _ref_check_literals() {
 }
 
 # _ref_check_pywal_cache — the generated palette every colour symlink resolves
-# to. Without it hypr/config/colors.conf, waybar's colors.css and the rofi
-# themes all dangle at once, so it is worth naming directly rather than letting
-# the reader infer it from a fan of broken links.
+# to. Without them Hyprland's colors.lua or Hyprlock's colors.conf dangles, so
+# it is worth naming them directly rather than relying on the symlink check.
 _ref_check_pywal_cache() {
-    local palette="$DOCTOR_CACHE/wal/colors-hyprland.conf"
-    [ -e "$palette" ] && return 0
-    err "pywal cache missing: $palette" \
-        "wal -i \"\$(readlink -f $(doctor_q "$DOCTOR_ROOT/options/wallpaper"))\""
+    local palette missing=0
+    for palette in "$DOCTOR_CACHE/wal/colors-hyprland.conf" \
+                   "$DOCTOR_CACHE/wal/colors-hyprland.lua"; do
+        [ -e "$palette" ] && continue
+        err "pywal cache missing: $palette" \
+            "$(doctor_q "$DOCTOR_ROOT/hypr/apply_wal_colors.sh")"
+        missing=1
+    done
+    return "$missing"
 }
 
 check_references() {
@@ -248,6 +277,7 @@ check_references() {
     local before_notices="$DOCTOR_NOTICES"
 
     _ref_check_sources
+    _ref_check_requires
     _ref_check_literals
     _ref_check_pywal_cache
 

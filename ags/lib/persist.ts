@@ -3,18 +3,18 @@ import Gio from "gi://Gio"
 import { execAsync } from "ags/process"
 import { setKeyword } from "./hyprctl"
 
-const OVERRIDES_PATH = GLib.get_home_dir() + "/.config/hypr/config/overrides.conf"
+const OVERRIDES_PATH = GLib.get_home_dir() + "/.config/hypr/config/overrides.lua"
 
-const HEADER = `#
-# PANEL-MANAGED OVERRIDES
-# Written by the Super+I settings panel (ags/lib/persist.ts).
-# Sourced last from hyprland.conf so these lines win over the tracked configs.
-# One \`keyword = value\` or \`animation = ...\` per line. Do not edit by hand;
-# use the panel, or delete a line to fall back to the tracked default.
-#
+const HEADER = `--
+-- PANEL-MANAGED OVERRIDES
+-- Written by the Super+I settings panel (ags/lib/persist.ts).
+-- Required last from hyprland.lua so these values win over tracked defaults.
+-- One hl.config() or hl.animation() call per line. Do not edit by hand; use the
+-- panel, or delete a line to fall back to the tracked default.
+--
 `
 
-// Mirrors the tracked repo configs (decor.conf, general.conf, input.conf).
+// Mirrors the tracked repo configs (decor.lua, general.lua, input.lua).
 export const DEFAULTS: Record<string, string> = {
     "general:gaps_in": "4",
     "general:gaps_out": "10",
@@ -55,7 +55,7 @@ function readLines(): string[] {
 }
 
 function writeLines(lines: string[]): void {
-    const body = lines.filter(l => l.trim() !== "" && !l.startsWith("#")).join("\n")
+    const body = lines.filter(l => l.trim() !== "" && !l.startsWith("--")).join("\n")
     const text = HEADER + (body ? body + "\n" : "")
     try {
         const file = Gio.File.new_for_path(OVERRIDES_PATH)
@@ -63,14 +63,14 @@ function writeLines(lines: string[]): void {
         file.replace_contents(new TextEncoder().encode(text), null, false,
             Gio.FileCreateFlags.NONE, null)
     } catch (e) {
-        console.error("Failed to write overrides.conf:", e)
+        console.error("Failed to write overrides.lua:", e)
     }
 }
 
 export function getOverride(keyword: string): string | null {
     for (const line of readLines()) {
-        const m = line.match(/^([^#=]+?)\s*=\s*(.*)$/)
-        if (m && m[1].trim() === keyword) return m[2].trim()
+        const m = line.match(/-- @override (\S+) (.*)$/)
+        if (m && m[1] === keyword) return m[2]
     }
     return null
 }
@@ -79,27 +79,33 @@ export function hasOverride(keyword: string): boolean {
     return getOverride(keyword) !== null
 }
 
-function upsert(keyword: string, value: string): void {
-    const lines = readLines().filter(l => {
-        const m = l.match(/^([^#=]+?)\s*=/)
-        return !(m && m[1].trim() === keyword)
-    })
-    lines.push(`${keyword} = ${value}`)
+function luaValue(value: string | number | boolean): string {
+    if (typeof value === "boolean") return value ? "true" : "false"
+    if (typeof value === "number") return String(value)
+    return JSON.stringify(value)
+}
+
+function configCall(keyword: string, value: string | number | boolean): string {
+    let nested = luaValue(value)
+    for (const key of keyword.split(":").reverse()) nested = `{ ${key} = ${nested} }`
+    const marker = typeof value === "boolean" ? (value ? "true" : "false") : String(value)
+    return `hl.config(${nested}) -- @override ${keyword} ${marker}`
+}
+
+function upsert(keyword: string, value: string | number | boolean): void {
+    const lines = readLines().filter(l => !l.includes(`-- @override ${keyword} `))
+    lines.push(configCall(keyword, value))
     writeLines(lines)
 }
 
 function removeLine(keyword: string): void {
-    writeLines(readLines().filter(l => {
-        const m = l.match(/^([^#=]+?)\s*=/)
-        return !(m && m[1].trim() === keyword)
-    }))
+    writeLines(readLines().filter(l => !l.includes(`-- @override ${keyword} `)))
 }
 
-/** Apply now via hyprctl AND persist to overrides.conf. */
+/** Apply now via hyprctl AND persist to overrides.lua. */
 export function setPersistent(keyword: string, value: string | number | boolean): void {
     setKeyword(keyword, value)
-    const val = typeof value === "boolean" ? (value ? "true" : "false") : String(value)
-    upsert(keyword, val)
+    upsert(keyword, value)
 }
 
 /** Remove the override and re-apply the tracked default (if known). */
@@ -109,27 +115,31 @@ export function resetSetting(keyword: string): void {
     if (def !== undefined) setKeyword(keyword, def)
 }
 
-const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-
 /**
  * Persist a full animation line, e.g. "windows,1,6,default".
- * Stored as `animation = windows,...`; matched/replaced by animation name.
+ * Stored as an hl.animation() call; matched/replaced by its marker comment.
  */
 export function setAnimationPersistent(name: string, line: string): void {
-    const lines = readLines().filter(l =>
-        !l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`)))
-    lines.push(`animation = ${line}`)
+    const lines = readLines().filter(l => !l.includes(`-- @animation ${name}`))
+    const [leaf, enabled, speed, bezier, style] = line.split(",")
+    const fields = [
+        `leaf = ${JSON.stringify(leaf)}`,
+        `enabled = ${enabled !== "0"}`,
+        `speed = ${Number(speed)}`,
+        `bezier = ${JSON.stringify(bezier)}`,
+    ]
+    if (style) fields.push(`style = ${JSON.stringify(style)}`)
+    lines.push(`hl.animation({ ${fields.join(", ")} }) -- @animation ${name}`)
     writeLines(lines)
     setKeyword("animation", line)
 }
 
 export function hasAnimationOverride(name: string): boolean {
-    return readLines().some(l => l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`)))
+    return readLines().some(l => l.includes(`-- @animation ${name}`))
 }
 
 export function resetAnimation(name: string): void {
-    writeLines(readLines().filter(l =>
-        !l.match(new RegExp(`^animation\\s*=\\s*${escapeRe(name)},`))))
-    // No hyprctl re-apply: tracked animations.conf value returns on next reload.
+    writeLines(readLines().filter(l => !l.includes(`-- @animation ${name}`)))
+    // No hyprctl re-apply: tracked animations.lua value returns on next reload.
     execAsync(["hyprctl", "reload"]).catch(console.error)
 }

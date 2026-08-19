@@ -3,7 +3,6 @@ import { kwToggle, kwSlider, optionEntry, customRow } from "../components/rows"
 import { SliderControl } from "../components/controls"
 import { readOption } from "../../lib/options"
 import GLib from "gi://GLib"
-import Gio from "gi://Gio"
 import { execAsync } from "ags/process"
 
 function applyFonts() {
@@ -27,11 +26,6 @@ function applyCursor(theme: string, size: number) {
 }
 
 function applyCursorTheme(theme: string) {
-    try {
-        Gio.File.new_for_path(GLib.get_home_dir() + "/.config/hypr/config/cursortheme.conf")
-            .replace_contents(new TextEncoder().encode(`$cursortheme = ${theme}\n`),
-                null, false, Gio.FileCreateFlags.NONE, null)
-    } catch (e) { console.error(e) }
     applyCursor(theme, getCursorSize())
 }
 

@@ -2,10 +2,9 @@
 #
 # Binary availability for everything the keybinds and autostart invoke.
 #
-# Targets are extracted from keybinds.conf and autostart.conf, so binding a
-# new key extends coverage automatically. Hyprland's `$variable` indirection
-# is resolved the way Hyprland resolves it: $terminal and $browser from
-# options/, everything else from hypr/config/apptype.conf.
+# Targets are extracted from keybinds.lua and autostart.lua, so binding a new
+# command extends coverage automatically. Application-table references are
+# resolved from options/ and hypr/config/apptype.lua.
 #
 # Everything here is WARN, never ERROR. A keybind pointing at an absent
 # binary means one shortcut silently does nothing; the session still starts
@@ -79,7 +78,7 @@ _bin_check_token() {
         bin="$(_bin_resolve_var "${token#\$}")"
         if [ -z "$bin" ]; then
             warn "$origin invokes $token, which is not defined anywhere" \
-                 "define it in hypr/config/apptype.conf, or in options/$(doctor_q "${token#\$}")"
+                 "define it in hypr/config/apptype.lua, or in options/$(doctor_q "${token#\$}")"
             return 0
         fi
     else
@@ -164,10 +163,10 @@ _bin_check_systemd_unit() {
         -*) return 0 ;;   # a flag, not a unit
     esac
 
-    # The unit is usually reached through a Hyprland variable — this repo
-    # writes `systemctl --user start $polkitAgent` — so resolve it the same
-    # way the binary check does. Skipping `$…` tokens here would silently
-    # exempt precisely the line this check was added for.
+    # The Lua scanner represents an apps.polkitAgent concatenation as
+    # `$polkitAgent`, so resolve it through the same application-table helper
+    # as the binary check. Skipping `$…` tokens here would silently exempt
+    # precisely the line this check was added for.
     if [ "${unit:0:1}" = '$' ]; then
         unit="$(_bin_resolve_var "${unit#\$}")"
         [ -n "$unit" ] || return 0   # undefined: already reported as a token
@@ -179,15 +178,24 @@ _bin_check_systemd_unit() {
     fi
 }
 
-# _bin_scan <file-relative-to-root> <sed-extraction-expression>
-_bin_scan() {
-    local conf="$1" expr="$2" line
-
+# _bin_scan_lua <file-relative-to-root>
+# Extracts the command expression from every hl.exec_cmd()/hl.dsp.exec_cmd()
+# call. The config keeps each call on one line; these substitutions cover Lua
+# quoted strings, long-bracket strings, and the application table references
+# used by this repo.
+_bin_scan_lua() {
+    local conf="$1" line
     [ -f "$DOCTOR_ROOT/$conf" ] || return 0
 
     while read -r line; do
         _bin_check_command "$line" "$conf"
-    done < <(sed -n "$expr" "$DOCTOR_ROOT/$conf")
+    done < <(sed -nE \
+        -e 's/.*exec_cmd\(\[\[(.*)\]\]\).*/\1/p' \
+        -e 's/.*exec_cmd\("([^"]*)"\).*/\1/p' \
+        -e 's/.*exec_cmd\(apps\.terminal \.\. " -e " \.\. apps\.textEditor\).*/$terminal -e $textEditor/p' \
+        -e 's/.*exec_cmd\(apps\.([A-Za-z_][A-Za-z0-9_]*)\).*/$\1/p' \
+        -e 's/.*exec_cmd\("([^"]*)" \.\. apps\.([A-Za-z_][A-Za-z0-9_]*)\).*/\1$\2/p' \
+        "$DOCTOR_ROOT/$conf")
 }
 
 check_binaries() {
@@ -196,13 +204,8 @@ check_binaries() {
     local before_e="$DOCTOR_ERRORS" before_w="$DOCTOR_WARNINGS" before_n="$DOCTOR_NOTICES"
     _BIN_SEEN=""
 
-    # Only `exec` binds name a command; killactive, fullscreen, movefocus and
-    # friends are dispatchers and must never be parsed as binaries.
-    _bin_scan "hypr/config/software/keybinds.conf" \
-        's/^[[:space:]]*bind[a-z]*[[:space:]]*=.*[[:space:]]exec,[[:space:]]*//p'
-
-    _bin_scan "hypr/config/setup/autostart.conf" \
-        's/^[[:space:]]*exec-once[[:space:]]*=[[:space:]]*//p'
+    _bin_scan_lua "hypr/config/software/keybinds.lua"
+    _bin_scan_lua "hypr/config/setup/autostart.lua"
 
     if [ "$DOCTOR_ERRORS" = "$before_e" ] \
         && [ "$DOCTOR_WARNINGS" = "$before_w" ] \

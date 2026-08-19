@@ -2,11 +2,11 @@
 #
 # Tests for the generated documentation.
 #
-# docs/keybindings.md is rendered from hypr/config/software/keybinds.conf. That
+# docs/keybindings.md is rendered from hypr/config/software/keybinds.lua. That
 # only helps if a stale copy cannot be committed, which is what this suite is
 # for: it lives in test/, whose owning directory is the repo root, so the
 # pre-commit hook runs it on every commit -- including the commit that changes
-# keybinds.conf and forgets to regenerate.
+# keybinds.lua and forgets to regenerate.
 #
 # Standalone and dependency-free, exit 1 on any failure, the same style as
 # scripts/waybar/test-updates.sh.
@@ -19,7 +19,7 @@ ROOT="$(dirname "$TEST_DIR")"
 GENERATOR="$ROOT/scripts/docs/generate-keybindings.sh"
 CHEATSHEET="$ROOT/rofi/keybinds-cheatsheet.sh"
 DOC="$ROOT/docs/keybindings.md"
-CONF="$ROOT/hypr/config/software/keybinds.conf"
+CONF="$ROOT/hypr/config/software/keybinds.lua"
 
 PASSED=0
 FAILED=0
@@ -68,7 +68,7 @@ cp "$BACKUP" "$DOC"
 # declares and the key cells the document carries, and require the document to
 # account for all of them. Folded rows (`Super + 1-9, 0, =`) mean the two counts
 # are not equal, so this compares reachable sections instead: every `## Heading`
-# in keybinds.conf that carries at least one bind must appear in the document.
+# in keybinds.lua that carries at least one bind must appear in the document.
 
 missing=()
 section=""
@@ -76,7 +76,7 @@ has_bind=0
 # Not `cmd | while read`: the loop assigns to `missing`, which a subshell would
 # discard -- the same trap the doctor's check modules document.
 while IFS= read -r line || [ -n "$line" ]; do
-    if [[ "$line" =~ ^##[[:space:]]+(.*)$ ]]; then
+    if [[ "$line" =~ ^[[:space:]]*--[[:space:]]*##[[:space:]]+(.*)$ ]]; then
         if [ "$has_bind" -eq 1 ] && [ -n "$section" ]; then
             grep -qF "## $section" "$DOC" || missing+=("$section")
         fi
@@ -84,14 +84,14 @@ while IFS= read -r line || [ -n "$line" ]; do
         has_bind=0
         continue
     fi
-    [[ "$line" =~ ^[[:space:]]*bind[a-z]*[[:space:]]*= ]] && has_bind=1
+    [[ "$line" =~ ^[[:space:]]*hl\.bind\( ]] && has_bind=1
 done < "$CONF"
 if [ "$has_bind" -eq 1 ] && [ -n "$section" ]; then
     grep -qF "## $section" "$DOC" || missing+=("$section")
 fi
 
 if [ "${#missing[@]}" -eq 0 ]; then
-    pass "every keybinds.conf section with bindings has a heading in the document"
+    pass "every keybinds.lua section with bindings has a heading in the document"
 else
     fail "sections missing from docs/keybindings.md" "${missing[@]}"
 fi

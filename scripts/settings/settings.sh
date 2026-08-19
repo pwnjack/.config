@@ -69,27 +69,27 @@ hyprland() {
                 clear
                 ;;
             3)
-                $EDITOR "$HOME/.config/hypr/config/software/general.conf"
+                $EDITOR "$HOME/.config/hypr/config/software/general.lua"
                 clear
                 ;;
             4)
-                $EDITOR "$HOME/.config/hypr/config/hardware/input.conf"
+                $EDITOR "$HOME/.config/hypr/config/hardware/input.lua"
                 clear
                 ;;
             5)
-                $EDITOR "$HOME/.config/hypr/config/software/keybinds.conf"
+                $EDITOR "$HOME/.config/hypr/config/software/keybinds.lua"
                 clear
                 ;;
             6)
-                $EDITOR "$HOME/.config/hypr/config/software/rules.conf"
+                $EDITOR "$HOME/.config/hypr/config/software/rules.lua"
                 clear
                 ;;
             7)
-                $EDITOR "$HOME/.config/hypr/config/setup/autostart.conf"
+                $EDITOR "$HOME/.config/hypr/config/setup/autostart.lua"
                 clear
                 ;;
             8)
-                $EDITOR "$HOME/.config/hypr/config/setup/envvars.conf"
+                $EDITOR "$HOME/.config/hypr/config/setup/envvars.lua"
                 clear
                 ;;
             [qQ])
@@ -139,7 +139,6 @@ customization() {
                 echo "This will not appear until you restart Hyprland."
                 echo
                 read -p "■ " choice
-                echo "\$cursortheme = $choice" > "$HOME/.config/hypr/config/cursortheme.conf"
                 echo "$choice" > "$HOME/.config/options/cursortheme"
                 command -v gsettings >/dev/null 2>&1 && \
                     gsettings set org.gnome.desktop.interface cursor-theme "$choice"
@@ -267,7 +266,7 @@ while true; do
     case $choice in
         1)
             clear
-            less "$HOME/.config/hypr/config/software/keybinds.conf"
+            less "$HOME/.config/hypr/config/software/keybinds.lua"
             clear
             ;;
         2)

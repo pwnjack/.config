@@ -1,0 +1,11 @@
+-- Deliberately host-neutral: no connector is named here, so a fresh checkout
+-- is correct on any hardware.
+--
+-- `highres@highrr`, not `preferred` or bare `highrr`. On this machine's
+-- 144 Hz panel, `preferred` selected 2560x1440@59.951 while this combined form
+-- selected 2560x1440@143.998. Hyprland parses the two keywords around `@`.
+--
+-- scripts/settings/advanced/monitor.sh appends machine-specific hl.monitor()
+-- calls below this catch-all. A named output beats the catch-all regardless of
+-- order.
+hl.monitor({ output = "", mode = "highres@highrr", position = "auto", scale = 1 })

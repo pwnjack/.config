@@ -23,8 +23,8 @@ Hyprland dotfiles repository for Arch Linux / CachyOS. The entire repo lives at 
 # Apply a new color scheme from wallpaper
 wal -i /path/to/wallpaper.jpg
 
-# Fix broken pywal symlink
-ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
+# Re-render Hyprland and Hyprlock palette files
+~/.config/hypr/apply_wal_colors.sh
 
 # Reload Hyprland config
 hyprctl reload
@@ -39,30 +39,35 @@ echo "ghostty" > ~/.config/options/terminal
 
 ## Architecture
 
-### Hyprland Config (modular, sourced from `hypr/hyprland.conf`)
+### Hyprland Config (modular Lua, loaded from `hypr/hyprland.lua`)
 
 ```
 hypr/config/
-├── colors.conf              # Symlink -> ~/.cache/wal/colors-hyprland.conf
-├── apptype.conf             # Default app definitions
+├── colors.lua               # Symlink -> ~/.cache/wal/colors-hyprland.lua
+├── colors.conf              # Hyprlock-only symlink -> cached Hyprlang palette
+├── apptype.lua              # Default app definitions
 ├── hardware/
-│   ├── monitor.conf         # Display resolution/layout
-│   └── input.conf           # Keyboard/mouse settings
+│   ├── monitor.lua          # Display resolution/layout
+│   ├── input.lua            # Keyboard/mouse settings
+│   └── primary.conf         # Hyprlock-only monitor variable
 ├── looks/
-│   ├── decor.conf           # Borders, blur, rounding
-│   └── animations.conf      # Window animations
+│   ├── decor.lua            # Borders, blur, rounding
+│   └── animations.lua       # Window animations
 ├── setup/
-│   ├── envvars.conf         # Environment variables
-│   └── autostart.conf       # exec-once startup apps
+│   ├── envvars.lua          # Environment variables
+│   └── autostart.lua        # hyprland.start applications
 └── software/
-    ├── keybinds.conf        # All keyboard shortcuts
-    ├── general.conf         # Misc settings
-    └── rules.conf           # Window-specific rules
+    ├── keybinds.lua         # All keyboard shortcuts
+    ├── general.lua          # Misc settings
+    └── rules.lua            # Window-specific rules
 ```
+
+Hyprland's config is Lua. Hyprlock, Hypridle, and Hyprsunset are separate
+programs and intentionally keep their Hyprlang `.conf` files.
 
 ### Pywal Color Flow
 
-Wallpaper image -> `wal -i` -> generates `~/.cache/wal/colors-*.conf` files -> symlinked/sourced by Hyprland (`colors.conf`), Waybar (`colors.css`), Rofi themes, and SwayNC. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. Generated state lives under `~/.cache` (`current_wallpaper`, `wal/rofi-wallpaper.rasi`, `wal/ghostty-colors`, `wal/thunar-gtk.css`, `wal/cava-config`, `wal/btop.theme`, `wal/starship.toml`, `waypaper-config.ini`); the repo tracks only symlinks to it, so wallpaper switches never dirty git.
+Wallpaper image -> `wal -i` -> `scripts/theming/apply-wal.sh` fans the palette out to every consumer. `hypr/apply_wal_colors.sh` renders `colors-hyprland.lua` for Hyprland and `colors-hyprland.conf` for Hyprlock; the tracked `colors.lua` and `colors.conf` files are symlinks to those cached outputs. Changing the wallpaper via `scripts/hyprland/wall.sh` triggers this pipeline automatically. Generated state lives under `~/.cache` (`current_wallpaper`, `wal/colors-hyprland.lua`, `wal/colors-hyprland.conf`, `wal/rofi-wallpaper.rasi`, `wal/ghostty-colors`, `wal/thunar-gtk.css`, `wal/cava-config`, `wal/btop.theme`, `wal/starship.toml`, `waypaper-config.ini`); the repo tracks only symlinks to it, so wallpaper switches never dirty git.
 
 Components that need more than a plain include own a `<component>/apply_wal_colors.sh`. `scripts/theming/apply-wal.sh` is the driver: it **globs** for those scripts rather than listing them, so adding a themed component is one new file — no edit to the driver, to `wall.sh`, or to `install.sh`. Both of those call the driver and name no component.
 
@@ -79,7 +84,7 @@ Two components are templated (`<component>/<name>.in` -> rendered to cache -> tr
 
 ### Night Light (hyprsunset)
 
-`hyprsunset` runs as a daemon from `autostart.conf` and owns the schedule in `hypr/hyprsunset.conf` — a tracked, panel-writable file, the same arrangement as `hypr/hypridle.conf`. `scripts/hyprland/nightlight.sh` is the **only** thing that talks to `hyprctl hyprsunset`; the keybind ($Mod SHIFT+D toggle, $Mod CTRL+D follow-schedule), the waybar `custom/nightlight` module and the panel's Power rows all call the script.
+`hyprsunset` runs as a daemon from `config/setup/autostart.lua` and owns the schedule in `hypr/hyprsunset.conf` — a tracked, panel-writable file, the same arrangement as `hypr/hypridle.conf`. `scripts/hyprland/nightlight.sh` is the **only** thing that talks to `hyprctl hyprsunset`; the keybind ($Mod SHIFT+D toggle, $Mod CTRL+D follow-schedule), the waybar `custom/nightlight` module and the panel's Power rows all call the script.
 
 There is deliberately **no state file** — the daemon is the state, so every surface agrees by construction. A manual override is just a temperature write, which the daemon's own profile timer reclaims at the next scheduled boundary; that is what makes overrides self-expiring with no expiry logic to maintain.
 
@@ -120,8 +125,8 @@ of that privileged rename.
 
 `docs/gaming-wow.md` is the single source for this — **read it before touching
 any game rule.** The launch chain is Faugus -> gamescope -> Battle.net -> WoW, so
-the Hyprland client is *gamescope*, not the game, and every rule in
-`rules.conf`'s `## GAME WINDOW RULES` block exists twice for that reason. The
+the Hyprland client is *gamescope*, not the game, and `rules.lua` applies every
+game effect to both match tables for that reason. The
 launcher side (`faugus-launcher/**`) is git-ignored because Faugus rewrites it
 every session, so the doc records that recipe as prose — including which flag
 fixed what, and which tuning ideas were measured and rejected (gamemode buys
@@ -129,7 +134,7 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.conf` is host-neutral for the same reason and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
 ### Scripts (`scripts/`)
 
@@ -165,8 +170,8 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Config is Arch/CachyOS-specific — package management uses `pacman` and `paru`/`yay` for AUR.
 - Keybindings follow a macOS-inspired layout (Super key as primary modifier).
 - `.gitignore` is aggressive (~318 lines) — only essential Hyprland/shell/utility configs are tracked. Application data directories (Obsidian, game launchers, Electron apps, etc.) are excluded.
-- `rofi/keybinds-cheatsheet.sh` (Super+H) renders itself from `keybinds.conf` at runtime — never hand-edit the rows. A binding's trailing `#` comment is its label (`$vars` inside are resolved); without one the label comes from the dispatcher. Preview with `./rofi/keybinds-cheatsheet.sh --print`.
-- `docs/keybindings.md` is **generated** by `scripts/docs/generate-keybindings.sh` from that same parser's `--markdown` mode — never hand-edit it, and regenerate after touching `keybinds.conf`. `test/test-docs.sh` fails on a stale copy, and since it lives in `test/` it runs on every commit. The two skins differ in exactly one way: markdown does **not** resolve the options-backed `$terminal`/`$browser`, printing `options/terminal` instead, because a committed file must not freeze one machine's preference as though it were fixed. `scripts/lib/hypr-vars.sh` owns which variables those are (`hypr_var_origin`); do not restate that list anywhere else. README keeps only the five essential binds and links here — it carried the full table by hand once and it drifted.
+- `rofi/keybinds-cheatsheet.sh` (Super+H) renders itself from `keybinds.lua` at runtime — never hand-edit the rows. Each one-line `hl.bind(...)` has a trailing `--` label (`$vars` inside are resolved). Preview with `./rofi/keybinds-cheatsheet.sh --print`.
+- `docs/keybindings.md` is **generated** by `scripts/docs/generate-keybindings.sh` from that same parser's `--markdown` mode — never hand-edit it, and regenerate after touching `keybinds.lua`. `test/test-docs.sh` fails on a stale copy, and since it lives in `test/` it runs on every commit. The two skins differ in exactly one way: markdown does **not** resolve the options-backed `$terminal`/`$browser`, printing `options/terminal` instead, because a committed file must not freeze one machine's preference as though it were fixed. `scripts/lib/hypr-vars.sh` owns which variables those are (`hypr_var_origin`); do not restate that list anywhere else. README keeps only the five essential binds and links here — it carried the full table by hand once and it drifted.
 - `doctor.sh` and its check modules derive every target from tracked files. When adding a check, never introduce a hand-written list of paths, binaries, or packages — parse the config that already declares them. A list is a second source of truth and will drift.
 - Check modules must never run their loops in a pipeline (`cmd | while read`); the severity counters are shell variables and would be lost in the subshell, silently discarding every finding. Use `while read ...; do ... done < <(cmd)`. The test harness greps for this and fails the suite.
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.
@@ -182,8 +187,8 @@ scripts/doctor/
 ├── lib.sh                   # group/ok/err/warn/note/summary, counters, doctor_q, doctor_require_repo
 ├── checks/
 │   ├── symlinks.sh          # check_symlinks   — from `git ls-files -s` mode 120000
-│   ├── references.sh        # check_references — from `source =` lines and literal ~/.config paths
-│   ├── binaries.sh          # check_binaries   — from keybinds.conf `exec,` and autostart `exec-once`
+│   ├── references.sh        # check_references — from Lua require(), Hyprlang source, literal paths
+│   ├── binaries.sh          # check_binaries   — from Lua keybind/autostart hl.exec_cmd() calls
 │   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
 │   ├── sddm.sh              # check_sddm       — from sddm/setup-sudo.sh and the live SDDM configuration
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values

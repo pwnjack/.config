@@ -30,13 +30,13 @@ mkdir -p "$svc_fixture/hypr/config/setup" "$svc_fixture/mako" "$svc_fixture/sway
 echo "tracked" > "$svc_fixture/mako/config"
 echo "tracked" > "$svc_fixture/swaync/config"
 
-cat > "$svc_fixture/hypr/config/setup/autostart.conf" <<'SVC_EOF'
-exec-once = svc-running-qq
-exec-once = svc-down-qq &
-exec-once = ~/.config/scripts/thing.sh
-exec-once = $HOME/.config/scripts/other.sh
-exec-once = $polkitAgent
-exec-once = svc-running-qq
+cat > "$svc_fixture/hypr/config/setup/autostart.lua" <<'SVC_EOF'
+hl.exec_cmd("svc-running-qq")
+hl.exec_cmd("svc-down-qq")
+hl.exec_cmd("~/.config/scripts/thing.sh")
+hl.exec_cmd("$HOME/.config/scripts/other.sh")
+hl.exec_cmd("systemctl --user start " .. apps.polkitAgent)
+hl.exec_cmd("svc-running-qq")
 SVC_EOF
 
 cat > "$svc_fixture/install.sh" <<'SVC_EOF'
@@ -117,7 +117,7 @@ assert_not_contains "$svc_out" "✓" "no green tick while findings exist"
 # --- clean fixture: everything running, installed, and unambiguous -------
 svc_clean="$(make_fixture)"
 mkdir -p "$svc_clean/hypr/config/setup"
-printf 'exec-once = svc-running-qq\n' > "$svc_clean/hypr/config/setup/autostart.conf"
+printf 'hl.exec_cmd("svc-running-qq")\n' > "$svc_clean/hypr/config/setup/autostart.lua"
 printf 'PACKAGES=(\n    "svc-present-pkg-qq"\n)\n' > "$svc_clean/install.sh"
 git -C "$svc_clean" add -A
 git -C "$svc_clean" commit -qm "fixture"
@@ -228,4 +228,4 @@ svc_empty_file="$DOCTOR_TEST_TMP/services-empty"
 doctor_reset
 check_services > "$svc_empty_file" 2>&1
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" \
-    "absent autostart.conf/install.sh produce no findings"
+    "absent autostart.lua/install.sh produce no findings"

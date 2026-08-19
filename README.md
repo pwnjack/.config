@@ -2,7 +2,7 @@
 
 Modern, minimal Hyprland configuration for Arch Linux / CachyOS with dynamic pywal theming.
 
-![Hyprland](https://img.shields.io/badge/Hyprland-0.54+-blue)
+![Hyprland](https://img.shields.io/badge/Hyprland-0.55+-blue)
 ![Arch](https://img.shields.io/badge/Arch_Linux-CachyOS-1793D1)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -46,8 +46,8 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 
 ```
 ~/.config/
-├── hypr/          # Hyprland: modular config sourced from hyprland.conf,
-│                  # plus hyprlock, hypridle and hyprsunset
+├── hypr/          # Hyprland: modular Lua config from hyprland.lua,
+│                  # plus Hyprlang configs for hyprlock/idle/sunset
 ├── waybar/        # Bar: config.jsonc, style.css, pywal colors
 ├── rofi/          # Launcher, power/screenshot menus, keybinds cheatsheet
 ├── swaync/        # Notification daemon and sidebar
@@ -73,8 +73,8 @@ counterparts are generated symlinks — edit the template.
 ```
 
 `doctor.sh` reports and never modifies anything. Every check derives its
-targets from tracked files — git's symlink modes, `source =` lines in
-`hyprland.conf`, `exec,` targets in `keybinds.conf`, the package arrays in
+targets from tracked files — git's symlink modes, Lua `require()` calls,
+`hl.exec_cmd()` targets in keybinds and autostart, and the package arrays in
 `install.sh` — so adding a keybind or an autostart entry extends coverage
 automatically. There is no list to keep in sync.
 
@@ -88,10 +88,11 @@ What it checks:
 
 - **Symlinks** — dangling targets, non-portable absolute paths, and links
   clobbered by a regular file (which git still reports as a symlink)
-- **Config references** — every `source =` target, every literal `~/.config`
-  path in a tracked file, the `wall.sh` colour fan-out, the pywal cache
-- **Binaries** — every command bound in `keybinds.conf` or `autostart.conf`,
-  resolving Hyprland's `$variable` indirection first
+- **Config references** — every Lua `require()` and Hyprlang `source =` target,
+  every literal `~/.config` path in a tracked file, the `wall.sh` colour
+  fan-out, and both Hyprland/Hyprlock pywal caches
+- **Binaries** — every command passed to `hl.exec_cmd()` by keybinds or
+  autostart, resolving the application table indirection first
 - **Services** — autostart daemons actually running, who owns
   `org.freedesktop.Notifications`, and `install.sh` package drift
 - **Waybar** — every module on the bar has a config block, every block is on
@@ -122,7 +123,7 @@ Those five are the ones worth memorising.
 section — or press `Super + H` for the same list, searchable, without leaving
 the desktop.
 
-Both are rendered from `hypr/config/software/keybinds.conf` by one parser, so
+Both are rendered from `hypr/config/software/keybinds.lua` by one parser, so
 neither can drift from the bindings it documents. After editing the config, run
 `./scripts/docs/generate-keybindings.sh`; `test/test-docs.sh` fails on a stale
 copy, so the pre-commit hook catches a forgotten regeneration.
@@ -198,9 +199,9 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
 paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources \
         aylurs-gtk-shell libastal-meta
 
-# Initialize pywal
+# Initialize pywal and render every component's cache file
 wal -i ~/.config/wallpapers/wall1.jpg
-ln -sfn ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
+~/.config/scripts/theming/apply-wal.sh
 
 # Set fish as default shell (optional)
 chsh -s $(which fish)
@@ -250,25 +251,21 @@ edit `cava/config.in` and `starship/starship.toml.in`, never `cava/config` or
 
 ### Visual Tweaks
 
-**Blur & Rounding:** `~/.config/hypr/config/looks/decor.conf`
-```conf
-decoration {
-    rounding = 18
-    blur {
-        enabled = true
-        size = 6
-        passes = 4
-    }
-}
+**Blur & Rounding:** `~/.config/hypr/config/looks/decor.lua`
+```lua
+hl.config("decoration", {
+    rounding = 18,
+    blur = { enabled = true, size = 6, passes = 4 },
+})
 ```
 
-**Animations:** `~/.config/hypr/config/looks/animations.conf`
+**Animations:** `~/.config/hypr/config/looks/animations.lua`
 
-**Window Rules:** `~/.config/hypr/config/software/rules.conf`
+**Window Rules:** `~/.config/hypr/config/software/rules.lua`
 
 ### Monitors
 
-Edit `~/.config/hypr/config/hardware/monitor.conf`
+Edit `~/.config/hypr/config/hardware/monitor.lua`
 
 ## Troubleshooting
 
@@ -279,7 +276,7 @@ hyprctl reload
 
 **Pywal symlink broken:**
 ```bash
-ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
+~/.config/hypr/apply_wal_colors.sh
 ```
 
 **Waybar issues:**

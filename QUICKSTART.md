@@ -56,12 +56,12 @@ waypaper
 
 | Component | Location |
 |-----------|----------|
-| Hyprland | `~/.config/hypr/hyprland.conf` |
+| Hyprland | `~/.config/hypr/hyprland.lua` |
 | Waybar | `~/.config/waybar/config.jsonc` |
 | Terminal | `~/.config/ghostty/config` |
 | Shell | `~/.config/fish/config.fish` |
 | Editor | `~/.config/nvim/` |
-| Keybinds | `~/.config/hypr/config/software/keybinds.conf` |
+| Keybinds | `~/.config/hypr/config/software/keybinds.lua` |
 
 ### Quick Edits
 
@@ -79,7 +79,7 @@ echo "ghostty" > ~/.config/options/terminal
 echo "HDMI-A-1" > ~/.config/options/mainmonitor
 
 # Edit keybindings
-nvim ~/.config/hypr/config/software/keybinds.conf
+nvim ~/.config/hypr/config/software/keybinds.lua
 ```
 
 ## Troubleshooting
@@ -110,8 +110,8 @@ systemctl --user status hypridle
 # Regenerate pywal colors
 wal -i ~/.config/wallpapers/wall1.jpg
 
-# Recreate symlink
-ln -sf ~/.cache/wal/colors-hyprland.conf ~/.config/hypr/config/colors.conf
+# Re-render both Hyprland's Lua palette and Hyprlock's Hyprlang palette
+~/.config/hypr/apply_wal_colors.sh
 
 # Reload Hyprland
 hyprctl reload
@@ -136,21 +136,27 @@ annotations land in `~/Pictures/Screenshots` with an `_annotated` suffix.
 # View clipboard history
 cliphist list | rofi -dmenu | cliphist decode | wl-copy
 
-# Or use keybind (check keybinds.conf)
+# Or use keybind (check keybinds.lua)
 ```
 
 ## Customization
 
 ### Add Startup Applications
-Edit: `~/.config/hypr/config/setup/autostart.conf`
-```
-exec-once = your-app
+Edit: `~/.config/hypr/config/setup/autostart.lua`
+```lua
+hl.on("hyprland.start", function()
+    hl.exec_cmd("your-app")
+end)
 ```
 
 ### Window Rules
-Edit: `~/.config/hypr/config/software/rules.conf`
-```
-windowrulev2 = float, class:^(your-app)$
+Edit: `~/.config/hypr/config/software/rules.lua`
+```lua
+hl.window_rule({
+    name = "float-your-app",
+    match = { class = "^(your-app)$" },
+    float = true,
+})
 ```
 
 ### Waybar Modules

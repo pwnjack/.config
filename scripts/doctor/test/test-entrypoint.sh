@@ -65,6 +65,7 @@ assert_contains "$ep_out" "Hardware" "the hardware check ran"
 ep_clean="$(make_fixture)"
 mkdir -p "$ep_clean/wal"
 printf 'colors\n' > "$ep_clean/wal/colors-hyprland.conf"
+printf 'return {}\n' > "$ep_clean/wal/colors-hyprland.lua"
 printf 'placeholder\n' > "$ep_clean/README.md"
 git -C "$ep_clean" add -A
 git -C "$ep_clean" commit -qm "fixture"

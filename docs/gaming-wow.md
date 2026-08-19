@@ -39,7 +39,7 @@ Why each piece is there:
   normal Hyprland client instead of taking the display.
 - **`--adaptive-sync`** — VRR on DP-1.
 - **`-w 2560 -h 1440 -W 2560 -H 1440 -r 144`** — matches DP-1 exactly
-  (`hypr/config/hardware/monitor.conf`). If the monitor ever changes, this
+  (`hypr/config/hardware/monitor.lua`). If the monitor ever changes, this
   string changes with it.
 - **`--expose-wayland`** — lets the nested client see the Wayland socket.
 - **`PROTON_ENABLE_WAYLAND=0` + `DISABLE_GAMESCOPE_WSI=1`** — keep the game on
@@ -55,11 +55,12 @@ leftover, but don't be surprised by it.
 
 ## The Hyprland half (tracked)
 
-`hypr/config/software/rules.conf`, under `## GAME WINDOW RULES`. Every game rule
-is written twice — once for `class ^(WowClassic.exe)$` and once for
-`class ^(gamescope)$, title ^(World of Warcraft)$` — because with the gamescope
-wrapper above it is *gamescope* that is the Hyprland client, not the game. Both
-Classic clients report the same `WowClassic.exe`, so one pair covers both.
+`hypr/config/software/rules.lua`, under `GAME WINDOW RULES`. Each effect is
+applied to two named rule tables by `game_rule()` — one matching
+`class ^(WowClassic.exe)$` and one matching `class ^(gamescope)$`, title
+`^(World of Warcraft)$` — because with the gamescope wrapper above it is
+*gamescope* that is the Hyprland client, not the game. Both Classic clients
+report the same `WowClassic.exe`, so one pair covers both.
 
 - **`immediate on`** — allows tearing for the game window. This was the stutter
   fix; without it frame pacing is visibly worse.

@@ -2,6 +2,26 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-08-19] - Hyprland Lua Configuration
+
+### Changed
+
+- Migrated Hyprland's main configuration and every Hyprland-owned module to
+  the Lua API introduced in 0.55, ahead of Hyprlang removal. The modular
+  layout, bindings, monitor behavior, window/layer rules, startup commands,
+  and panel-managed overrides are preserved under `hyprland.lua`.
+- Kept Hyprlock, Hypridle, and Hyprsunset in Hyprlang because those separate
+  tools have not migrated. Pywal now renders both a Lua palette for Hyprland
+  and a Hyprlang palette for Hyprlock from the same fallback-capable loader.
+- Updated the settings tools, keybind documentation generator, and doctor
+  checks to read and write the Lua sources rather than retired `.conf` files.
+
+### Verified
+
+- The complete modular config passes `Hyprland --verify-config` on 0.56.2,
+  so the Lua configuration can be adopted on the next Hyprland startup before
+  the legacy parser is removed.
+
 ## [2026-08-02] - Unwired Tools
 
 Closes the last of the four backlog chunks: three programs that were installed

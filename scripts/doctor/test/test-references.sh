@@ -64,6 +64,13 @@ echo "colors" > "$ref_fixture/hypr/config/good.conf"
 echo "inline" > "$ref_fixture/hypr/config/inline.conf"
 echo "spaced" > "$ref_fixture/hypr/config/spaced dir/there.conf"
 
+# --- Hyprland Lua module chain ----------------------------------------------
+cat > "$ref_fixture/hypr/hyprland.lua" <<'EOF'
+require("config.good")
+require("config.missing_lua")
+EOF
+echo 'return {}' > "$ref_fixture/hypr/config/good.lua"
+
 # --- literal ~/.config references -------------------------------------------
 # docs/ and *.md cite illustrative paths that intentionally do not exist.
 cat > "$ref_fixture/docs/plan.md" <<'EOF'
@@ -181,6 +188,13 @@ assert_not_contains "$ref_out" "config/*.conf" \
 assert_not_contains "$ref_out" "absolute.conf" \
     "source target outside the tree under test is skipped"
 
+assert_contains "$ref_out" "hypr/hyprland.lua requires config.missing_lua" \
+    "missing Lua module is reported"
+ref_require_line="$(grep -F 'requires config.missing_lua' "$ref_out_file")"
+assert_contains "$ref_require_line" "ERROR" "missing Lua module is ERROR severity"
+assert_not_contains "$ref_out" "requires config.good" \
+    "resolvable Lua module produces no finding"
+
 # --- literal ~/.config references -------------------------------------------
 assert_contains "$ref_out" "scripts/broken.sh references ~/.config/gone/missing.sh" \
     "missing literal \$HOME/.config path is reported"
@@ -243,14 +257,16 @@ assert_not_contains "$ref_out" "applies colours via ~/.config/gone/wall-hard-ref
 
 # --- pywal cache ------------------------------------------------------------
 assert_contains "$ref_out" "$ref_cache_empty/wal/colors-hyprland.conf" \
-    "missing pywal cache is reported"
+    "missing Hyprlock pywal cache is reported"
+assert_contains "$ref_out" "$ref_cache_empty/wal/colors-hyprland.lua" \
+    "missing Hyprland Lua pywal cache is reported"
 # colors.conf dangles and every themed component loses its palette at once.
 ref_pywal_line="$(grep -F 'pywal cache missing' "$ref_out_file")"
 assert_contains "$ref_pywal_line" "ERROR" "missing pywal cache is ERROR severity"
 
 # --- tallies ----------------------------------------------------------------
-# Only what stops the session: 4 unresolvable source targets, 1 pywal cache.
-assert_eq "$DOCTOR_ERRORS" "5" "session-breaking references counted as errors"
+# Only what stops the session: 4 source targets, 1 Lua module, 2 palette files.
+assert_eq "$DOCTOR_ERRORS" "7" "session-breaking references counted as errors"
 # 4 literal references plus the 3 entries of wall.sh's guarded loop.
 assert_eq "$DOCTOR_WARNINGS" "7" "degraded-feature references counted as warnings"
 assert_eq "$DOCTOR_NOTICES" "0" "nothing here is a notice"
@@ -264,9 +280,8 @@ assert_contains "$ref_out" "restore $ref_fixture/gone/missing2.sh, or drop the r
     "literal hint shell-quotes the referencing file's name"
 assert_contains "$ref_out" "restore $ref_fixture/ghostty/apply_wal_colors.sh, or remove it from the list in $ref_fixture/scripts/hyprland/wall.sh" \
     "colour script hint points at the list to edit"
-ref_wal_hint='wal -i "$(readlink -f '"$ref_fixture"'/options/wallpaper)"'
-assert_contains "$ref_out" "$ref_wal_hint" \
-    "pywal hint regenerates the cache from the recorded wallpaper"
+assert_contains "$ref_out" "$ref_fixture/hypr/apply_wal_colors.sh" \
+    "pywal hint points at the component that guarantees both formats"
 
 # A top-level conf has no base directory; "$root//$target" would be an ugly,
 # unpasteable path even though the kernel tolerates it.
@@ -290,6 +305,10 @@ cat > "$ref_clean/hypr/hyprland.conf" <<'EOF'
 source = config/colors.conf
 EOF
 echo "colors" > "$ref_clean/hypr/config/colors.conf"
+cat > "$ref_clean/hypr/hyprland.lua" <<'EOF'
+require("config.colors")
+EOF
+echo "return {}" > "$ref_clean/hypr/config/colors.lua"
 cat > "$ref_clean/launch.sh" <<'EOF'
 exec "$HOME/.config/hypr/hyprland.conf"
 EOF
@@ -299,6 +318,7 @@ git -C "$ref_clean" commit -qm "fixture"
 ref_cache_full="$DOCTOR_TEST_TMP/ref-cache-full"
 mkdir -p "$ref_cache_full/wal"
 echo "generated" > "$ref_cache_full/wal/colors-hyprland.conf"
+echo "return {}" > "$ref_cache_full/wal/colors-hyprland.lua"
 
 DOCTOR_ROOT="$ref_clean"
 DOCTOR_CACHE="$ref_cache_full"

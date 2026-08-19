@@ -6,8 +6,8 @@
 # this repo's runtime state can silently diverge from its config without any
 # file going missing (which the other checks already cover):
 #
-#   1. Daemon list — derived from bare-binary `exec-once` lines in
-#      autostart.conf, the same source binaries.sh already scans. A line is a
+#   1. Daemon list — derived from bare-binary `hl.exec_cmd()` calls in
+#      autostart.lua, the same source binaries.sh already scans. A line is a
 #      daemon candidate only when its first token has no `/`, `~/` or `$`
 #      prefix: those forms name a one-shot script or an unresolved variable,
 #      neither of which is "a process that should still be alive". This is
@@ -62,7 +62,7 @@
 #     — a known false positive, cheap to dismiss, cheaper than a wrong map.
 #
 #   * `pgrep -x` matches on `comm`, which the kernel truncates at 15 bytes.
-#     Every name in this repo's autostart.conf is short enough that this never
+#     Every name in this repo's autostart.lua is short enough that this never
 #     bites (`swayosd-server` is 14 bytes, the longest of them), so no
 #     workaround is implemented. `pgrep -f` was tried and rejected: it matches
 #     full command lines, so `pgrep -f ags` also matched an unrelated shell
@@ -79,7 +79,7 @@
 # stays one value instead of a newline list.
 DOCTOR_DBUS_ROLE="org.freedesktop.Notifications"
 
-# _svc_autostart_daemons -> bare-binary exec-once targets, one per line,
+# _svc_autostart_daemons -> bare-binary autostart targets, one per line,
 # deduplicated. Reads with process substitution, per the lib.sh contract:
 # piping sed's output into the read loop would run the loop in a subshell and
 # lose whatever it printed to the parent's stdout redirection along with it
@@ -87,8 +87,10 @@ DOCTOR_DBUS_ROLE="org.freedesktop.Notifications"
 # every other check so the contract stays mechanically checkable by grep, not
 # by memory).
 _svc_autostart_daemons() {
-    local conf="$DOCTOR_ROOT/hypr/config/setup/autostart.conf" line first
+    local conf="$DOCTOR_ROOT/hypr/config/setup/autostart.lua" line first
+    local commands
     [ -f "$conf" ] || return 0
+    commands="$(sed -nE 's/^[[:space:]]*hl\.exec_cmd\("([^"]*)"\).*/\1/p' "$conf")"
 
     while read -r line; do
         line="${line%&}"
@@ -100,7 +102,7 @@ _svc_autostart_daemons() {
             /*|'~'/*|'$'*) continue ;;
         esac
         printf '%s\n' "$first"
-    done < <(sed -n 's/^[[:space:]]*exec-once[[:space:]]*=[[:space:]]*//p' "$conf") | sort -u
+    done < <(printf '%s\n' "$commands") | sort -u
 }
 
 # _svc_install_packages -> every PACKAGES/AUR_PACKAGES entry in install.sh,
@@ -192,7 +194,7 @@ check_services() {
     while read -r daemon; do
         [ -n "$daemon" ] || continue
         _svc_is_running "$daemon" && continue
-        warn "'$daemon' is declared in autostart.conf but is not running" \
+        warn "'$daemon' is declared in autostart.lua but is not running" \
              "check what happened to it: journalctl --user -b | grep $(doctor_q "$daemon")"
     done < <(_svc_autostart_daemons)
 

@@ -2,7 +2,7 @@
 
 # Keybindings
 
-Every row below is rendered from `hypr/config/software/keybinds.conf` by the
+Every row below is rendered from `hypr/config/software/keybinds.lua` by the
 same parse that `Super + H` shows at runtime, so this file cannot disagree with
 the bindings it documents. To change a binding, edit the config and regenerate:
 

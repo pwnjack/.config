@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Resolution of Hyprland `$variable` indirection.
+# Resolution of application names referenced by the Lua configuration.
 #
-# Hyprland substitutes these while parsing its config, so anything that reads a
-# config line afterwards has to redo the substitution itself. Two things do:
+# Anything that reads a config line afterwards has to resolve the application
+# table the same way. Two things do:
 # the doctor's binary check, which needs to know the command a keybind really
 # runs, and the keybinds cheatsheet, which labels `$terminal` with the terminal
 # you actually use. One copy means a new variable source is taught once.
@@ -31,10 +31,9 @@ hypr_var_origin() {
 # `name` is the bare variable name, without the leading `$`. Two sources, in
 # the order the config itself establishes them:
 #
-#   terminal, browser   hyprland.conf assigns these by reading options/<name>
-#                       at parse time ($browser = $(cat …/options/browser)),
-#                       so the file is the value.
-#   everything else     hypr/config/apptype.conf, `$name = value  # comment`.
+#   terminal, browser   apptype.lua reads options/<name> at parse time, so the
+#                       option file is the value.
+#   everything else     hypr/config/apptype.lua, `name = "value"`.
 #
 # Comments are stripped at the first `#`, which is Hyprland's own rule.
 hypr_resolve_var() {
@@ -47,12 +46,9 @@ hypr_resolve_var() {
             fi
             ;;
         *)
-            if [ -f "$root/hypr/config/apptype.conf" ]; then
-                # [$] is a character class matching a literal $, which keeps
-                # the expression readable and unambiguous to shellcheck.
-                value="$(sed -n "s/^[\$]${name}[[:space:]]*=[[:space:]]*//p" \
-                    "$root/hypr/config/apptype.conf" | head -n1)"
-                value="${value%%#*}"
+            if [ -f "$root/hypr/config/apptype.lua" ]; then
+                value="$(sed -n "s/^[[:space:]]*${name}[[:space:]]*=[[:space:]]*\"\([^\"]*\)\".*/\1/p" \
+                    "$root/hypr/config/apptype.lua" | head -n1)"
             fi
             ;;
     esac

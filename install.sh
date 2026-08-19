@@ -248,16 +248,18 @@ else
     warning "Could not initialize pywal - run 'wal -i /path/to/wallpaper' manually later"
 fi
 
-# Pywal symlink for Hyprland colors.
+# Pywal symlinks for Hyprland (Lua) and hyprlock (Hyprlang) colors.
 # The target is relative on purpose. An absolute one bakes this machine's home
 # path into a tracked file, which doctor.sh reports as a portability warning
 # and which breaks the moment the repo is checked out under a different user.
 info "Setting up pywal integration..."
 execute ln -sfn "../../../.cache/wal/colors-hyprland.conf" "$CONFIG_DIR/hypr/config/colors.conf"
-if [ -f "$HOME/.cache/wal/colors-hyprland.conf" ]; then
-    success "Pywal symlink created"
+execute ln -sfn "../../../.cache/wal/colors-hyprland.lua" "$CONFIG_DIR/hypr/config/colors.lua"
+if [ -f "$HOME/.cache/wal/colors-hyprland.conf" ] \
+    && [ -f "$HOME/.cache/wal/colors-hyprland.lua" ]; then
+    success "Pywal symlinks created"
 else
-    warning "Pywal colors not generated yet - they will appear after the first 'wal -i' run"
+    warning "Pywal colors not generated yet - the theming pass below will create fallbacks"
 fi
 
 # Current-wallpaper state + generated configs (cache-backed, symlinked from the repo)

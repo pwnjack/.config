@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mapfile -t MONITORS < <(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+')
-CONFIG="$HOME/.config/hypr/config/hardware/monitor.conf"
+CONFIG="$HOME/.config/hypr/config/hardware/monitor.lua"
 
 clear
 
@@ -150,12 +150,13 @@ monitoradd() {
             read -p " ■ " choice
 
             if [[ "$choice" == "0" ]]; then
+                transform=""
                 tenabled="False"
                 break
             fi
 
             if [[ "$choice" =~ ^[0-3]$ ]]; then
-                transform="transform,$choice"
+                transform="$choice"
                 tenabled="True, $choice"
                 break
             fi
@@ -177,7 +178,10 @@ monitoradd() {
 
         case $choice in
             [Yy])
-                echo -e "monitor=$mon,$resolution,$pos,$scale,$transform" >> $CONFIG
+                monitor_line="hl.monitor({ output = \"$mon\", mode = \"$resolution\", position = \"$pos\", scale = $scale"
+                [ -n "$transform" ] && monitor_line+=", transform = $transform"
+                monitor_line+=" })"
+                echo "$monitor_line" >> "$CONFIG"
                 clear
                 echo "Finished, press ENTER to return."
                 read -p " ■ "
@@ -199,11 +203,10 @@ monitoradd() {
 }
 
 monitorremove() {
-    # Only list rules that name an output (monitor=<name>,...). The
-    # host-neutral catch-all (monitor=,...) has no name before the comma and
-    # is deliberately excluded here — it isn't a per-monitor override and
-    # removing it was never a sensible operation.
-    mapfile -t monitors < <(grep -E '^monitor=[^,]' "$CONFIG")
+    # Only list calls that name an output. The host-neutral catch-all has an
+    # empty output string and is deliberately excluded here: it is not a
+    # per-monitor override, so removing it would never be sensible.
+    mapfile -t monitors < <(grep -E '^hl\.monitor\(\{ output = "[^"]+' "$CONFIG")
 
     if [ ${#monitors[@]} -eq 0 ]; then
         echo "No per-monitor rules are configured — only the host-neutral catch-all, which is not removable."
@@ -232,7 +235,12 @@ monitorremove() {
     fi
 
     if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#monitors[@]} ]; then
-        sed -i "/^${monitors[$((choice-1))]}$/d" "$CONFIG"
+        selected="${monitors[$((choice-1))]}"
+        # Select by exact text: treating a Lua line as a sed expression would
+        # give its braces and punctuation regex meaning.
+        tmp="${CONFIG}.tmp"
+        awk -v selected="$selected" '$0 != selected' "$CONFIG" > "$tmp"
+        mv "$tmp" "$CONFIG"
         clear
         echo "Finished, press ENTER to return."
         read -p " ■ "
@@ -272,7 +280,7 @@ while true; do
             ;;
         3)
             clear
-            nano $HOME/.config/hypr/config/hardware/monitor.conf
+            nano "$CONFIG"
             clear
             ;;
         [qQ])
