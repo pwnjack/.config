@@ -181,7 +181,11 @@ window#waybar {
     background: transparent;
     color: @foreground;
     border-radius: 100px;
-    padding: 2px 6px;
+    /* GTK's 22px line box renders these asymmetric CSS minima as an exact
+       24x24 background; measured from a live bar capture. */
+    min-width: 26px;
+    min-height: 22px;
+    padding: 0;
     margin: 8px 2px;
     transition: all 0.25s ease-in-out;
 }
