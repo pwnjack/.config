@@ -59,8 +59,8 @@
 #
 
 # Waybar's own action keywords. They sit exactly where a command would, and are
-# NOT separable by module: hyprland/workspaces carries "on-click": "activate"
-# and a `hyprctl dispatch 'hl.dsp.focus(...)'` scroll handler in the same block.
+# NOT separable by module: wlr/taskbar uses "activate" and "close" in the same
+# handler fields where custom modules place executable command lines.
 #
 # This is upstream waybar vocabulary, not a second source of truth for anything
 # in this repo, so no change here can make it stale -- only a waybar release

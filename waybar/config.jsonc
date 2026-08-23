@@ -18,7 +18,11 @@
 
   // Modules Center
   "modules-center": [
-    "hyprland/workspaces",
+    "custom/workspace#one",
+    "custom/workspace#two",
+    "custom/workspace#three",
+    "custom/workspace#four",
+    "custom/workspace#five",
     "clock",
     "custom/weather",
     "custom/media",
@@ -43,26 +47,56 @@
   ],
 
   // Workspaces
-  "hyprland/workspaces": {
-    "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"r-1\" })'",
-    "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"r+1\" })'",
-    "on-click": "activate",
-    "active-only": false,
-    "all-outputs": false,
-    "format": "{icon}",
-    "format-icons": {
-      "urgent": "",
-      "active": "●",
-      "default": "●",
-      "empty": "○",
-    },
-    "persistent-workspaces": {
-      // Explicit IDs, never a bare count. Waybar reads `"*": 5` as five
-      // workspaces *in addition to* the ones that already exist, so the bar
-      // grew to eight buttons as soon as three workspaces were in use. A list
-      // pins exactly which IDs are always shown.
-      "*": [1, 2, 3, 4, 5],
-    },
+  // hyprland/workspaces cannot be used with the Lua provider because its
+  // click handler hard-codes the removed positional `workspace` dispatcher.
+  // ext/workspaces fixes clicks but exposes no window count, so these custom
+  // instances preserve both behaviours: Lua-safe clicks and filled occupied
+  // dots. Signal 7 is raised by Hyprland workspace/window events; the interval
+  // is only a fallback if an event is ever missed.
+  "custom/workspace#one": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status 1",
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 1",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#two": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status 2",
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 2",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#three": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status 3",
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 3",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#four": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status 4",
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 4",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#five": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status 5",
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 5",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
   },
 
   // Taskbar

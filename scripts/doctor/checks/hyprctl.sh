@@ -4,9 +4,11 @@
 #
 # Hyprland's Lua provider does not accept `hyprctl keyword`, and dispatchers
 # must be passed as Lua expressions rather than the legacy positional form.
-# Scan every tracked text file so panel code, Waybar handlers and scripts are
-# covered automatically. Documentation and the doctor's own fixtures are
-# excluded because both intentionally discuss obsolete examples.
+# Waybar's hyprland/workspaces module also embeds a positional `workspace`
+# dispatcher in its button implementation, even though no such command appears
+# in config.jsonc. Scan every tracked text file and that placed module so panel
+# code, Waybar handlers and scripts are covered. Documentation and the doctor's
+# own fixtures are excluded because both intentionally discuss old examples.
 #
 # This is a WARN: one control or action is broken when invoked, but Hyprland
 # and the rest of the session continue to run.
@@ -16,6 +18,27 @@
 # currently running compositor, which may be older than the checked-out tree.
 _hctl_uses_lua_provider() {
     git -C "$DOCTOR_ROOT" ls-files --error-unmatch -- hypr/hyprland.lua >/dev/null 2>&1
+}
+
+# _hctl_uses_native_waybar_workspaces
+# True only when hyprland/workspaces is inside a modules-left/center/right
+# array. A configured-but-unplaced block cannot break clicks, and a commented
+# entry is not configuration. This deliberately mirrors Waybar's own narrow
+# JSONC window instead of stripping comments from arbitrary handler strings.
+_hctl_uses_native_waybar_workspaces() {
+    local config="$DOCTOR_ROOT/waybar/config.jsonc"
+    [ -f "$config" ] || return 1
+
+    awk '
+        /^[[:space:]]*"modules-(left|center|right)"[[:space:]]*:/ { inarr = 1 }
+        inarr {
+            line = $0
+            sub(/\/\/.*/, "", line)
+            if (line ~ /"hyprland\/workspaces"/) found = 1
+            if (index(line, "]")) inarr = 0
+        }
+        END { exit !found }
+    ' "$config"
 }
 
 # _hctl_check_file <root-relative-file>
@@ -57,6 +80,12 @@ check_hyprctl() {
     if ! _hctl_uses_lua_provider; then
         ok "the tracked configuration does not use Hyprland's Lua provider"
         return 0
+    fi
+
+    if _hctl_uses_native_waybar_workspaces; then
+        local waybar_config="$DOCTOR_ROOT/waybar/config.jsonc"
+        warn "waybar places hyprland/workspaces, whose clicks use a dispatcher removed by the Lua config provider" \
+            "replace it with ext/workspaces in $(doctor_q "$waybar_config")"
     fi
 
     while IFS= read -r -d '' file; do

@@ -34,3 +34,25 @@ hl.config({
         enable_hyprcursor = true,
     },
 })
+
+-- Keep the five Waybar dots backed by real workspaces so empty and occupied
+-- states remain queryable even after every window leaves a workspace.
+for workspace = 1, 5 do
+    hl.workspace_rule({ workspace = workspace, persistent = true })
+end
+
+-- Refresh the custom dots immediately whenever their active/occupied state can
+-- change. Signal 7 belongs to custom/workspace; each module also has a slow
+-- interval as a fallback.
+local function refresh_waybar_workspaces()
+    hl.exec_cmd("pkill -RTMIN+7 waybar")
+end
+
+for _, event in ipairs({
+    "workspace.active",
+    "window.open",
+    "window.destroy",
+    "window.move_to_workspace",
+}) do
+    hl.on(event, refresh_waybar_workspaces)
+end

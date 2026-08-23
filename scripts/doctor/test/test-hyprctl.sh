@@ -71,14 +71,54 @@ assert_not_contains "$hctl_legacy_out" "WARN" "legacy syntax is allowed with the
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS$DOCTOR_NOTICES" "000" \
     "a skipped legacy-provider tree records no findings"
 
+# --- Waybar's implicit positional dispatcher is reported -----------------
+hctl_waybar="$(make_fixture)"
+mkdir -p "$hctl_waybar/hypr" "$hctl_waybar/waybar"
+printf 'return {}\n' > "$hctl_waybar/hypr/hyprland.lua"
+printf '%s\n' \
+    '{' \
+    '  "modules-center": [' \
+    '    // "hyprland/workspaces",' \
+    '    "hyprland/workspaces",' \
+    '  ],' \
+    '}' \
+    > "$hctl_waybar/waybar/config.jsonc"
+git -C "$hctl_waybar" add -A
+git -C "$hctl_waybar" commit -qm "fixture"
+
+DOCTOR_ROOT="$hctl_waybar"
+doctor_reset
+check_hyprctl > "$hctl_out_file" 2>&1
+hctl_waybar_out="$(<"$hctl_out_file")"
+
+assert_contains "$hctl_waybar_out" "hyprland/workspaces" \
+    "Waybar's implicit positional workspace dispatcher is reported"
+assert_contains "$hctl_waybar_out" "ext/workspaces" \
+    "the Waybar finding names the protocol-backed replacement"
+assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS$DOCTOR_NOTICES" "010" \
+    "the incompatible Waybar module is one warning"
+assert_not_contains "$hctl_waybar_out" "✓" \
+    "an incompatible Waybar module suppresses the green tick"
+
 # --- a clean Lua-provider tree gets the all-clear -------------------------
 hctl_clean="$(make_fixture)"
-mkdir -p "$hctl_clean/hypr"
+mkdir -p "$hctl_clean/hypr" "$hctl_clean/waybar"
 printf 'return {}\n' > "$hctl_clean/hypr/hyprland.lua"
 printf '%s\n' \
     'hyprctl dispatch '\''hl.dsp.focus({ workspace = "r-1" })'\''' \
     'hyprctl eval '\''hl.config({ misc = { vrr = 0 } })'\''' \
     > "$hctl_clean/actions.sh"
+printf '%s\n' \
+    '{' \
+    '  "modules-center": [' \
+    '    // "hyprland/workspaces",' \
+    '    "ext/workspaces",' \
+    '  ],' \
+    '  "hyprland/workspaces": {' \
+    '    "on-click": "activate",' \
+    '  },' \
+    '}' \
+    > "$hctl_clean/waybar/config.jsonc"
 git -C "$hctl_clean" add -A
 git -C "$hctl_clean" commit -qm "fixture"
 
@@ -88,5 +128,7 @@ check_hyprctl > "$hctl_out_file" 2>&1
 hctl_clean_out="$(<"$hctl_out_file")"
 
 assert_contains "$hctl_clean_out" "✓" "a compatible Lua-provider tree gets the green tick"
+assert_not_contains "$hctl_clean_out" "hyprland/workspaces, whose clicks" \
+    "a commented or configured-but-unplaced native module is accepted"
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS$DOCTOR_NOTICES" "000" \
     "a compatible tree records no findings"

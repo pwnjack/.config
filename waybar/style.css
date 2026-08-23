@@ -77,7 +77,7 @@ window#waybar {
 
 #window,
 #taskbar,
-#workspaces,
+#custom-workspace,
 #clock,
 #custom-weather,
 #custom-media,
@@ -111,7 +111,6 @@ window#waybar {
 
 #window,
 #taskbar,
-#workspaces,
 #clock,
 #custom-weather,
 #custom-media,
@@ -155,7 +154,6 @@ window#waybar {
    A module that comes and goes cannot be load-bearing for a gap: with 15px
    on both sides of each, every neighbouring gap stays 30px whether the
    battery is showing or not. */
-#workspaces,
 #custom-updates,
 #network,
 #bluetooth,
@@ -179,19 +177,29 @@ window#waybar {
    ● / ○ are geometric Unicode, not Nerd Font glyphs — they render at
    full size, so they stay at the text size rather than the icon size. */
 
-#workspaces button {
+#custom-workspace {
+    background: transparent;
+    color: @foreground;
     border-radius: 100px;
     padding: 2px 6px;
-    margin: 4px 2px;
+    margin: 8px 2px;
     transition: all 0.25s ease-in-out;
 }
 
-#workspaces button.active {
+#custom-workspace.one {
+    margin-left: 17px;
+}
+
+#custom-workspace.five {
+    margin-right: 17px;
+}
+
+#custom-workspace.active {
     color: @foreground;
     background-color: @color4;
 }
 
-#workspaces button:hover {
+#custom-workspace:hover {
     background-color: @color4;
     opacity: 0.4;
 }
