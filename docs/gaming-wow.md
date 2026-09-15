@@ -1,6 +1,56 @@
 # WoW / Battle.net on this setup
 
-Hard-won launch tuning that this repo **cannot** track directly. `.gitignore:284`
+## Current working baseline (2026-09-12)
+
+Use **Battle.net from Rofi**, which runs
+`env LUTRIS_SKIP_INIT=1 lutris lutris:rungameid/3`. Keep Lutris as the primary
+launcher: the user reports better cursor behavior here than in Faugus. The
+previous Faugus migration was stopped; the desktop shortcut was never changed.
+
+The current chain is Rofi -> Lutris -> Gamescope (SDL) -> UMU/Proton ->
+Battle.net -> WoW. Lutris's game configuration is machine-local:
+`~/.local/share/lutris/games/battlenet-standard-1762118986.yml`. It uses the
+existing `~/Games/battlenet` prefix and `Proton-GE Latest` runner.
+
+Current Gamescope settings in that Lutris entry:
+
+```yaml
+gamescope: true
+gamescope_flags: --backend sdl --expose-wayland --force-grab-cursor -r 144 --adaptive-sync
+gamescope_game_res: 2560x1440
+gamescope_output_res: 2560x1440
+gamescope_window_mode: -b
+```
+
+Only the backend was changed from `wayland` to `sdl` during troubleshooting.
+The user confirmed resizing worked, initially reported unclickable controls,
+then reported the retry worked and asked to retain this setup. Disabling
+Gamescope was prepared but never applied. Existing Lutris environment and
+runner overrides remain intact; there is no verified reason to copy the
+different Faugus overrides into this baseline.
+
+Battle.net now opens centered at **1920x1080** instead of 1280x720 on the
+2560x1440 monitor. This is the outer window size; Gamescope's internal game
+resolution remains 2560x1440. WoW retains its fullscreen/workspace-5 rules.
+When a shared Gamescope window leaves fullscreen, returning to its previous
+launcher-sized geometry is expected. This does not by itself indicate that
+the fullscreen game was rendering at that smaller resolution.
+
+Live verification after the size change: Battle.net opened floating and
+centered at 1920x1080; WoW subsequently appeared with initial title
+`World of Warcraft`, fullscreen at 2560x1440 on workspace 5. Hyprland reported
+no configuration errors. Keep testing through this one launch path: camera
+dragging, Super+workspace switching and repeated fullscreen/resize cycles still
+need user confirmation before treating gameplay as fully verified.
+
+The monitor exposes VRR support, but Hyprland currently has `misc.vrr = 0`
+and `general.allow_tearing = false`. Neither `--adaptive-sync` nor the
+`immediate` window rule proves VRR/tearing is active. Leave display tuning
+separate from these input/window tests.
+
+## Historical Faugus recipe
+
+Hard-won launch tuning that this repo **cannot** track directly. `.gitignore`
 ignores `faugus-launcher/**`, and rightly so: Faugus rewrites `games.json` on
 every session (`playtime` alone churns), and the directory also holds absolute
 paths, banners, icons and the BattlEye/EAC blobs. So the recipe lives here as
@@ -10,7 +60,7 @@ and needs this file to rebuild the rest by hand.
 Verified 2026-07-26 against gamescope 3.16.24, faugus-launcher 2.0.2, umu
 1.4.1-patch1, GE-Proton11-1, Hyprland 0.56.0.
 
-## The launch chain
+### The Faugus launch chain
 
 Four hops, which is why the window rules have to match two different clients:
 
@@ -19,14 +69,16 @@ Faugus Launcher -> env vars -> gamescope -> Battle.net.exe -> WoW
 ```
 
 Faugus entry `Battle.net`, prefix `~/Games/battlenet`, runner `Proton-GE Latest`
-(`~/.local/share/Steam/compatibilitytools.d/Proton-GE Latest`, currently
-GE-Proton11-1). `launch_arguments`, verbatim:
+(`~/.local/share/Steam/compatibilitytools.d/Proton-GE Latest`, GE-Proton11-1
+at the July verification). `launch_arguments`, verbatim:
 
 ```
 WINE_SIMULATE_WRITECOPY=1 PROTON_ENABLE_WAYLAND=0 gamescope -w 2560 -h 1440 -W 2560 -H 1440 -r 144 --backend sdl --expose-wayland --force-grab-cursor --adaptive-sync --
 ```
 
-Plus `envar.txt`: `DISABLE_GAMESCOPE_WSI=1`.
+Plus `envar.txt`: `DISABLE_GAMESCOPE_WSI=1` (now stored in
+`~/.config/faugus-launcher/envar.json`; games are now in
+`~/.local/share/faugus-launcher/games.json`).
 
 Why each piece is there:
 
@@ -37,10 +89,12 @@ Why each piece is there:
   needed.
 - **`--backend sdl`** — nested backend rather than DRM, so gamescope stays a
   normal Hyprland client instead of taking the display.
-- **`--adaptive-sync`** — VRR on DP-1.
-- **`-w 2560 -h 1440 -W 2560 -H 1440 -r 144`** — matches DP-1 exactly
-  (`hypr/config/hardware/monitor.lua`). If the monitor ever changes, this
-  string changes with it.
+- **`--adaptive-sync`** — historical VRR intent; see the current-baseline
+  caveat above. This flag alone does not enable Hyprland's monitor VRR.
+- **`-w 2560 -h 1440 -W 2560 -H 1440 -r 144`** — matches the measured
+  2560x1440, 144 Hz panel. These are machine-local dimensions; the tracked
+  `hypr/config/hardware/monitor.lua` is host-neutral. Adjust them for a
+  different monitor.
 - **`--expose-wayland`** — lets the nested client see the Wayland socket.
 - **`PROTON_ENABLE_WAYLAND=0` + `DISABLE_GAMESCOPE_WSI=1`** — keep the game on
   XWayland inside gamescope rather than native Wayland, and stop Proton's
@@ -55,15 +109,32 @@ leftover, but don't be surprised by it.
 
 ## The Hyprland half (tracked)
 
-`hypr/config/software/rules.lua`, under `GAME WINDOW RULES`. Each effect is
+`hypr/config/software/rules.lua`, under `Game window rules`. Each effect is
 applied to two named rule tables by `game_rule()` — one matching
-`class ^(WowClassic.exe)$` and one matching `class ^(gamescope)$`, title
-`^(World of Warcraft)$` — because with the gamescope wrapper above it is
+`class (?i)^WowClassic[.]exe$` and one matching `class ^(gamescope)$`, title
+`^World of Warcraft( [(]grabbed[)])?$` — because with the gamescope wrapper it is
 *gamescope* that is the Hyprland client, not the game. Both Classic clients
 report the same `WowClassic.exe`, so one pair covers both.
 
-- **`immediate on`** — allows tearing for the game window. This was the stutter
-  fix; without it frame pacing is visibly worse.
+Matching correction (2026-09-12): executable classes are matched
+case-insensitively with literal dots. The Gamescope launcher title matches
+`^Battle[.]net.*$`, covering the observed initial `Battle.net Login` as well as
+`Battle.net`; Hyprland uses full regex matches, so the old `^(Battle.net)`
+missed the login window. The WoW title also accepts Gamescope's optional
+` (grabbed)` suffix. Both Battle.net rules also set the outer launcher size to
+1920x1080. The WoW rule effects remain unchanged. Rofi's existing Battle.net
+shortcut invokes Lutris with the SDL backend; see the current baseline.
+
+Floating, size, workspace and fullscreen rules apply when a window opens.
+Restart Battle.net to test the corrected startup match. If Gamescope reuses
+that window and changes its title to WoW, the dynamic game effects can match,
+but the startup-only fullscreen/workspace effects will not run again. Handling
+that transition requires a separate title-event handler; none is added by this
+rule update.
+
+- **`immediate on`** — retained from the historical stutter tuning. It allows
+  tearing for the window only when compositor-wide tearing is also enabled;
+  the current `general.allow_tearing = false` prevents that.
 - **`no_blur`, `no_shadow`, `decorate off`** — stop the compositor spending
   anything on effects behind a fullscreen game.
 - **`workspace 5` + `fullscreen on`** — the game gets its own workspace, so
@@ -96,7 +167,7 @@ Most of the file is churn — `CACHE-*`, `engineSurvey*`, `gameTip`, quest count
 | `GxCompatWorkSubmitOptimizations` | `0` | vkd3d/D3D12 work-submit stutter workaround |
 | `GxApi` | `D3D12` | D3D12 via vkd3d-proton rather than D3D11 |
 | `hwDetect` | `0` | Stops WoW's auto-detect from overwriting these choices on launch |
-| `vsync` | `1` | Works with gamescope's `--adaptive-sync` rather than against it |
+| `vsync` | `1` | Retained historical setting; not evidence that monitor VRR is active |
 | `GxMaximize` | `1` | Fullscreen behaviour inside the gamescope surface |
 | `graphicsQuality` | `6` | Quality preset, with the individual knobs below overriding it |
 | `shadowMode` / `shadowTextureSize` / `shadowNumCascades` | `3` / `2048` / `3` | Shadow detail |

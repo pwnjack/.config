@@ -124,11 +124,12 @@ of that privileged rename.
 ### Gaming (WoW / Battle.net)
 
 `docs/gaming-wow.md` is the single source for this — **read it before touching
-any game rule.** The launch chain is Faugus -> gamescope -> Battle.net -> WoW, so
-the Hyprland client is *gamescope*, not the game, and `rules.lua` applies every
-game effect to both match tables for that reason. The
-launcher side (`faugus-launcher/**`) is git-ignored because Faugus rewrites it
-every session, so the doc records that recipe as prose — including which flag
+any game rule.** The current launch chain is Rofi -> Lutris -> gamescope ->
+Battle.net -> WoW, so the Hyprland client is *gamescope*, not the game, and
+`rules.lua` applies every game effect to both match tables for that reason.
+The launcher settings are machine-local (Lutris under `~/.local/share/lutris`,
+with a separate Faugus entry retained). The doc records the current Lutris
+baseline and the historical Faugus recipe as prose — including which flag
 fixed what, and which tuning ideas were measured and rejected (gamemode buys
 `nice -4` here and nothing else). Don't re-derive that survey.
 

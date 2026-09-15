@@ -59,16 +59,17 @@ hl.window_rule({
 -- Game window rules. See docs/gaming-wow.md before changing these.
 hl.window_rule({
     name = "battlenet-launcher",
-    match = { class = "^(battle.net.exe)$" },
+    match = { class = "(?i)^battle[.]net[.]exe$" },
     float = true,
-    size = "1280 720",
+    size = "1920 1080",
     center = true,
 })
 hl.window_rule({
     name = "battlenet-gamescope",
-    match = { class = "^(gamescope)$", title = "^(Battle.net)" },
+    -- Hyprland matches the whole title, including the initial "Battle.net Login".
+    match = { class = "^(gamescope)$", title = "^Battle[.]net.*$" },
     float = true,
-    size = "1280 720",
+    size = "1920 1080",
     center = true,
 })
 
@@ -86,8 +87,8 @@ local function game_rule(name, match)
     })
 end
 
-game_rule("wow-classic", { class = "^(WowClassic.exe)$" })
-game_rule("wow-gamescope", { class = "^(gamescope)$", title = "^(World of Warcraft)$" })
+game_rule("wow-classic", { class = "(?i)^WowClassic[.]exe$" })
+game_rule("wow-gamescope", { class = "^(gamescope)$", title = "^World of Warcraft( [(]grabbed[)])?$" })
 
 -- Layer rules
 local function layer(name, namespace, effects)
