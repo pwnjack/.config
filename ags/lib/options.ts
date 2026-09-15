@@ -26,11 +26,3 @@ export function writeOption(name: string, value: string): void {
         console.error(`Failed to write option ${name}:`, e)
     }
 }
-
-export const OPTIONS = [
-    "browser", "terminal", "editor",
-    "launchertype", "font", "font-gtk", "cursortheme",
-    "autologin", "clock", "randomwallpaper", "mainmonitor",
-] as const
-
-export type OptionName = typeof OPTIONS[number]
