@@ -4,12 +4,12 @@ import { ToggleControl, SliderControl, DropdownControl, EntryControl, DropdownIt
 import { getOptionBool, getOptionInt, getOptionFloat, getOption } from "../../lib/hyprctl"
 import { setPersistent, resetSetting, hasOverride } from "../../lib/persist"
 import { readOption, writeOption } from "../../lib/options"
-import { RowSpec, requestRefresh } from "../../lib/registry"
+import { RowSpec, runSettingChange } from "../../lib/registry"
 
 interface Base { id: string; title: string; description: string; icon: string; keywords?: string[] }
 
 const resetProps = (keyword: string) => ({
-    onReset: () => { resetSetting(keyword); requestRefresh() },
+    onReset: () => runSettingChange(() => resetSetting(keyword), true),
     resetVisible: hasOverride(keyword),
 })
 
@@ -18,7 +18,7 @@ export function kwToggle(b: Base & { keyword: string }): RowSpec {
         icon: b.icon, title: b.title, description: b.description,
         control: ToggleControl({
             active: getOptionBool(b.keyword),
-            onToggled: v => setPersistent(b.keyword, v),
+            onToggled: v => runSettingChange(() => setPersistent(b.keyword, v)),
         }),
         ...resetProps(b.keyword),
     }) }
@@ -33,7 +33,7 @@ export function kwSlider(b: Base & {
         control: SliderControl({
             value: b.float ? getOptionFloat(b.keyword) : getOptionInt(b.keyword),
             min: b.min, max: b.max, step: b.step, format: b.format,
-            onChanged: v => setPersistent(b.keyword, b.float ? v : Math.round(v)),
+            onChanged: v => runSettingChange(() => setPersistent(b.keyword, b.float ? v : Math.round(v))),
         }),
         ...resetProps(b.keyword),
     }) }
@@ -44,7 +44,7 @@ export function kwDropdown(b: Base & { keyword: string; items: DropdownItem[] })
         icon: b.icon, title: b.title, description: b.description,
         control: DropdownControl({
             items: b.items, active: getOption(b.keyword),
-            onChanged: v => setPersistent(b.keyword, v),
+            onChanged: v => runSettingChange(() => setPersistent(b.keyword, v)),
         }),
         ...resetProps(b.keyword),
     }) }
@@ -75,12 +75,12 @@ export function optionToggle(b: Base & { option: string; onChange?: (enabled: bo
 /** Fully custom control row (swaync, hypridle, animations, monitors). */
 export function customRow(b: Base & {
     control: () => Gtk.Widget
-    onReset?: () => void; resetVisible?: () => boolean
+    onReset?: () => void | Promise<void>; resetVisible?: () => boolean
 }): RowSpec {
     return { ...b, build: () => SettingRow({
         icon: b.icon, title: b.title, description: b.description,
         control: b.control(),
-        onReset: b.onReset ? () => { b.onReset!(); requestRefresh() } : undefined,
+        onReset: b.onReset ? () => runSettingChange(async () => { await b.onReset!() }, true) : undefined,
         resetVisible: b.resetVisible?.() ?? false,
     }) }
 }

@@ -109,6 +109,8 @@ PACKAGES=(
     "gnome-calculator"
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
+    # Isolated deployment/hook fixtures and panel persistence tests
+    "python" "nodejs"
     # Fonts (configs default to FiraCode Nerd Font)
     "ttf-firacode-nerd" "ttf-cascadia-mono-nerd" "ttf-nerd-fonts-symbols"
     "noto-fonts" "noto-fonts-emoji"
@@ -176,43 +178,15 @@ if [ ${#STILL_MISSING_AUR[@]} -gt 0 ]; then
 fi
 
 # ------------------------------------------------------------------
-# Backup existing configs
-# ------------------------------------------------------------------
-if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
-    info "Creating backup of existing configs..."
-    execute mkdir -p "$BACKUP_DIR"
-
-    CONFIGS_TO_BACKUP=(
-        "hypr" "waybar" "swaync" "rofi"
-        "fish" "ghostty" "nvim" "btop" "cava" "gtk-3.0" "gtk-4.0"
-        "qt5ct" "qt6ct" "options" "scripts" "mimeapps.list"
-        "fastfetch" "starship" "starship.toml" "swappy"
-    )
-
-    for config in "${CONFIGS_TO_BACKUP[@]}"; do
-        if [ -e "$CONFIG_DIR/$config" ]; then
-            execute cp -r "$CONFIG_DIR/$config" "$BACKUP_DIR/"
-            success "Backed up: $config"
-        fi
-    done
-
-    info "Backup saved to: $BACKUP_DIR"
-fi
-
-# ------------------------------------------------------------------
-# Deploy dotfiles into ~/.config
+# Back up and deploy the same tracked-file plan
 # ------------------------------------------------------------------
 if [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
-    info "Deploying dotfiles to $CONFIG_DIR..."
-    execute mkdir -p "$CONFIG_DIR"
-    while IFS= read -r -d '' item; do
-        name=$(basename "$item")
-        case "$name" in
-            .git|.github|.claude) continue ;;
-        esac
-        execute cp -a "$item" "$CONFIG_DIR/"
-    done < <(find "$DOTFILES_DIR" -mindepth 1 -maxdepth 1 -print0)
-    success "Dotfiles deployed"
+    info "Deploying tracked dotfiles to $CONFIG_DIR..."
+    # shellcheck source=scripts/lib/deploy.sh
+    source "$DOTFILES_DIR/scripts/lib/deploy.sh"
+    deploy_dotfiles "$DOTFILES_DIR" "$CONFIG_DIR" "$BACKUP_DIR" "$DRY_RUN" "$NO_BACKUP"
+    success "Tracked dotfiles deployed"
+    [ "$NO_BACKUP" = true ] || info "Backup saved to: $BACKUP_DIR"
 else
     info "Repo already lives at $CONFIG_DIR - no deployment needed"
 fi
@@ -277,7 +251,9 @@ fi
 # configs by symlink or include). The driver globs for the per-component
 # scripts, and each one produces its output even when pywal has not run, so
 # no component needs a fallback here.
-execute "$CONFIG_DIR/scripts/theming/apply-wal.sh"
+if ! execute "$CONFIG_DIR/scripts/theming/apply-wal.sh"; then
+    warning "Some theme components failed; run scripts/theming/apply-wal.sh to retry"
+fi
 
 # Seed waypaper config
 if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then

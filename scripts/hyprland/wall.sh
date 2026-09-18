@@ -1,55 +1,65 @@
 #!/bin/bash
-#
-# Wallpaper Change Pipeline
-# Reads the active wallpaper from awww, regenerates the pywal palette,
-# and propagates colors to every themed component.
-#
+# Serialize wallpaper changes, reading the current selection after taking the
+# lock so queued requests cannot restore an older palette.
+set -uo pipefail
 
-sleep 1
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
 
-# options/mainmonitor is a preference, not a hardware fact. Empty means "no
-# preference", which resolves here to whatever awww reports first. The named
-# lookup is skipped outright rather than left to grep "^: :", so the empty case
-# is explicit instead of resting on a pattern that happens not to match.
-primary_monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)
+notify() {
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send -i preferences-desktop-wallpaper "$1" "$2" 9>&- || true
+}
+fail() {
+    echo "wallpaper: $*" >&2
+    notify "Wallpaper theme failed" "$*"
+    exit 1
+}
+
+command -v flock >/dev/null 2>&1 || fail "flock is not installed"
+mkdir -p "$cache_dir/wal" || fail "Cannot create the palette cache"
+exec 9>"$cache_dir/wal/wallpaper.lock"
+flock 9 || fail "Cannot lock the wallpaper pipeline"
+
+# Children must not keep our lock alive (several renderers start daemons).
+query=$(awww query 9>&-) || fail "Cannot read the current wallpaper"
+primary_monitor=$(cat "$config_dir/options/mainmonitor" 2>/dev/null) || primary_monitor=""
 wallpaper=""
 if [ -n "$primary_monitor" ]; then
-    wallpaper=$(awww query | grep "^: $primary_monitor:" | sed 's/.*image: //')
+    while IFS= read -r line; do
+        case "$line" in
+            ": $primary_monitor:"*) wallpaper=${line#*image: }; break ;;
+        esac
+    done <<< "$query"
 fi
-
-# Fallback: first monitor reported by awww
 if [ -z "$wallpaper" ]; then
-    wallpaper=$(awww query | head -n1 | sed 's/.*image: //')
+    line=${query%%$'\n'*}
+    wallpaper=${line#*image: }
 fi
+[ -f "$wallpaper" ] || fail "The selected wallpaper is unavailable"
 
-[ -f "$wallpaper" ] || exit 0
+# wal is synchronous. Do not publish new wallpaper state or reload consumers
+# when generation failed; no fixed sleep can turn that failure into success.
+wal -q -i "$wallpaper" 9>&- || fail "Could not generate colors from $(basename "$wallpaper")"
+ln -sfn "$wallpaper" "$cache_dir/current_wallpaper" || fail "Cannot save the current wallpaper"
+escaped=${wallpaper//\\/\\\\}
+escaped=${escaped//\"/\\\"}
+printf '* { wallpaper: url("%s", width); }\n' "$escaped" > "$cache_dir/wal/rofi-wallpaper.rasi" \
+    || fail "Cannot save the launcher background"
 
-wallname=$(basename "$wallpaper")
+failed=0
+"$config_dir/scripts/theming/apply-wal.sh" 9>&- || failed=1
 
-# Record the current wallpaper and rofi background in the cache
-mkdir -p "$HOME/.cache/wal"
-ln -sfn "$wallpaper" "$HOME/.cache/current_wallpaper"
-echo "* { wallpaper: url(\"$wallpaper\", width); }" > "$HOME/.cache/wal/rofi-wallpaper.rasi"
-
-wal -q -i "$wallpaper"
-
-# Wait for wal to finish generating colors
-sleep 0.5
-
-# Apply pywal colors to every themed component. The driver finds the
-# per-component apply_wal_colors.sh scripts by glob, so no component is named
-# here — adding one is a single new file.
-[ -x "$HOME/.config/scripts/theming/apply-wal.sh" ] && "$HOME/.config/scripts/theming/apply-wal.sh"
-
-# waybar is not a themed component in that sense: it reads the pywal CSS
-# through a tracked symlink and only needs restarting.
-[ -x "$HOME/.config/scripts/waybar/waybar.sh" ] && "$HOME/.config/scripts/waybar/waybar.sh" &
-
-notify-send -i preferences-desktop-wallpaper-symbolic "Wallpaper Applied" "New color scheme generated from image:\n$wallname"
-
-# Restart the AGS settings panel so it picks up the new palette
+if [ -x "$config_dir/scripts/waybar/waybar.sh" ]; then
+    "$config_dir/scripts/waybar/waybar.sh" 9>&- || failed=1
+fi
 if command -v ags >/dev/null 2>&1; then
-    astal -i settings-panel --quit 2>/dev/null
-    ags run "$HOME/.config/ags/app.ts" &
+    astal -i settings-panel --quit 9>&- 2>/dev/null || true
+    ags run "$config_dir/ags/app.ts" 9>&- &
 fi
-command -v eww >/dev/null 2>&1 && eww reload 2>/dev/null
+if command -v eww >/dev/null 2>&1; then
+    eww reload 9>&- 2>/dev/null || failed=1
+fi
+
+[ "$failed" -eq 0 ] || fail "Colors were generated, but some components failed to update. See the wallpaper command's stderr for details."
+notify "Wallpaper Applied" "New color scheme generated from image: $(basename "$wallpaper")"

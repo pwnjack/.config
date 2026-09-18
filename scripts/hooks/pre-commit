@@ -13,44 +13,36 @@
 #
 set -uo pipefail
 
-REPO="$(git rev-parse --show-toplevel)"
+REPO="$(git rev-parse --show-toplevel)" || exit 1
 FAILED=0
+SNAPSHOT="$(mktemp -d)" || exit 1
+trap 'rm -rf -- "$SNAPSHOT"' EXIT
 
-# Staged, excluding deletions — a deleted file cannot be linted.
-#
-# --no-renames as well, or a renamed file is never linted at all: git reports a
-# rename as a single R record, which ACM drops, so `git mv a.sh b.sh` slipped
-# past shellcheck entirely. Splitting it yields the destination as an A, which
-# is linted, and the source as a D, which ACM still excludes.
-staged() {
-    git diff --cached --name-only --diff-filter=ACM --no-renames -z
-}
+if ! bash "$REPO/scripts/hooks/snapshot.sh" "$REPO" "$SNAPSHOT"; then
+    echo "pre-commit: could not export staged files; no checks were run" >&2
+    exit 1
+fi
+mapfile -d '' -t STAGED_SH_PATHS < "$SNAPSHOT/lint-paths"
+mapfile -d '' -t STAGED_ALL < "$SNAPSHOT/changed-paths"
 
-# Every staged path, for choosing which test suites to run. Deliberately a
-# second listing rather than a reuse of staged(): a deleted file cannot be
-# linted, but a deletion is exactly when a suite most needs to run, and the ACM
-# filter above would hand suite selection an empty list for a commit that only
-# removes or only renames files — the gate silently doing nothing for the
-# change most able to break something.
-#
-# --no-renames, not --diff-filter=ACMRD: a rename is reported as one R record
-# naming only the destination, so ACMRD misses that the file LEFT its old
-# directory and that directory's suite never runs. --no-renames splits the R
-# into a D and an A, yielding both paths.
-staged_all() {
-    git diff --cached --name-only --no-renames -z
-}
+# Git may set repository-local variables when invoking hooks. Tests must not
+# inherit a route back to the real index, worktree, or object database.
+while IFS= read -r name; do
+    unset "$name"
+done < <(git rev-parse --local-env-vars)
+REPO="$SNAPSHOT/worktree"
+cd "$REPO" || exit 1
 
 # --- shell scripts --------------------------------------------------------
 # The hooks themselves carry no .sh suffix, so they are matched by path as
 # well. One case statement, so a hypothetical scripts/hooks/foo.sh is not
 # linted twice.
 STAGED_SH=()
-while IFS= read -r -d '' _hook_file; do
+for _hook_file in "${STAGED_SH_PATHS[@]}"; do
     case "$_hook_file" in
         *.sh|scripts/hooks/*) STAGED_SH+=("$_hook_file") ;;
     esac
-done < <(staged)
+done
 
 if [ "${#STAGED_SH[@]}" -gt 0 ]; then
     if command -v shellcheck >/dev/null 2>&1; then
@@ -78,10 +70,9 @@ fi
 #
 # Output is NOT redirected. test.sh prints one line per suite and a failing
 # suite's output in full, so there is no second command to suggest.
-mapfile -d '' -t STAGED_ALL < <(staged_all)
 
 if [ "${#STAGED_ALL[@]}" -gt 0 ]; then
-    if ! "$REPO/test.sh" --for "${STAGED_ALL[@]}"; then
+    if ! bash "$REPO/test.sh" --for "${STAGED_ALL[@]}"; then
         FAILED=1
     fi
 fi
@@ -91,14 +82,15 @@ fi
 # package.json and no node_modules in ags/. esbuild catches syntax errors but
 # NOT type errors, so tsconfig's `strict: true` is not enforced here.
 #
-# staged_all(), not staged(): the ACM filter drops deletions, so removing a
-# module from ags/ — or moving one out of it — used to run no bundle check at
-# all, which are the two edits most able to break the build. The unfiltered
-# listing names the old path in both cases.
-if staged_all | tr '\0' '\n' | grep -q '^ags/'; then
+# The unfiltered list includes deletions and both sides of renames.
+AGS_CHANGED=false
+for _hook_file in "${STAGED_ALL[@]}"; do
+    case "$_hook_file" in ags/*) AGS_CHANGED=true ;; esac
+done
+if [ "$AGS_CHANGED" = true ]; then
     if command -v ags >/dev/null 2>&1; then
         echo "pre-commit: ags bundle"
-        BUNDLE_OUT="$(mktemp)"
+        BUNDLE_OUT="$SNAPSHOT/panel.js"
         if ! (cd "$REPO/ags" && ags bundle app.ts "$BUNDLE_OUT" >/dev/null 2>&1); then
             echo "pre-commit: ags bundle failed — run 'cd ags && ags bundle app.ts /tmp/out' to see why"
             FAILED=1

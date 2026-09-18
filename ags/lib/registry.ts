@@ -41,3 +41,16 @@ export function searchRows(query: string): { cat: CategoryDef; row: RowSpec }[] 
 let refreshFn: (() => void) | null = null
 export const setRefreshHandler = (fn: () => void) => { refreshFn = fn }
 export const requestRefresh = () => refreshFn?.()
+
+let statusFn: ((message: string) => void) | null = null
+export const setStatusHandler = (fn: (message: string) => void) => { statusFn = fn }
+
+/** GTK callbacks end here: async failures stay visible and controls re-read live values. */
+export function runSettingChange(change: () => Promise<void>, refresh = false): void {
+    statusFn?.("")
+    change().then(() => { if (refresh) requestRefresh() }).catch(error => {
+        console.error("Settings change failed:", error)
+        statusFn?.(error instanceof Error ? error.message : "The setting could not be changed. Please try again.")
+        requestRefresh()
+    })
+}

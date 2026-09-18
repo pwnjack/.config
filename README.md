@@ -104,11 +104,17 @@ What it checks:
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 `core.hooksPath`) runs `shellcheck` on staged shell scripts, the test suites
 covering whatever the commit touches, and `ags bundle` on staged panel
-sources. Bypass with `git commit --no-verify`.
+sources. All checks run in a private snapshot of the index, so partially staged
+changes are checked as they will be committed. The working tree and real index
+are untouched. The snapshot contains staged files and blobs, without commit
+history. Bypass with `git commit --no-verify`.
 
 Run every test suite with `./test.sh`. Suites are discovered, not registered:
 `./test.sh --list` prints the current set and each one is runnable on its own,
-so naming a new file `test-*.sh` or `run-tests.sh` is the whole of adding one.
+so naming and tracking a new file `test-*.sh` or `run-tests.sh` is the whole of
+adding one. Run new, untracked suites directly until they are staged. The panel
+persistence suite uses Node.js with built-in TypeScript support and module hooks
+(verified with Node.js 26.8.2); installation and hook fixtures use Python 3.
 
 ## Keybindings
 
@@ -161,7 +167,10 @@ back to the schedule in `hypr/hyprsunset.conf` immediately.
 ### Automated (recommended)
 
 The install script checks/installs all dependencies, deploys the configs to
-`~/.config`, initializes pywal, and wires up all symlinks:
+`~/.config`, initializes pywal, and wires up all symlinks. Deployment copies
+only tracked files and backs up exactly the existing files it will replace,
+including symlinks. Untracked application data stays out of deployment;
+directory symlinks and file/directory conflicts are rejected before copying:
 
 ```bash
 # Clone anywhere (a fresh ~/.config is never empty, so use a staging dir)
@@ -193,7 +202,7 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
-               zoxide atuin shellcheck pacman-contrib ttf-firacode-nerd \
+               zoxide atuin shellcheck python nodejs pacman-contrib ttf-firacode-nerd \
                ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
                noto-fonts-emoji
 

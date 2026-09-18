@@ -36,7 +36,10 @@ export function SliderControl(p: SliderControlProps): Gtk.Widget {
         const val = Math.round(scale.get_value() * 100) / 100
         valueLabel.label = fmt(val)                     // same closure — no tree walking
         if (debounce) clearTimeout(debounce)
-        debounce = setTimeout(() => p.onChanged(val), 150)
+        debounce = setTimeout(() => { debounce = null; p.onChanged(val) }, 150)
+    })
+    scale.connect("unmap", () => {
+        if (debounce) { clearTimeout(debounce); debounce = null }
     })
     const box = new Gtk.Box({ spacing: 8, valign: Gtk.Align.CENTER })
     box.append(scale); box.append(valueLabel)

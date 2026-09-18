@@ -20,7 +20,7 @@ export function luaValue(value: string | number | boolean): string {
     return JSON.stringify(value)
 }
 
-export function setKeyword(keyword: string, value: string | number | boolean): void {
+export async function setKeyword(keyword: string, value: string | number | boolean): Promise<void> {
     let expression: string
 
     if (keyword === "animation") {
@@ -40,7 +40,7 @@ export function setKeyword(keyword: string, value: string | number | boolean): v
         expression = `hl.config(${nested})`
     }
 
-    execAsync(["hyprctl", "eval", expression]).catch(console.error)
+    await checkedHyprctl(["eval", expression])
 }
 
 export function getOption(name: string): string {
@@ -78,4 +78,18 @@ export function getOptionInt(name: string): number {
 export function getOptionFloat(name: string): number {
     const val = getOption(name)
     return parseFloat(val) || 0
+}
+
+/** hyprctl can report a Lua error in stdout even when the process exits zero. */
+export async function checkedHyprctl(args: string[]): Promise<void> {
+    const reply = (await execAsync(["hyprctl", ...args])).trim()
+    if (reply !== "ok") throw new Error(reply || "Hyprland returned no confirmation")
+}
+
+export async function reloadConfig(): Promise<void> {
+    await checkedHyprctl(["reload"])
+    const errors = JSON.parse(await execAsync(["hyprctl", "configerrors", "-j"]))
+    if (!Array.isArray(errors) || errors.some(error => typeof error !== "string" || error.trim() !== "")) {
+        throw new Error(`Hyprland configuration errors: ${JSON.stringify(errors)}`)
+    }
 }

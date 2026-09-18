@@ -24,9 +24,8 @@
 # Scripts run sequentially. They are cheap, and serial output keeps a failure
 # attributable to the component that caused it.
 #
-# The exit status is always 0. install.sh runs under `set -e`, so a component
-# that fails on one machine must not abort an otherwise good install — the
-# failure is reported on stderr instead.
+# All components are attempted; a nonzero exit reports partial failure.
+# Callers decide whether that failure should abort their own operation.
 #
 
 set -uo pipefail
@@ -47,4 +46,4 @@ for script in "$config_dir"/*/apply_wal_colors.sh; do
 done
 
 [ "$failed" -eq 0 ] || echo "apply-wal: $failed component(s) failed" >&2
-exit 0
+[ "$failed" -eq 0 ]

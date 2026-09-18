@@ -7,7 +7,7 @@ import { execAsync } from "ags/process"
 import CategoryNav from "./components/CategoryNav"
 import SearchEntry from "./components/SearchEntry"
 import ActionChip from "./components/ActionChip"
-import { allCategories, searchRows, setCategories, setRefreshHandler } from "../lib/registry"
+import { allCategories, searchRows, setCategories, setRefreshHandler, setStatusHandler } from "../lib/registry"
 import { readOption } from "../lib/options"
 import { CATEGORIES } from "./categories"
 
@@ -108,6 +108,13 @@ export default function SettingsPanel() {
         orientation: Gtk.Orientation.VERTICAL, hexpand: true, vexpand: true,
         cssClasses: ["content-area"],
     })
+    const status = new Gtk.Label({
+        visible: false, wrap: true, xalign: 0, selectable: true,
+        cssClasses: ["setting-error"], marginStart: 16, marginEnd: 16,
+        marginTop: 8, marginBottom: 8,
+    })
+    setStatusHandler(message => { status.label = message; status.visible = !!message })
+    content.append(status)
     content.append(scroll)
     content.append(footer)
 

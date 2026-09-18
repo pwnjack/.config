@@ -179,11 +179,22 @@ signal, so a running instance keeps the old colors until you restart it.
 ### Manual Backup
 ```bash
 # Backup current config
-cp -r ~/.config/hypr ~/hypr-backup-$(date +%Y%m%d)
+cp -a ~/.config/hypr ~/hypr-backup-$(date +%Y%m%d)
 
 # Restore
-cp -r ~/hypr-backup-DATE ~/.config/hypr
+cp -a --remove-destination ~/hypr-backup-DATE/. ~/.config/hypr/
 ```
+
+Installer backups mirror the relative paths of files it replaces. To restore
+one, copy its **contents** back into `~/.config`:
+
+```bash
+cp -a --remove-destination ~/.config-backup-YYYYMMDD-HHMMSS/. ~/.config/
+```
+
+This restores backed-up files; it does not remove files first introduced by
+installation. Existing destination directories should be real directories,
+not symlinks to another configuration tree.
 
 ### Git Management
 ```bash

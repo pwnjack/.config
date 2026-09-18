@@ -71,6 +71,12 @@ Wallpaper image -> `wal -i` -> `scripts/theming/apply-wal.sh` fans the palette o
 
 Components that need more than a plain include own a `<component>/apply_wal_colors.sh`. `scripts/theming/apply-wal.sh` is the driver: it **globs** for those scripts rather than listing them, so adding a themed component is one new file — no edit to the driver, to `wall.sh`, or to `install.sh`. Both of those call the driver and name no component.
 
+`wall.sh` holds a cache-backed `flock` while generating and applying a palette,
+reads the current selection after acquiring it, and reports generation or
+component failures without announcing success. The fan-out driver attempts all
+components and returns nonzero on partial failure; `install.sh` handles that
+status as a warning.
+
 Every `apply_wal_colors.sh` must:
 
 1. Render into `~/.cache/wal/` and never write a tracked file.
@@ -81,6 +87,15 @@ Every `apply_wal_colors.sh` must:
 `scripts/theming/palette.sh` is the shared loader: `wal_load` fills a `wal` array from `~/.cache/wal/colors` (with a built-in fallback palette), and `wal_readable_on <hex>` returns whichever of the darkest/lightest palette entries stays legible on that background. Use it rather than re-parsing pywal output — a wallpaper palette gives no contrast guarantees, so any fixed text color is unreadable on some wallpapers.
 
 Two components are templated (`<component>/<name>.in` -> rendered to cache -> tracked file is a symlink) because neither program has an include mechanism: **cava** and **starship**. Edit the `.in` file, never the symlink. cava is templated rather than using its native `theme =` support because cava 0.10.7 corrupts the heap on any vertical `gradient`, theme file or not — `horizontal_gradient` is the working path. **btop** uses its native theme directory instead, and **fastfetch** needs nothing: its `keyColor` values and the distro logo are ANSI indices, which the terminal already resolves to the pywal palette.
+
+### Settings panel persistence
+
+`ags/lib/persist.ts` serializes Hyprland apply/save operations. It waits for an
+`ok` reply before saving, reloads the saved configuration if a write fails,
+and propagates failures to the panel's visible status message. Resets remove
+only the selected override and reload the Lua configuration; there is no
+second table of default values. Failed resets attempt to restore the previous
+file and reload it. `hyprctl configerrors -j` may report `[""]` when healthy.
 
 ### Night Light (hyprsunset)
 
@@ -178,7 +193,7 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.
 - `scripts/doctor/` and `docs/` are excluded from the doctor's literal-path scan: both deliberately contain example paths that do not exist.
 - `./test.sh` discovers suites rather than listing them: a tracked file is an entry point if it is named `run-tests.sh`, or matches `test-*.sh` and its directory has no `run-tests.sh`. Name a new suite either way and it is picked up — by the runner and by the pre-commit hook — with no registration step. A suite's *owning directory* is its own directory minus a trailing `test/` component, and that is what decides which commits run it; a top-level `test/` maps to the whole repo, which is why `test/test-runner.sh` runs on every commit. Each suite is run as `bash <path>` in its own subshell and the only contract is its exit code, so a sourced-fragment harness and a standalone script coexist unchanged.
-- `scripts/hooks/pre-commit` decides nothing about which suites to run — it passes the staged paths to `test.sh --for`. It builds two staged listings on purpose: `--diff-filter=ACM` for shellcheck and `ags bundle` (a deleted file cannot be linted) and an unfiltered one for suite selection (a deletion is exactly when a suite most needs to run). Both use `--no-renames`, or git's single `R` record hides one of the two paths.
+- `scripts/hooks/pre-commit` decides nothing about which suites to run — it passes the staged paths to `test.sh --for`. It builds two staged listings on purpose: `--diff-filter=ACM` for shellcheck (a deleted file cannot be linted) and an unfiltered one for suite selection and `ags bundle` (a deletion is exactly when a suite most needs to run). Both use `--no-renames`, or git's single `R` record hides one of the two paths. `scripts/hooks/snapshot.sh` exports both listings and the staged contents from a copied index. All checks run in that temporary tree with private Git metadata and blobs (no commit history), never against unstaged working files or a shared writable object store.
 
 ## Doctor Architecture (`scripts/doctor/`)
 

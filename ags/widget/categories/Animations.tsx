@@ -1,4 +1,4 @@
-import { CategoryDef } from "../../lib/registry"
+import { CategoryDef, runSettingChange } from "../../lib/registry"
 import { kwToggle, customRow } from "../components/rows"
 import { SliderControl } from "../components/controls"
 import { setAnimationPersistent, hasAnimationOverride, resetAnimation } from "../../lib/persist"
@@ -25,7 +25,7 @@ function readAnimTree(): Map<string, AnimState> {
 
 function setSpeed(a: AnimState, name: string, speed: number) {
     const base = `${name},${a.enabled ? 1 : 0},${Math.round(speed)},${a.bezier}`
-    setAnimationPersistent(name, a.style ? `${base},${a.style}` : base)
+    runSettingChange(() => setAnimationPersistent(name, a.style ? `${base},${a.style}` : base))
 }
 
 const ANIMS: { label: string; name: string; desc: string }[] = [
