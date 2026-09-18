@@ -40,7 +40,12 @@ fi
 
 # wal is synchronous. Do not publish new wallpaper state or reload consumers
 # when generation failed; no fixed sleep can turn that failure into success.
-wal -q -i "$wallpaper" 9>&- || fail "Could not generate colors from $(basename "$wallpaper")"
+# awww already owns the wallpaper. Keep pywal's diagnostics: -q suppresses
+# even Python tracebacks, making a failed template impossible to identify.
+if ! wal -n -i "$wallpaper" 9>&- > "$cache_dir/wal/generation.log" 2>&1; then
+    cat "$cache_dir/wal/generation.log" >&2
+    fail "Could not generate colors from $(basename "$wallpaper")"
+fi
 ln -sfn "$wallpaper" "$cache_dir/current_wallpaper" || fail "Cannot save the current wallpaper"
 escaped=${wallpaper//\\/\\\\}
 escaped=${escaped//\"/\\\"}

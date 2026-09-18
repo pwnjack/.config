@@ -53,7 +53,8 @@ ags/@girs/
 
 # Pywal cache
 wal/cache/
-wal/templates/
+wal/templates/*
+!wal/templates/colors-hyprland.lua
 **/.cache/wal/
 
 # -------------------------------------------------------------------------------
