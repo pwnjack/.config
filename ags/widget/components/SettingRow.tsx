@@ -12,6 +12,11 @@ export interface SettingRowProps {
 export default function SettingRow(p: SettingRowProps): Gtk.Widget {
     const row = new Gtk.Box({ cssClasses: ["setting-row"], spacing: 12 })
 
+    p.control.update_property(
+        [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION],
+        [p.title, p.description],
+    )
+
     // GtkImage centers its icon in its own allocation, so it can be the plate itself
     row.append(new Gtk.Image({
         iconName: p.icon, cssClasses: ["row-icon"], valign: Gtk.Align.CENTER,

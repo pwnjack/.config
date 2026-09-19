@@ -16,6 +16,9 @@ const Startup: CategoryDef = {
                 // pkill terminates the whole eww daemon — fine while the clock is the only eww widget
                 else execAsync(["bash", "-c", "pkill eww"]).catch(console.error)
             } }),
+        optionToggle({ id: "startup.protonvpn", title: "Proton VPN Auto-connect", icon: "protonvpn-tray",
+            description: "Start Proton VPN minimized at login and use its Auto connect setting", option: "protonvpn",
+            keywords: ["VPN", "privacy", "Fastest"] }),
         optionToggle({ id: "startup.randomwallpaper", title: "Random Wallpaper", icon: "preferences-desktop-wallpaper-symbolic",
             description: "Pick a random wallpaper (and palette) on each login", option: "randomwallpaper",
             keywords: ["waypaper", "pywal"] }),

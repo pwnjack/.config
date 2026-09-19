@@ -11,3 +11,9 @@ elif [ -f "$HOME/.config/options/clock" ] && grep -q "enabled" "$HOME/.config/op
     # Open eww clock widget if enabled
     command -v eww >/dev/null 2>&1 && eww open clock
 fi
+
+if [ -f "$HOME/.config/options/protonvpn" ] && grep -qx "enabled" "$HOME/.config/options/protonvpn"; then
+    if command -v protonvpn-app >/dev/null 2>&1; then
+        protonvpn-app >/dev/null 2>&1 &
+    fi
+fi
