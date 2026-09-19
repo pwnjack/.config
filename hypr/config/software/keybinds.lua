@@ -46,7 +46,7 @@ return function(apps)
     -- ## Settings & Utilities
     hl.bind("SUPER + I", hl.dsp.exec_cmd("astal -i settings-panel --toggle-window settings-panel")) -- Settings panel
     hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("waypaper --random")) -- Random wallpaper
-    hl.bind("SUPER + CTRL + W", hl.dsp.exec_cmd("waypaper")) -- Wallpaper picker
+    hl.bind("SUPER + CTRL + W", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/wallpaper-carousel.sh")) -- Wallpaper carousel
     hl.bind("CTRL + SHIFT + ESCAPE", hl.dsp.exec_cmd("resources")) -- System monitor
     hl.bind("SUPER + SHIFT + D", hl.dsp.exec_cmd("~/.config/scripts/hyprland/nightlight.sh toggle")) -- Toggle night light
     hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("~/.config/scripts/hyprland/nightlight.sh auto")) -- Night light: follow schedule

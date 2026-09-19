@@ -18,8 +18,8 @@ return function(colors)
             shadow = { enabled = false },
             blur = {
                 enabled = true,
-                size = 6,
-                passes = 4,
+                size = 4,
+                passes = 2,
                 vibrancy = 0.1696,
                 new_optimizations = true,
                 xray = false,

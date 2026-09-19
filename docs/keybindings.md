@@ -80,7 +80,7 @@ checkout.
 |-----|--------|
 | `Super + I` | Settings panel |
 | `Super + Shift + W` | Random wallpaper |
-| `Super + Ctrl + W` | Wallpaper picker |
+| `Super + Ctrl + W` | Wallpaper carousel |
 | `Ctrl + Shift + Esc` | System monitor |
 | `Super + Shift + D` | Toggle night light |
 | `Super + Ctrl + D` | Night light: follow schedule |

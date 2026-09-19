@@ -197,7 +197,7 @@ git reset origin/main   # marks repo files as tracked without touching them
 ```bash
 # Core (official/CachyOS repos)
 sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
-               hyprpicker hyprsunset waybar swaync swayosd rofi rofi-emoji \
+               hyprpicker hyprsunset waybar swaync swayosd quickshell rofi rofi-emoji \
                ghostty fish starship neovim zed kwrite thunar yazi \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
@@ -232,6 +232,18 @@ Simple text files in `~/.config/options/`:
 ├── mainmonitor  # empty = no preference
 └── ...
 ```
+
+### Wallpaper Carousel
+
+**Super+Ctrl+W** toggles a fullscreen wallpaper carousel on the focused monitor.
+Browse with Left/Right, the mouse wheel, or a card click. Press Enter, click the
+selected card, or use **Apply wallpaper** to apply to all monitors. **Ctrl+F**
+searches filenames; **Escape** closes without applying a selection.
+
+The carousel reads the folder from Waypaper and keeps the existing awww/pywal
+theme pipeline. **Super+Shift+W** still selects a random wallpaper; run `waypaper`
+for the original picker and folder settings. Quickshell starts on first use.
+See [controls, integration, and verification](docs/wallpaper-carousel.md).
 
 ### Pywal Colors
 

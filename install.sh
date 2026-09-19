@@ -91,7 +91,7 @@ PACKAGES=(
     "hyprland" "hyprlock" "hypridle" "hyprpolkitagent"
     "hyprshot" "hyprpicker" "hyprsunset" "swappy"
     # Bar, notifications, OSD, wallpaper
-    "waybar" "swaync" "swayosd" "awww" "waypaper"
+    "waybar" "swaync" "swayosd" "awww" "waypaper" "quickshell"
     # Launchers and menus
     "rofi" "rofi-emoji"
     # Terminals, shell, editors

@@ -88,6 +88,27 @@ Every `apply_wal_colors.sh` must:
 
 Two components are templated (`<component>/<name>.in` -> rendered to cache -> tracked file is a symlink) because neither program has an include mechanism: **cava** and **starship**. Edit the `.in` file, never the symlink. cava is templated rather than using its native `theme =` support because cava 0.10.7 corrupts the heap on any vertical `gradient`, theme file or not — `horizontal_gradient` is the working path. **btop** uses its native theme directory instead, and **fastfetch** needs nothing: its `keyColor` values and the distro logo are ANSI indices, which the terminal already resolves to the pywal palette.
 
+### Wallpaper carousel
+
+`quickshell/wallpaper-carousel/shell.qml` is a separate Quickshell application,
+opened on demand by `scripts/hyprland/wallpaper-carousel.sh` (Super+Ctrl+W).
+The launcher serializes startup and uses config-specific IPC; it stays hidden
+between opens and is independent of AGS. No login autostart is configured.
+`carousel-state.sh` reads Waypaper's folder settings, awww's current image and
+the shared palette loader on every open. Previews are asynchronous, bounded in
+resolution, and virtualized; hiding destroys the view's image delegates.
+The translucent backdrop uses a Hyprland layer blur rule and follows the shared
+blur settings in `decor.lua`; the desktop remains live behind it. Wheel handling
+covers the whole overlay.
+
+`carousel-apply.sh` passes the path as an argument to Waypaper with
+`--monitor All --no-post-command`, verifies awww and the saved selection, then
+runs `wall.sh` synchronously exactly once. Its nonblocking submission lock is
+separate from the existing theme lock. Keep external random/Waypaper behavior
+and the SDDM watcher unchanged. Waypaper cannot persist percent signs, and the
+query/INI boundary cannot represent line breaks; the helper rejects those names
+before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
+
 ### Settings panel persistence
 
 `ags/lib/persist.ts` serializes Hyprland apply/save operations. It waits for an
