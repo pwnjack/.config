@@ -75,7 +75,7 @@ FocusScope {
             }
         }
         ActionButton {
-            text: "Close  Esc"
+            text: "Close"
             ink: view.controller.foreground
             plate: view.controller.background
             accent: view.controller.accent
