@@ -23,6 +23,11 @@
     "custom/workspace#three",
     "custom/workspace#four",
     "custom/workspace#five",
+    "custom/workspace#six",
+    "custom/workspace#seven",
+    "custom/workspace#eight",
+    "custom/workspace#nine",
+    "custom/workspace#ten",
     "clock",
     "custom/weather",
     "custom/media",
@@ -51,8 +56,9 @@
   // click handler hard-codes the removed positional `workspace` dispatcher.
   // ext/workspaces fixes clicks but exposes no window count, so these custom
   // instances preserve both behaviours: Lua-safe clicks and filled occupied
-  // dots. Signal 7 is raised by Hyprland workspace/window events; the interval
-  // is only a fallback if an event is ever missed.
+  // dots. Workspaces 1-5 stay visible; the remaining bound workspaces 6-10
+  // appear only while they exist. Signal 7 is raised by Hyprland
+  // workspace/window events; the interval is only a fallback if one is missed.
   "custom/workspace#one": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status 1",
@@ -98,7 +104,56 @@
     "interval": 30,
     "signal": 7,
   },
-
+  "custom/workspace#six": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 6",
+    "hide-empty-text": true,
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 6",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#seven": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 7",
+    "hide-empty-text": true,
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 7",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#eight": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 8",
+    "hide-empty-text": true,
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 8",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#nine": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 9",
+    "hide-empty-text": true,
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 9",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
+  "custom/workspace#ten": {
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 10",
+    "hide-empty-text": true,
+    "on-click": "~/.config/scripts/waybar/workspace.sh switch 10",
+    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
+    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
+    "interval": 30,
+    "signal": 7,
+  },
   // Taskbar
   "wlr/taskbar": {
     "format": "{icon}",

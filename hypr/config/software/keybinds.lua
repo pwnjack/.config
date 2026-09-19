@@ -62,7 +62,6 @@ return function(apps)
     hl.bind("SUPER + 8", hl.dsp.focus({ workspace = 8 })) -- Switch to workspace
     hl.bind("SUPER + 9", hl.dsp.focus({ workspace = 9 })) -- Switch to workspace
     hl.bind("SUPER + 0", hl.dsp.focus({ workspace = 10 })) -- Switch to workspace
-    hl.bind("SUPER + EQUAL", hl.dsp.focus({ workspace = 11 })) -- Switch to workspace
 
     hl.bind("SUPER + SHIFT + 1", hl.dsp.window.move({ workspace = 1, follow = true })) -- Move window to workspace
     hl.bind("SUPER + SHIFT + 2", hl.dsp.window.move({ workspace = 2, follow = true })) -- Move window to workspace
@@ -74,7 +73,6 @@ return function(apps)
     hl.bind("SUPER + SHIFT + 8", hl.dsp.window.move({ workspace = 8, follow = true })) -- Move window to workspace
     hl.bind("SUPER + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = true })) -- Move window to workspace
     hl.bind("SUPER + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = true })) -- Move window to workspace
-    hl.bind("SUPER + SHIFT + EQUAL", hl.dsp.window.move({ workspace = 11, follow = true })) -- Move window to workspace
 
     hl.bind("SUPER + CTRL + 1", hl.dsp.window.move({ workspace = 1, follow = false })) -- Move window to workspace silently
     hl.bind("SUPER + CTRL + 2", hl.dsp.window.move({ workspace = 2, follow = false })) -- Move window to workspace silently
@@ -86,7 +84,6 @@ return function(apps)
     hl.bind("SUPER + CTRL + 8", hl.dsp.window.move({ workspace = 8, follow = false })) -- Move window to workspace silently
     hl.bind("SUPER + CTRL + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window to workspace silently
     hl.bind("SUPER + CTRL + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + EQUAL", hl.dsp.window.move({ workspace = 11, follow = false })) -- Move window to workspace silently
 
     hl.bind("SUPER + left", hl.dsp.focus({ workspace = "r-1" })) -- Previous/next workspace
     hl.bind("SUPER + right", hl.dsp.focus({ workspace = "r+1" })) -- Previous/next workspace

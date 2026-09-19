@@ -35,12 +35,6 @@ hl.config({
     },
 })
 
--- Keep the five Waybar dots backed by real workspaces so empty and occupied
--- states remain queryable even after every window leaves a workspace.
-for workspace = 1, 5 do
-    hl.workspace_rule({ workspace = workspace, persistent = true })
-end
-
 -- Refresh the custom dots immediately whenever their active/occupied state can
 -- change. Signal 7 belongs to custom/workspace; each module also has a slow
 -- interval as a fallback.

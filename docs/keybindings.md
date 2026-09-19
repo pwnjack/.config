@@ -89,9 +89,9 @@ checkout.
 
 | Key | Action |
 |-----|--------|
-| `Super + 1-9, 0, =` | Switch to workspace |
-| `Super + Shift + 1-9, 0, =` | Move window to workspace |
-| `Super + Ctrl + 1-9, 0, =` | Move window to workspace silently |
+| `Super + 1-9/0` | Switch to workspace |
+| `Super + Shift + 1-9/0` | Move window to workspace |
+| `Super + Ctrl + 1-9/0` | Move window to workspace silently |
 | `Super + Left/Right` | Previous/next workspace |
 | `Super + Ctrl + Left/Right` | Move window to prev/next workspace, stay here |
 | `Super + Shift + Left/Right` | Move window to prev/next workspace and follow |

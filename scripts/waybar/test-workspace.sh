@@ -70,6 +70,12 @@ assert_field "$out" '.class' 'empty' "an empty workspace gets the empty class"
 out=$(run_workspace status 5)
 assert_field "$out" '.text' '○' "a missing workspace safely renders empty"
 
+out=$(run_workspace status-existing 3)
+assert_field "$out" '.text' '○' "an existing optional workspace is rendered"
+
+out=$(run_workspace status-existing 5)
+assert_field "$out" '.text' '' "a missing optional workspace is hidden"
+
 run_workspace switch 4 >/dev/null
 if [ "$(<"$TMP/dispatch")" = 'hl.dsp.focus({ workspace = 4 })' ]; then
     pass "clicks use the Lua-compatible workspace dispatcher"

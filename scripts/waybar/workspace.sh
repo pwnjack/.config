@@ -11,7 +11,8 @@
 #   genuinely empty     ○
 #
 # Hyprland events signal Waybar for immediate updates; the module's interval is
-# only a fallback. The same validated switch path owns clicks for all five dots.
+# only a fallback. Workspaces 1-5 are always rendered, while `status-existing`
+# lets the optional 6-10 modules disappear until their workspace exists.
 
 set -uo pipefail
 
@@ -32,12 +33,18 @@ case "$action" in
         fi
         hyprctl dispatch "hl.dsp.focus({ workspace = $workspace })"
         ;;
-    status)
+    status|status-existing)
         if ! [[ "$workspace" =~ ^[1-9][0-9]*$ ]]; then
             echo "workspace: expected a positive numeric workspace ID" >&2
             exit 2
         fi
         workspaces=$(hyprctl workspaces -j 2>/dev/null) || workspaces='[]'
+        exists=$(jq -r --argjson id "$workspace" \
+            'any(.[]; .id == $id)' <<< "$workspaces" 2>/dev/null) || exists=false
+        if [ "$action" = "status-existing" ] && [ "$exists" != true ]; then
+            printf '{"text":""}\n'
+            exit 0
+        fi
         active=$(hyprctl activeworkspace -j 2>/dev/null \
             | jq -r '.id // 0' 2>/dev/null) || active=0
         windows=$(jq -r --argjson id "$workspace" \
@@ -53,7 +60,7 @@ case "$action" in
         fi
         ;;
     *)
-        echo "usage: workspace.sh status|switch WORKSPACE | previous | next" >&2
+        echo "usage: workspace.sh status|status-existing|switch WORKSPACE | previous | next" >&2
         exit 2
         ;;
 esac

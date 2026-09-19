@@ -135,10 +135,15 @@ window#waybar {
 }
 
 /* group-opening edges */
-#clock,
 #cpu,
 #custom-nightlight {
     padding-left: 15px;
+}
+
+/* Optional workspace dots 6-10 hide completely when absent. Keep the group
+   boundary on the always-present clock so the gap follows the last real dot. */
+#clock {
+    padding-left: 30px;
 }
 
 /* group-closing edges */
@@ -192,10 +197,6 @@ window#waybar {
 
 #custom-workspace.one {
     margin-left: 17px;
-}
-
-#custom-workspace.five {
-    margin-right: 17px;
 }
 
 #custom-workspace.active {
