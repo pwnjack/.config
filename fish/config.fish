@@ -11,6 +11,14 @@ end
 # Load aliases
 source ~/.config/fish/aliases.fish
 
+# Keep GnuPG pinentry attached to the terminal that invoked it. The system
+# pinentry wrapper prefers a graphical dialog under Wayland and falls back to
+# this TTY when a graphical backend is unavailable.
+if status is-interactive
+    set -gx GPG_TTY (tty)
+    gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1
+end
+
 if type -q zoxide
     zoxide init fish | source
 end
