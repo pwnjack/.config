@@ -1,4 +1,4 @@
-// Run the actual TS persistence layer with mocked GIO and Hyprland transports.
+// Run the actual persistence layer with mocked GIO and Hyprland transports.
 import assert from 'node:assert/strict'
 import { registerHooks } from 'node:module'
 
@@ -40,15 +40,14 @@ registerHooks({
         if (names[specifier]) return {
             url: 'data:text/javascript,' + encodeURIComponent(`export default globalThis.panelMocks.${names[specifier]}`), shortCircuit: true,
         }
-        if (specifier === 'ags/process' || specifier === './process.js') return {
+        if (specifier === './process.js') return {
             url: 'data:text/javascript,export const execAsync = globalThis.panelMocks.execAsync', shortCircuit: true,
         }
-        if (specifier === './hyprctl') return next('./hyprctl.ts', context)
         return next(specifier, context)
     },
 })
-const p = await import('../lib/persist.ts')
-const h = await import('../lib/hyprctl.ts')
+const p = await import('../persist.js')
+const h = await import('../hyprctl.js')
 const tick = () => new Promise(resolve => setImmediate(resolve))
 
 held = true

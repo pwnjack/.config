@@ -56,8 +56,8 @@
 #     installed first. "Installed but not running" in the task brief is read
 #     as "autostart declares it, so it is expected to be alive" rather than a
 #     literal pacman cross-check — the binary-to-package name mapping is not
-#     1:1 (swayosd-server ships from package "swayosd", ags from AUR package
-#     "aylurs-gtk-shell") and reconstructing it is its own project. A daemon
+#     1:1 (`swayosd-server` ships from package `swayosd`) and reconstructing
+#     that mapping is its own project. A daemon
 #     that was deliberately uninstalled still gets one WARN instead of silence
 #     — a known false positive, cheap to dismiss, cheaper than a wrong map.
 #
@@ -65,8 +65,8 @@
 #     Every name in this repo's autostart.lua is short enough that this never
 #     bites (`swayosd-server` is 14 bytes, the longest of them), so no
 #     workaround is implemented. `pgrep -f` was tried and rejected: it matches
-#     full command lines, so `pgrep -f ags` also matched an unrelated shell
-#     invocation that merely mentioned "ags" in its argv, and `-f hypridle`
+#     full command lines, so `pgrep -f swaync` can match an unrelated shell
+#     invocation that merely mentions "swaync" in its argv, and `-f hypridle`
 #     etc. are just as porous. `-x` is the correct tool here, not a shortcut.
 #
 #   * `pacman`, `busctl` and `pgrep` availability are each checked once in

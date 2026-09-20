@@ -48,5 +48,5 @@ done
 # Query all categories through the actual native helper, without changing values.
 request=$(jq -c '{op:"read", ids:[.rows[].id], monitors:true}' "$config_dir/quickshell/settings-panel/catalog.json")
 response=$(bash "$config_dir/scripts/settings/panel-request.sh" "$request")
-jq -e '.ok and ([.values[] | select(.error)] | length) == 0 and (.values | length) == 56' <<< "$response"
-printf 'All 56 settings read successfully; no panel instance remains.\n'
+jq -e '.ok and ([.values[] | select(.error)] | length) == 0 and (.values | length) == 55' <<< "$response"
+printf 'All 55 settings read successfully; no panel instance remains.\n'

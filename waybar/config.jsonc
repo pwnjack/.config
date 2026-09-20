@@ -58,14 +58,15 @@
   // instances preserve both behaviours: Lua-safe clicks and filled occupied
   // dots. Workspaces 1-5 stay visible; the remaining bound workspaces 6-10
   // appear only while they exist. Signal 7 is raised by Hyprland
-  // workspace/window events; the interval is only a fallback if one is missed.
+  // workspace/window events; the five-minute interval is only a low-cost
+  // fallback if one is missed.
   "custom/workspace#one": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status 1",
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 1",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#two": {
@@ -74,7 +75,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 2",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#three": {
@@ -83,7 +84,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 3",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#four": {
@@ -92,7 +93,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 4",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#five": {
@@ -101,7 +102,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 5",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#six": {
@@ -111,7 +112,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 6",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#seven": {
@@ -121,7 +122,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 7",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#eight": {
@@ -131,7 +132,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 8",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#nine": {
@@ -141,7 +142,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 9",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   "custom/workspace#ten": {
@@ -151,7 +152,7 @@
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 10",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 30,
+    "interval": 300,
     "signal": 7,
   },
   // Taskbar
@@ -259,7 +260,7 @@
 
   // CPU
   "cpu": {
-    "interval": 5,
+    "interval": 10,
     "format": "<span size='large' letter_spacing='4096'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
@@ -268,7 +269,7 @@
 
   // Memory
   "memory": {
-    "interval": 5,
+    "interval": 10,
     "format": "<span size='large' letter_spacing='4096'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
@@ -277,7 +278,9 @@
 
   // GPU with Temperature
   "custom/gpu": {
-    "interval": 5,
+    // nvidia-smi is a subprocess and hardware probe; a dashboard does not
+    // need to wake the GPU stack every five seconds while the machine is idle.
+    "interval": 30,
     "return-type": "json",
     "exec": "~/.config/waybar/scripts/gpu.sh",
     "on-click": "resources",
@@ -285,7 +288,7 @@
 
   // Disk
   "disk": {
-    "interval": 30,
+    "interval": 60,
     "format": "<span size='large' letter_spacing='4096'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
@@ -379,7 +382,10 @@
 
   // Media
   "custom/media": {
-    "interval": 1,
+    // Local controls signal an immediate refresh. Five seconds is the fallback
+    // for changes initiated inside a player, avoiding one shell pipeline/sec.
+    "interval": 5,
+    "signal": 10,
     "return-type": "json",
     "exec": "~/.config/scripts/hyprland/mediaexec.sh",
     // Every binding is a transport control and every one goes through

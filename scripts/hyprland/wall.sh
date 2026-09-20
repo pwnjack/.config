@@ -59,9 +59,6 @@ if [ -x "$config_dir/scripts/waybar/waybar.sh" ]; then
     "$config_dir/scripts/waybar/waybar.sh" 9>&- || failed=1
 fi
 # The settings panel reads the palette on demand; it has no resident consumer.
-if command -v eww >/dev/null 2>&1; then
-    eww reload 9>&- 2>/dev/null || failed=1
-fi
 
 [ "$failed" -eq 0 ] || fail "Colors were generated, but some components failed to update. See the wallpaper command's stderr for details."
 notify "Wallpaper Applied" "New color scheme generated from image: $(basename "$wallpaper")"

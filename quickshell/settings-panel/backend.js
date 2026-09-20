@@ -166,10 +166,6 @@ async function change(request) {
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"])))
-            if (row.key === "clock") {
-                if (readOption("clock") === "enabled") await execAsync(["eww", "open", "clock"])
-                else if (GLib.find_program_in_path("eww")) await execAsync(["eww", "close", "clock"])
-            }
         })
     }
     case "cursor": {

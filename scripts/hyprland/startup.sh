@@ -7,9 +7,6 @@
 if [ -f "$HOME/.config/options/autologin" ] && grep -q "enabled" "$HOME/.config/options/autologin"; then
     # Lock screen on autologin to ensure security
     command -v hyprlock >/dev/null 2>&1 && hyprlock
-elif [ -f "$HOME/.config/options/clock" ] && grep -q "enabled" "$HOME/.config/options/clock"; then
-    # Open eww clock widget if enabled
-    command -v eww >/dev/null 2>&1 && eww open clock
 fi
 
 if [ -f "$HOME/.config/options/protonvpn" ] && grep -qx "enabled" "$HOME/.config/options/protonvpn"; then

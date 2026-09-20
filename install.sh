@@ -266,7 +266,7 @@ fi
 if [ -d "$CONFIG_DIR/.git" ]; then
     info "Activating tracked git hooks..."
     execute git -C "$CONFIG_DIR" config core.hooksPath scripts/hooks
-    success "Pre-commit gate active (shellcheck + test suites + ags bundle)"
+    success "Pre-commit gate active (shellcheck + test suites)"
 fi
 
 # ------------------------------------------------------------------

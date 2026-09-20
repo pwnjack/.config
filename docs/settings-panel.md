@@ -9,8 +9,8 @@ clicking outside, or Super+I closes it.
 Once pending saves finish, the process exits. Failed saves keep the error visible
 by reopening the panel. Text fields require Enter or Save; sliders save on release.
 
-All nine categories and 56 settings from the previous AGS panel are present,
-including search, monitor selection, per-row resets, and the four footer actions.
+All nine categories and 55 live settings are present, including search, monitor
+selection, per-row resets, and the four footer actions.
 The palette is read through `scripts/theming/palette.sh` on every launch. The
 wallpaper carousel remains a separate application with its existing lifecycle.
 
@@ -24,15 +24,14 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 - `request.js` runs the GTK-free GJS backend for one JSON request and exits.
   `panel-request.sh` holds a lock across the complete request. Arguments stay
   argument arrays, including text containing quotes or shell metacharacters.
-- `persist.js` and `hyprctl.js` are shared with the retained legacy AGS sources.
-  Apply/save waits for Hyprland's `ok`; failed writes reload the saved config;
+- `persist.js` and `hyprctl.js` own the shared persistence layer. Apply/save
+  waits for Hyprland's `ok`; failed writes reload the saved config;
   resets remove just the selected override and reload the actual Lua defaults.
 - The backend updates hypridle/sunset fields in place, preserving unrelated
   content, and restores files if applying them fails. SwayNC retains unrelated
   keys. Night light liveness uses `nightlight.sh`, never an identity getter.
-- AGS no longer starts at login or after wallpaper changes. AGS/Astal packages
-  are no longer required by installation; GJS is an explicit dependency. Existing
-  packages and legacy AGS sources are retained, but are not launched by the desktop.
+- AGS no longer starts at login or after wallpaper changes. Its retired source
+  and AGS/Astal packages are gone; GJS remains an explicit backend dependency.
 
 ## Measurements
 
@@ -72,7 +71,7 @@ intentionally discovers tracked files only. Tests cover keyboard/search/close,
 no writes while building controls, slider release and explicit text saves,
 backend validation, animation preservation, notification rollback, main-monitor
 write failure, and the shared apply/save/reset transactions. The desktop smoke
-check reads all 56 settings without changing them, captures
+check reads all 55 settings without changing them, captures
 `/tmp/settings-panel-live.png`, measures opening, and verifies process exit.
 Qt's linter reports the same three Quickshell metadata warnings as the carousel
 (PanelWindow creatability and two Process exit-status handlers); live loading

@@ -97,12 +97,14 @@ _test_suites() {
     # Process substitution, not a pipeline: a pipeline would fill `owned` in a
     # subshell and the second pass would see an empty map.
     while IFS= read -r -d '' file; do
+        [ -f "$TEST_ROOT/$file" ] || continue
         case "${file##*/}" in
             run-tests.sh) _test_dir "$file"; owned["$TEST_DIR_OUT"]=1 ;;
         esac
     done < <(git -C "$TEST_ROOT" ls-files -z 2>/dev/null)
 
     while IFS= read -r -d '' file; do
+        [ -f "$TEST_ROOT/$file" ] || continue
         _test_dir "$file"
         dir="$TEST_DIR_OUT"
         case "${file##*/}" in

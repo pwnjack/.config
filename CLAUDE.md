@@ -116,7 +116,7 @@ before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 `scripts/hyprland/settings-panel.sh`, used by both Super+I and Waybar. It exits
 on close after pending saves finish; failed saves reopen the panel with an
 error. There is no login autostart or wallpaper-triggered AGS restart.
-`catalog.json` declares the 56 settings in nine categories. The frame appears
+`catalog.json` declares the 55 settings in nine categories. The frame appears
 before values arrive; a short-lived, GTK-free GJS helper reads values outside
 the UI thread. One value snapshot covers all categories; switching tabs/search
 only builds the selected rows, with no new helper or loading layout shift.
@@ -126,9 +126,8 @@ lock. Text fields save with Enter/Save; sliders save on release.
 
 `quickshell/settings-panel/persist.js` serializes Hyprland apply/save operations. It waits for an
 `ok` reply before saving, reloads the saved configuration if a write fails,
-and propagates failures to the panel's visible status message. The legacy AGS
-modules re-export this shared implementation, so its regression tests exercise
-the same code. Resets remove
+and propagates failures to the panel's visible status message. Its regression
+tests exercise that implementation directly. Resets remove
 only the selected override and reload the Lua configuration; there is no
 second table of default values. Failed resets attempt to restore the previous
 file and reload it. `hyprctl configerrors -j` may report `[""]` when healthy.
@@ -196,7 +195,7 @@ Simple text files (one value per file) that scripts read at runtime: `browser`, 
 ### Scripts (`scripts/`)
 
 - `hyprland/` — Startup, wallpaper switching (`wall.sh`), media control, night light (`nightlight.sh`), AI chatbox launcher
-  - Media: `medialib.sh` is a sourced helper that picks *which* player the waybar module follows (first `Playing`, else first with a title). `mediaexec.sh` renders it (waybar JSON, or one plain line for hyprlock with `--plain`) and `mediactl.sh` drives transport through the same choice, so the title shown and the player controlled can never diverge. There is deliberately no stored player preference — bare `playerctl` picks by bus registration order, and selecting per-poll is what removed the old left-click scope toggle.
+  - Media: `medialib.sh` is a sourced helper that picks *which* player the waybar module follows (first `Playing`, else first with a title). `mediaexec.sh` renders it (waybar JSON, or one plain line for hyprlock with `--plain`) and `mediactl.sh` drives transport through the same choice, so the title shown and the player controlled can never diverge. Successful local controls signal Waybar for an immediate refresh; the five-second poll only catches changes made inside a player. There is deliberately no stored player preference — bare `playerctl` picks by bus registration order, and selecting per-poll is what removed the old left-click scope toggle.
 - `waybar/` — Bar management and toggling, plus `battery.sh`: the battery module for the whole machine. It reads `/sys/class/power_supply` directly because waybar's own module counts only `SCOPE=System` and so reported nothing on this desktop. `SCOPE` selects behaviour rather than filtering — `Device` peripherals stay hidden until they fall below 25% (the module appearing is the warning, which is what keeps it stateless), while system batteries are always visible and accumulate, with the alert class taking the minimum across discharging ones. A powered-off peripheral keeps its node *and* its last reading, so `POWER_SUPPLY_ONLINE` present-and-`0` is the skip test; a laptop battery has no `ONLINE` at all and must not be caught by it. Charge state is trusted for system batteries only. `BATTERY_SYSFS` overrides the scan root — that seam is how `test-battery.sh` runs without hardware, and how the bar is screenshotted with the module forced visible without editing a tracked file.
 - `settings/` — Config utilities, updates, monitor detection
 - `fonts/` — Font application automation
@@ -234,7 +233,7 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.
 - `scripts/doctor/` and `docs/` are excluded from the doctor's literal-path scan: both deliberately contain example paths that do not exist.
 - `./test.sh` discovers suites rather than listing them: a tracked file is an entry point if it is named `run-tests.sh`, or matches `test-*.sh` and its directory has no `run-tests.sh`. Name a new suite either way and it is picked up — by the runner and by the pre-commit hook — with no registration step. A suite's *owning directory* is its own directory minus a trailing `test/` component, and that is what decides which commits run it; a top-level `test/` maps to the whole repo, which is why `test/test-runner.sh` runs on every commit. Each suite is run as `bash <path>` in its own subshell and the only contract is its exit code, so a sourced-fragment harness and a standalone script coexist unchanged.
-- `scripts/hooks/pre-commit` decides nothing about which suites to run — it passes the staged paths to `test.sh --for`. It builds two staged listings on purpose: `--diff-filter=ACM` for shellcheck (a deleted file cannot be linted) and an unfiltered one for suite selection and `ags bundle` (a deletion is exactly when a suite most needs to run). Both use `--no-renames`, or git's single `R` record hides one of the two paths. `scripts/hooks/snapshot.sh` exports both listings and the staged contents from a copied index. All checks run in that temporary tree with private Git metadata and blobs (no commit history), never against unstaged working files or a shared writable object store.
+- `scripts/hooks/pre-commit` decides nothing about which suites to run — it passes the staged paths to `test.sh --for`. It builds two staged listings on purpose: `--diff-filter=ACM` for shellcheck (a deleted file cannot be linted) and an unfiltered one for suite selection (a deletion is exactly when a suite most needs to run). Both use `--no-renames`, or git's single `R` record hides one of the two paths. `scripts/hooks/snapshot.sh` exports both listings and the staged contents from a copied index. All checks run in that temporary tree with private Git metadata and blobs (no commit history), never against unstaged working files or a shared writable object store.
 
 ## Doctor Architecture (`scripts/doctor/`)
 

@@ -8,7 +8,6 @@ trap 'rm -rf "$FIXTURE"' EXIT
 
 mkdir -p "$FIXTURE/home/.config/options" "$FIXTURE/bin"
 printf '%s\n' disabled > "$FIXTURE/home/.config/options/autologin"
-printf '%s\n' disabled > "$FIXTURE/home/.config/options/clock"
 
 cat > "$FIXTURE/bin/protonvpn-app" <<'EOF'
 #!/bin/bash

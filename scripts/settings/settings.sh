@@ -121,7 +121,6 @@ customization() {
         echo "5. Change Default TUI Editor                          "
         echo "-------------------------------------------------------"
         echo "6. Rofi Launcher Type                                 "
-        echo "7. Enable/Disable Desktop Clock                       󰌑"
         echo "-------------------------------------------------------"
         echo "Q. Return                                             󰌑"
         echo "-------------------------------------------------------"
@@ -199,29 +198,6 @@ customization() {
                         ;;
                     2)
                         echo "horizontal" > "$HOME/.config/options/launchertype"
-                        ;;
-                esac
-                clear
-                read -p "Finished, press ENTER to continue."
-                clear
-                ;;
-            7)
-                clear
-                echo "What would you like to do?"
-                echo
-                echo "1: Enable Desktop Clock"
-                echo "2: Disable Desktop Clock"
-                echo
-                read -p "■ " choice
-
-                case $choice in
-                    1)
-                        echo "enabled" > "$HOME/.config/options/clock"
-                        command -v eww >/dev/null 2>&1 && eww open clock &> /dev/null &
-                        ;;
-                    2)
-                        echo "disabled" > "$HOME/.config/options/clock"
-                        pkill eww
                         ;;
                 esac
                 clear

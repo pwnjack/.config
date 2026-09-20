@@ -12,7 +12,7 @@ const files = new Map([
     [base + '/swaync/config.json', JSON.stringify({timeout:5,unrelated:{keep:true}})],
     [base + '/hypr/config/hardware/primary.conf', '$monitor =\n'],
 ])
-for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','launchertype','autologin','clock','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
+for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 let events = [], failingPath = '', failReload = false
 const running = new Set()
 const encoder = new TextEncoder()

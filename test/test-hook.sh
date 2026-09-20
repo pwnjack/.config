@@ -98,25 +98,6 @@ with tempfile.TemporaryDirectory() as tmp:
     assert os.readlink(snapshot / 'worktree/cache-link') == '../missing-cache'
     assert (snapshot / 'worktree/probe.sh').stat().st_mode & 0o111
     print('ok: snapshot preserves unusual filenames, symlinks, and executable bits')
-    # A deleted AGS module must still trigger the build, and the module must
-    # actually be absent in that build's filesystem.
-    baseline = dict(files, **{'ags/removed.ts': ('100644', b'old')})
-    head_tree(baseline)
-    index(files)
-    bins = base / 'bin'
-    bins.mkdir()
-    ags = bins / 'ags'
-    ags.write_text('#!/bin/bash\ntest ! -e removed.ts\nexit 1\n')
-    ags.chmod(0o755)
-    # Keep a staged ags directory present for the bundle command.
-    files['ags/app.ts'] = ('100644', b'import "./removed"')
-    index(files)
-    (repo / 'ags').mkdir()
-    (repo / 'ags/removed.ts').write_text('unstaged resurrection')
-    env = dict(os.environ, PATH=str(bins) + ':' + os.environ['PATH'])
-    result = subprocess.run(['bash', str(hook)], cwd=repo, env=env, capture_output=True, text=True)
-    assert result.returncode == 1 and 'ags bundle failed' in result.stdout, result.stdout + result.stderr
-    print('ok: staged deletion triggers the panel build despite an unstaged resurrection')
     assert (repo / 'payload').read_text() == 'unstaged'
     print('ok: the real fixture worktree and index remain unchanged by checks')
 PY

@@ -2,6 +2,33 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-09-20] - Idle Efficiency and Repository Finalization
+
+### Changed
+
+- Replaced the resident AGS settings panel with the on-demand Quickshell panel.
+  Both Quickshell surfaces now exit when closed and consume no idle UI-runtime
+  memory; the persistence regression test targets the active implementation.
+- Made Waybar refresh event-first: workspace events and local media controls
+  signal the bar immediately, while slower intervals remain as recovery paths.
+  Custom workspace, media, and GPU commands fall from about 92 launches per
+  idle minute to 16, and `nvidia-smi` runs once every 30 seconds.
+- Reduced native CPU and memory refreshes to ten seconds and disk refreshes to
+  one minute, preserving the dashboard while cutting idle wakeups.
+
+### Removed
+
+- Retired AGS sources, its special pre-commit bundle branch, completed planning
+  archives, and obsolete option files left by earlier repository generations.
+- The unwired Eww desktop-clock toggle and wallpaper reload probe. Eww is not a
+  configured or installed component of this repository.
+
+### Verified
+
+- All 14 discovered test suites pass after each cleanup unit. ShellCheck passes
+  for every changed shell script, and the doctor module suite passes all 412
+  assertions.
+
 ## [2026-08-19] - Hyprland Lua Configuration
 
 ### Changed

@@ -19,4 +19,8 @@ player=$(media_player)
 # rather than let playerctl print to waybar's log once a click.
 [ -z "$player" ] && exit 0
 
-playerctl -p "$player" "$@" 2>/dev/null
+if playerctl -p "$player" "$@" 2>/dev/null; then
+    # The bar's five-second poll is only a fallback for changes made inside a
+    # player. Controls routed through this script refresh the module at once.
+    pkill -RTMIN+10 waybar 2>/dev/null || true
+fi

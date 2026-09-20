@@ -1,6 +1,6 @@
 --
 -- PANEL-MANAGED OVERRIDES
--- Written by the Super+I settings panel (ags/lib/persist.ts).
+-- Written by the Super+I settings panel (quickshell/settings-panel/persist.js).
 -- Required last from hyprland.lua so these values win over tracked defaults.
 -- One hl.config() or hl.animation() call per line. Do not edit by hand; use the
 -- panel, or delete a line to fall back to the tracked default.

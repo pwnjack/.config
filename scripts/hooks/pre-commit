@@ -77,30 +77,6 @@ if [ "${#STAGED_ALL[@]}" -gt 0 ]; then
     fi
 fi
 
-# --- AGS settings panel ---------------------------------------------------
-# `ags bundle` is the only compile gate available: there is no tsc, no
-# package.json and no node_modules in ags/. esbuild catches syntax errors but
-# NOT type errors, so tsconfig's `strict: true` is not enforced here.
-#
-# The unfiltered list includes deletions and both sides of renames.
-AGS_CHANGED=false
-for _hook_file in "${STAGED_ALL[@]}"; do
-    case "$_hook_file" in ags/*) AGS_CHANGED=true ;; esac
-done
-if [ "$AGS_CHANGED" = true ]; then
-    if command -v ags >/dev/null 2>&1; then
-        echo "pre-commit: ags bundle"
-        BUNDLE_OUT="$SNAPSHOT/panel.js"
-        if ! (cd "$REPO/ags" && ags bundle app.ts "$BUNDLE_OUT" >/dev/null 2>&1); then
-            echo "pre-commit: ags bundle failed — run 'cd ags && ags bundle app.ts /tmp/out' to see why"
-            FAILED=1
-        fi
-        rm -f "$BUNDLE_OUT"
-    else
-        echo "pre-commit: ags not installed, skipping panel build check"
-    fi
-fi
-
 if [ "$FAILED" -ne 0 ]; then
     echo
     echo "pre-commit: checks failed. Fix the issues above, or bypass with --no-verify."

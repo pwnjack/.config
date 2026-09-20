@@ -34,8 +34,6 @@ sleep 0.2
 echo "end $3" >> "$FIXTURE/events"
 ''')
     executable(bins / 'notify-send', 'printf "%s\\n" "$*" >> "$FIXTURE/notices"\n')
-    for name in ('ags', 'astal', 'eww'):
-        executable(bins / name, 'echo "$0" >> "$FIXTURE/ui-starts"\n')
     driver = config / 'scripts/theming/apply-wal.sh'
     executable(driver, 'echo apply >> "$FIXTURE/events"\nexit "${FAIL_APPLY:-0}"\n')
     env = dict(os.environ, XDG_CONFIG_HOME=str(config), XDG_CACHE_HOME=str(cache),
@@ -68,8 +66,8 @@ echo "end $3" >> "$FIXTURE/events"
     assert lines == [f'start {first}', f'end {first}', 'apply', f'start {second}', f'end {second}', 'apply'], lines
     assert (cache / 'current_wallpaper').resolve() == second
     print('ok: overlapping changes serialize and the latest wallpaper wins')
-    assert not any('ags' in line or 'astal' in line for line in (base / 'ui-starts').read_text().splitlines())
-    print('ok: wallpaper changes do not start a resident settings panel')
+    assert not (base / 'ui-starts').exists()
+    print('ok: wallpaper changes do not start or reload a resident UI')
     # The real driver attempts later components even if an earlier one fails.
     for name, code in [('a', 1), ('b', 0)]:
         directory = config / name

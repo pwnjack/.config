@@ -675,15 +675,6 @@
     },
     {
       "category": "startup",
-      "id": "startup.clock",
-      "title": "Desktop Clock",
-      "description": "eww clock widget on the desktop",
-      "source": "option",
-      "key": "clock",
-      "kind": "toggle"
-    },
-    {
-      "category": "startup",
       "id": "startup.protonvpn",
       "title": "Proton VPN Auto-connect",
       "description": "Start Proton VPN minimized at login and use its Auto connect setting",

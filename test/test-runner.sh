@@ -165,6 +165,14 @@ run "$root_flat"; out="$RUN_OUT"
 assert_eq "$RC" "0" "a root-level run-tests.sh runs and its fragment does not"
 assert_contains "$out" "1 suite passed" "only the root-level run-tests.sh ran"
 
+# A suite deleted in the working tree remains in the index until it is staged.
+# Local validation must exercise the tree that actually exists, not try to run
+# a path which is already absent.
+rm "$root_flat/run-tests.sh" "$root_flat/test-frag.sh"
+run "$root_flat"; out="$RUN_OUT"
+assert_eq "$RC" "0" "locally deleted suites are ignored before staging"
+assert_contains "$out" "no test suites found" "a missing tracked suite is not executed"
+
 # --- a path containing a newline -------------------------------------------
 # git tracks such a path legally and C-quotes it in listings. Carrying the
 # suite list on newlines rather than NULs splits this ONE file into two bogus

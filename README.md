@@ -104,10 +104,9 @@ What it checks:
   `hyprctl keyword` or positional dispatcher forms
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
-`core.hooksPath`) runs `shellcheck` on staged shell scripts, the test suites
-covering whatever the commit touches, and `ags bundle` on staged legacy AGS
-sources when AGS is installed. The Quickshell panel has its own UI and backend
-suite. All checks run in a private snapshot of the index, so partially staged
+`core.hooksPath`) runs `shellcheck` on staged shell scripts and the test suites
+covering whatever the commit touches. The Quickshell panel has its own UI and
+backend suite. All checks run in a private snapshot of the index, so partially staged
 changes are checked as they will be committed. The working tree and real index
 are untouched. The snapshot contains staged files and blobs, without commit
 history. Bypass with `git commit --no-verify`.
@@ -164,6 +163,17 @@ the next scheduled boundary. Right-click (or `Super + Ctrl + D`) hands control
 back to the schedule in `hypr/hyprsunset.conf` immediately.
 
 `Super + Shift + B` restarts Waybar; `Super + Alt + B` shows and hides it.
+
+### Idle efficiency
+
+The settings panel and wallpaper carousel are launched on demand and exit when
+closed, so neither keeps a UI runtime resident. Waybar uses signals for
+workspace changes, media controls, night-light actions, and completed updates;
+their intervals are safety fallbacks rather than the primary refresh path.
+Compared with the previous intervals, custom workspace, media, and GPU commands
+drop from about 92 launches per idle minute to 16. The GPU module also limits
+`nvidia-smi` to one probe every 30 seconds. See the component docs for measured
+panel and carousel memory.
 
 ## Installation
 
