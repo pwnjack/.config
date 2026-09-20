@@ -9,6 +9,7 @@ ShellRoot {
     id: root
     readonly property string configDir: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
     property bool opened: false
+    property bool closing: false
     property bool loading: false
     property bool submitting: false
     property bool previewReady: false
@@ -36,10 +37,13 @@ ShellRoot {
     }
     onQueryChanged: filter()
     function close() {
+        closing = true;
         opened = false;
+        if (!applyProcess.running)
+            Qt.quit();
     }
     function open() {
-        if (opened)
+        if (opened || closing)
             return;
         const focused = Hyprland.focusedMonitor;
         overlay.screen = Quickshell.screens.find(s => focused && s.name === focused.name) || Quickshell.screens[0];
@@ -51,6 +55,7 @@ ShellRoot {
         loading = true;
         stateReader.running = true;
     }
+    Component.onCompleted: open()
     function navigate(step) {
         if (!loading && !submitting && entries.length)
             selectedIndex = (selectedIndex + step + entries.length) % entries.length;
@@ -69,6 +74,8 @@ ShellRoot {
             return "ready";
         }
         function toggle(): void {
+            if (root.closing)
+                return;
             if (root.opened)
                 root.close();
             else
@@ -129,6 +136,8 @@ ShellRoot {
             root.submitting = false;
             if (code === 0)
                 root.close();
+            else if (root.closing)
+                Qt.quit();
             else
                 root.problem = "Wallpaper could not be fully applied. See the desktop notification; you can retry or close.";
         }

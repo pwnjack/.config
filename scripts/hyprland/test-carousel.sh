@@ -139,7 +139,7 @@ exit "${THEME_FAIL:-0}"
     first.communicate(timeout=5)
     assert first.returncode == 0
     print('ok: overlapping confirmations rejected while the original submission completes')
-    # Real launcher against a stub IPC server: rapid cold starts create one instance.
+    # Real launcher against a stub IPC server: each close tears down the instance.
     executable(bins / 'qs', '''
 if [[ $* == *--daemonize* ]]; then
     echo launch >> "$FIXTURE/launches"
@@ -148,7 +148,9 @@ if [[ $* == *--daemonize* ]]; then
 elif [[ $* == *'ipc call carousel ping'* ]]; then
     test -f "$FIXTURE/ready"
 elif [[ $* == *'ipc call carousel toggle'* ]]; then
+    test -f "$FIXTURE/ready" || exit 1
     echo toggle >> "$FIXTURE/toggles"
+    rm -f "$FIXTURE/ready"
 else
     exit 1
 fi
@@ -158,9 +160,9 @@ fi
     for process in processes:
         process.communicate(timeout=10)
         assert process.returncode == 0
-    assert (base / 'launches').read_text().splitlines() == ['launch']
-    assert len((base / 'toggles').read_text().splitlines()) == 8
-    assert run('wallpaper-carousel.sh', 'start').returncode == 0
-    assert len((base / 'toggles').read_text().splitlines()) == 8
-    print('ok: simultaneous cold toggles launch one instance; hidden startup does not toggle')
+    assert len((base / 'launches').read_text().splitlines()) == 4
+    assert len((base / 'toggles').read_text().splitlines()) == 4
+    assert not (base / 'ready').exists()
+    assert run('wallpaper-carousel.sh', 'start').returncode == 2
+    print('ok: simultaneous toggles serialize into four launches and four process exits')
 PY

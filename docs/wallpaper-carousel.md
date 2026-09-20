@@ -38,8 +38,8 @@ but no upstream code was copied because reuse permission was not established.
 
 - `scripts/hyprland/wallpaper-carousel.sh` locks startup/toggle requests and
   addresses only this configuration's Quickshell IPC. Quickshell's
-  `--no-duplicate` is an additional safeguard. The process starts on first use
-  and remains hidden between opens; it does not start at login.
+  `--no-duplicate` is an additional safeguard. The process starts on demand and
+  exits when the carousel closes, so it consumes no RAM between uses.
 - `scripts/hyprland/carousel-state.sh` reads `waypaper/config.ini` on every open,
   including folders, recursion, hidden files, GIF filtering, and name/date sort.
   It queries awww for the visible image, falling back to Waypaper's saved choice.
@@ -58,7 +58,7 @@ but no upstream code was copied because reuse permission was not established.
 - Image delegates exist only around the viewport, with one card-width of extra
   buffer. Decoding is asynchronous and limited to at most 1280×1440 requested
   pixels, adjusted for display scale. Qt's shared image cache is disabled for
-  these previews. Hiding destroys the view; Qt/GPU allocators may retain memory.
+  these previews. Closing exits the process and releases its Qt/GPU allocations.
 
 Logs and locks live under `${XDG_CACHE_HOME:-~/.cache}/wallpaper-carousel/`.
 Quickshell also maintains its own runtime logs and normal Qt caches. No previews
@@ -66,8 +66,7 @@ or selections are written to tracked files. Waypaper's existing config symlink
 continues to point into the cache.
 
 ```bash
-# Start hidden / toggle / inspect / close this instance
-scripts/hyprland/wallpaper-carousel.sh start
+# Open or toggle closed / inspect / close this instance
 scripts/hyprland/wallpaper-carousel.sh
 qs -p ~/.config/quickshell/wallpaper-carousel/shell.qml ipc call carousel status
 qs -p ~/.config/quickshell/wallpaper-carousel/shell.qml ipc call carousel close
@@ -76,7 +75,8 @@ qs -p ~/.config/quickshell/wallpaper-carousel/shell.qml log -t 50
 
 ## Verification
 
-On the available 2560×1440, 144 Hz display at scale 1, with 132 wallpapers:
+Before close was changed to exit the process, the available 2560×1440, 144 Hz
+display at scale 1, with 132 wallpapers produced these measurements:
 
 | Measurement | Observed |
 | --- | --- |
@@ -87,8 +87,9 @@ On the available 2560×1440, 144 Hz display at scale 1, with 132 wallpapers:
 | Resident memory after rapid navigation | 320,968 KiB (about 313 MiB) |
 | Peak resident memory in that run | 364,764 KiB (about 356 MiB) |
 
-These are single local observations, not cross-machine guarantees. The modest
-warm-open improvement and retained memory are why login autostart was omitted.
+These are single historical observations, not cross-machine guarantees. The
+modest warm-open improvement was not worth retaining hundreds of MiB while
+idle, so closing now exits the process and leaves no carousel RSS.
 
 The user confirmed that the physical Super+Ctrl+W shortcut opens the carousel
 and that the random-wallpaper shortcut retains its existing direct behavior.
@@ -97,7 +98,7 @@ this host, so that check relied on physical input instead.
 
 Live checks established: current-image centering; keyboard navigation; search
 with no results; Escape; unchanged saved configuration after cancellation; six
-concurrent toggles retaining one instance and ending closed; Enter applying a
+concurrent toggles remaining serialized and ending with no process; Enter applying a
 different wallpaper; duplicate Enter ignored; awww,
 the saved login choice, and current-wallpaper state agreeing; and successful
 theme generation. The original wallpaper was restored afterward. The final

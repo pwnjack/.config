@@ -92,11 +92,12 @@ Two components are templated (`<component>/<name>.in` -> rendered to cache -> tr
 
 `quickshell/wallpaper-carousel/shell.qml` is a separate Quickshell application,
 opened on demand by `scripts/hyprland/wallpaper-carousel.sh` (Super+Ctrl+W).
-The launcher serializes startup and uses config-specific IPC; it stays hidden
-between opens and is independent of AGS. No login autostart is configured.
+The launcher serializes startup and uses config-specific IPC; it exits on close
+to consume no idle RAM and is independent of AGS. No login autostart is configured.
 `carousel-state.sh` reads Waypaper's folder settings, awww's current image and
 the shared palette loader on every open. Previews are asynchronous, bounded in
-resolution, and virtualized; hiding destroys the view's image delegates.
+resolution, and virtualized; closing destroys the process after any pending
+wallpaper application finishes.
 The translucent backdrop uses a Hyprland layer blur rule and follows the shared
 blur settings in `decor.lua`; the desktop remains live behind it. Wheel handling
 covers the whole overlay.
