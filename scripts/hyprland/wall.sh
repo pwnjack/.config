@@ -58,10 +58,7 @@ failed=0
 if [ -x "$config_dir/scripts/waybar/waybar.sh" ]; then
     "$config_dir/scripts/waybar/waybar.sh" 9>&- || failed=1
 fi
-if command -v ags >/dev/null 2>&1; then
-    astal -i settings-panel --quit 9>&- 2>/dev/null || true
-    ags run "$config_dir/ags/app.ts" 9>&- &
-fi
+# The settings panel reads the palette on demand; it has no resident consumer.
 if command -v eww >/dev/null 2>&1; then
     eww reload 9>&- 2>/dev/null || failed=1
 fi

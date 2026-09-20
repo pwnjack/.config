@@ -44,7 +44,7 @@ return function(apps)
     hl.bind("SUPER + ALT + B", hl.dsp.exec_cmd("~/.config/scripts/waybar/waybartoggle.sh")) -- Show/hide Waybar
 
     -- ## Settings & Utilities
-    hl.bind("SUPER + I", hl.dsp.exec_cmd("astal -i settings-panel --toggle-window settings-panel")) -- Settings panel
+    hl.bind("SUPER + I", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/settings-panel.sh")) -- Settings panel
     hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("waypaper --random")) -- Random wallpaper
     hl.bind("SUPER + CTRL + W", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/wallpaper-carousel.sh")) -- Wallpaper carousel
     hl.bind("CTRL + SHIFT + ESCAPE", hl.dsp.exec_cmd("resources")) -- System monitor

@@ -1,0 +1,750 @@
+{
+  "categories": [
+    {
+      "id": "appearance",
+      "title": "Appearance",
+      "description": "Borders, blur, gaps, opacity, fonts and cursor"
+    },
+    {
+      "id": "animations",
+      "title": "Animations",
+      "description": "Master switch and per-animation speeds"
+    },
+    {
+      "id": "windows",
+      "title": "Windows",
+      "description": "Tiling layout and window behavior"
+    },
+    {
+      "id": "input",
+      "title": "Input",
+      "description": "Mouse, keyboard and touchpad"
+    },
+    {
+      "id": "notifications",
+      "title": "Notifications",
+      "description": "SwayNC toasts and control center"
+    },
+    {
+      "id": "monitors",
+      "title": "Monitors",
+      "description": "Connected displays and adaptive sync"
+    },
+    {
+      "id": "power",
+      "title": "Power",
+      "description": "Idle timeouts, display power and night light"
+    },
+    {
+      "id": "startup",
+      "title": "Startup",
+      "description": "What happens when Hyprland starts"
+    },
+    {
+      "id": "apps",
+      "title": "Default Apps",
+      "description": "Applications used by keybinds and scripts"
+    }
+  ],
+  "rows": [
+    {
+      "category": "appearance",
+      "id": "appearance.blur",
+      "title": "Blur",
+      "description": "Frosted-glass effect behind windows",
+      "source": "keyword",
+      "key": "decoration:blur:enabled",
+      "kind": "toggle"
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.blur-size",
+      "title": "Blur Size",
+      "description": "Blur kernel radius",
+      "source": "keyword",
+      "key": "decoration:blur:size",
+      "kind": "slider",
+      "min": 1,
+      "max": 20,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.blur-passes",
+      "title": "Blur Passes",
+      "description": "More passes, smoother and costlier blur",
+      "source": "keyword",
+      "key": "decoration:blur:passes",
+      "kind": "slider",
+      "min": 1,
+      "max": 6,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.shadows",
+      "title": "Shadows",
+      "description": "Drop shadow under windows",
+      "source": "keyword",
+      "key": "decoration:shadow:enabled",
+      "kind": "toggle"
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.rounding",
+      "title": "Corner Rounding",
+      "description": "Window corner radius in pixels",
+      "source": "keyword",
+      "key": "decoration:rounding",
+      "kind": "slider",
+      "min": 0,
+      "max": 30,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.border",
+      "title": "Border Width",
+      "description": "Window border thickness",
+      "source": "keyword",
+      "key": "general:border_size",
+      "kind": "slider",
+      "min": 0,
+      "max": 5,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.gaps-in",
+      "title": "Gaps Inner",
+      "description": "Space between tiled windows",
+      "source": "keyword",
+      "key": "general:gaps_in",
+      "kind": "slider",
+      "min": 0,
+      "max": 20,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.gaps-out",
+      "title": "Gaps Outer",
+      "description": "Space between windows and screen edge",
+      "source": "keyword",
+      "key": "general:gaps_out",
+      "kind": "slider",
+      "min": 0,
+      "max": 30,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.opacity-active",
+      "title": "Active Opacity",
+      "description": "Opacity of the focused window",
+      "source": "keyword",
+      "key": "decoration:active_opacity",
+      "kind": "slider",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.opacity-inactive",
+      "title": "Inactive Opacity",
+      "description": "Opacity of unfocused windows",
+      "source": "keyword",
+      "key": "decoration:inactive_opacity",
+      "kind": "slider",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.font",
+      "title": "Main Font",
+      "description": "Applied to Rofi, Waybar and terminals",
+      "source": "option",
+      "key": "font",
+      "kind": "text"
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.font-gtk",
+      "title": "GTK Font",
+      "description": "Font for GTK applications",
+      "source": "option",
+      "key": "font-gtk",
+      "kind": "text"
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.cursor-theme",
+      "title": "Cursor Theme",
+      "description": "Cursor theme name; fully applies after restart",
+      "source": "option",
+      "key": "cursortheme",
+      "kind": "text"
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.cursor-size",
+      "title": "Cursor Size",
+      "description": "Pointer size in pixels",
+      "source": "cursor",
+      "key": "size",
+      "kind": "slider",
+      "min": 16,
+      "max": 48,
+      "step": 2
+    },
+    {
+      "category": "animations",
+      "id": "anim.master",
+      "title": "Animations",
+      "description": "Master switch for all animations",
+      "source": "keyword",
+      "key": "animations:enabled",
+      "kind": "toggle"
+    },
+    {
+      "category": "animations",
+      "id": "anim.windows",
+      "title": "Windows",
+      "description": "Open/close scale animation",
+      "source": "animation",
+      "key": "windows",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.windowsIn",
+      "title": "Windows In",
+      "description": "Window opening",
+      "source": "animation",
+      "key": "windowsIn",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.windowsOut",
+      "title": "Windows Out",
+      "description": "Window closing",
+      "source": "animation",
+      "key": "windowsOut",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.windowsMove",
+      "title": "Windows Move",
+      "description": "Drag and tile movement",
+      "source": "animation",
+      "key": "windowsMove",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.fade",
+      "title": "Fade",
+      "description": "Opacity transitions",
+      "source": "animation",
+      "key": "fade",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.workspaces",
+      "title": "Workspaces",
+      "description": "Workspace switch slide",
+      "source": "animation",
+      "key": "workspaces",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "animations",
+      "id": "anim.border",
+      "title": "Border",
+      "description": "Border color transitions",
+      "source": "animation",
+      "key": "border",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1
+    },
+    {
+      "category": "windows",
+      "id": "win.layout",
+      "title": "Layout Mode",
+      "description": "Dwindle splits like a binary tree; master keeps one main window",
+      "source": "keyword",
+      "key": "general:layout",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Dwindle",
+          "value": "dwindle"
+        },
+        {
+          "label": "Master",
+          "value": "master"
+        }
+      ]
+    },
+    {
+      "category": "windows",
+      "id": "win.preserve-split",
+      "title": "Preserve Split",
+      "description": "Keep split direction when windows close",
+      "source": "keyword",
+      "key": "dwindle:preserve_split",
+      "kind": "toggle"
+    },
+    {
+      "category": "windows",
+      "id": "win.smart-split",
+      "title": "Smart Split",
+      "description": "Split direction follows cursor position",
+      "source": "keyword",
+      "key": "dwindle:smart_split",
+      "kind": "toggle"
+    },
+    {
+      "category": "windows",
+      "id": "win.tearing",
+      "title": "Allow Tearing",
+      "description": "Reduces latency in games; may cause glitches",
+      "source": "keyword",
+      "key": "general:allow_tearing",
+      "kind": "toggle"
+    },
+    {
+      "category": "windows",
+      "id": "win.resize-border",
+      "title": "Resize on Border",
+      "description": "Drag window edges to resize",
+      "source": "keyword",
+      "key": "general:resize_on_border",
+      "kind": "toggle"
+    },
+    {
+      "category": "windows",
+      "id": "win.xwayland",
+      "title": "XWayland",
+      "description": "Support for X11-only applications",
+      "source": "keyword",
+      "key": "xwayland:enabled",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.sensitivity",
+      "title": "Mouse Sensitivity",
+      "description": "−1 slow … +1 fast (libinput acceleration)",
+      "source": "keyword",
+      "key": "input:sensitivity",
+      "kind": "slider",
+      "min": -1,
+      "max": 1,
+      "step": 0.1
+    },
+    {
+      "category": "input",
+      "id": "input.follow-mouse",
+      "title": "Focus Follows Mouse",
+      "description": "How window focus follows the pointer",
+      "source": "keyword",
+      "key": "input:follow_mouse",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Disabled",
+          "value": "0"
+        },
+        {
+          "label": "Full",
+          "value": "1"
+        },
+        {
+          "label": "Loose",
+          "value": "2"
+        },
+        {
+          "label": "Detached",
+          "value": "3"
+        }
+      ]
+    },
+    {
+      "category": "input",
+      "id": "input.numlock",
+      "title": "Numlock by Default",
+      "description": "Enable numlock at startup",
+      "source": "keyword",
+      "key": "input:numlock_by_default",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.natural-scroll",
+      "title": "Natural Scroll (Touchpad)",
+      "description": "Content follows finger direction",
+      "source": "keyword",
+      "key": "input:touchpad:natural_scroll",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.scroll-factor",
+      "title": "Touchpad Scroll Factor",
+      "description": "Scroll speed multiplier",
+      "source": "keyword",
+      "key": "input:touchpad:scroll_factor",
+      "kind": "slider",
+      "min": 0.1,
+      "max": 2,
+      "step": 0.1
+    },
+    {
+      "category": "notifications",
+      "id": "notif.timeout",
+      "title": "Default Timeout",
+      "description": "Seconds a toast stays on screen",
+      "source": "swaync",
+      "key": "timeout",
+      "kind": "slider",
+      "min": 1,
+      "max": 15,
+      "step": 1,
+      "default": 5
+    },
+    {
+      "category": "notifications",
+      "id": "notif.timeout-low",
+      "title": "Low Priority Timeout",
+      "description": "Seconds for low-priority toasts",
+      "source": "swaync",
+      "key": "timeout-low",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "category": "notifications",
+      "id": "notif.width",
+      "title": "Notification Width",
+      "description": "Toast width in pixels",
+      "source": "swaync",
+      "key": "notification-window-width",
+      "kind": "slider",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "default": 400
+    },
+    {
+      "category": "notifications",
+      "id": "notif.cc-width",
+      "title": "Control Center Width",
+      "description": "Sidebar width in pixels",
+      "source": "swaync",
+      "key": "control-center-width",
+      "kind": "slider",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "default": 358
+    },
+    {
+      "category": "notifications",
+      "id": "notif.transition",
+      "title": "Transition Time",
+      "description": "Animation duration in ms",
+      "source": "swaync",
+      "key": "transition-time",
+      "kind": "slider",
+      "min": 0,
+      "max": 500,
+      "step": 25,
+      "default": 100
+    },
+    {
+      "category": "notifications",
+      "id": "notif.pos-x",
+      "title": "Position X",
+      "description": "Horizontal screen edge for toasts",
+      "source": "swaync",
+      "key": "positionX",
+      "kind": "select",
+      "default": "right",
+      "items": [
+        {
+          "label": "Left",
+          "value": "left"
+        },
+        {
+          "label": "Center",
+          "value": "center"
+        },
+        {
+          "label": "Right",
+          "value": "right"
+        }
+      ]
+    },
+    {
+      "category": "notifications",
+      "id": "notif.pos-y",
+      "title": "Position Y",
+      "description": "Vertical screen edge for toasts",
+      "source": "swaync",
+      "key": "positionY",
+      "kind": "select",
+      "default": "top",
+      "items": [
+        {
+          "label": "Top",
+          "value": "top"
+        },
+        {
+          "label": "Bottom",
+          "value": "bottom"
+        }
+      ]
+    },
+    {
+      "category": "monitors",
+      "id": "monitors.vrr",
+      "title": "VRR (Adaptive Sync)",
+      "description": "Variable refresh rate",
+      "source": "keyword",
+      "key": "misc:vrr",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Off",
+          "value": "0"
+        },
+        {
+          "label": "On",
+          "value": "1"
+        },
+        {
+          "label": "Fullscreen only",
+          "value": "2"
+        }
+      ]
+    },
+    {
+      "category": "power",
+      "id": "power.lock",
+      "title": "Lock Timeout",
+      "description": "Idle time before hyprlock engages",
+      "source": "idle",
+      "key": "lock",
+      "kind": "slider",
+      "min": 60,
+      "max": 1800,
+      "step": 30,
+      "default": 180,
+      "format": "duration"
+    },
+    {
+      "category": "power",
+      "id": "power.dpms",
+      "title": "Screen Off Timeout",
+      "description": "Idle time before displays power down",
+      "source": "idle",
+      "key": "dpms",
+      "kind": "slider",
+      "min": 120,
+      "max": 3600,
+      "step": 60,
+      "default": 600,
+      "format": "duration"
+    },
+    {
+      "category": "power",
+      "id": "power.dpms-key",
+      "title": "Wake on Key Press",
+      "description": "Screens power on when a key is pressed",
+      "source": "keyword",
+      "key": "misc:key_press_enables_dpms",
+      "kind": "toggle"
+    },
+    {
+      "category": "power",
+      "id": "power.dpms-mouse",
+      "title": "Wake on Mouse Move",
+      "description": "Screens power on when the mouse moves",
+      "source": "keyword",
+      "key": "misc:mouse_move_enables_dpms",
+      "kind": "toggle"
+    },
+    {
+      "category": "power",
+      "id": "power.nightlight-temp",
+      "title": "Night Light Warmth",
+      "description": "Colour temperature applied on the evening schedule",
+      "source": "sunset",
+      "key": "nightTemp",
+      "kind": "slider",
+      "min": 2000,
+      "max": 6000,
+      "step": 100,
+      "default": 4000,
+      "format": "temperature",
+      "keywords": [
+        "hyprsunset",
+        "blue light",
+        "schedule",
+        "nightlight"
+      ]
+    },
+    {
+      "category": "power",
+      "id": "power.nightlight-start",
+      "title": "Night Light Starts",
+      "description": "Time of day the warm profile takes over",
+      "source": "sunset",
+      "key": "nightMinutes",
+      "kind": "slider",
+      "min": 0,
+      "max": 1410,
+      "step": 30,
+      "default": 1200,
+      "format": "clock",
+      "keywords": [
+        "hyprsunset",
+        "blue light",
+        "schedule",
+        "nightlight"
+      ]
+    },
+    {
+      "category": "power",
+      "id": "power.nightlight-end",
+      "title": "Night Light Ends",
+      "description": "Time of day the neutral profile takes over",
+      "source": "sunset",
+      "key": "dayMinutes",
+      "kind": "slider",
+      "min": 0,
+      "max": 1410,
+      "step": 30,
+      "default": 420,
+      "format": "clock",
+      "keywords": [
+        "hyprsunset",
+        "blue light",
+        "schedule",
+        "nightlight"
+      ]
+    },
+    {
+      "category": "startup",
+      "id": "startup.autologin",
+      "title": "Lock on Autologin",
+      "description": "Run hyprlock at startup when logged in automatically",
+      "source": "option",
+      "key": "autologin",
+      "kind": "toggle"
+    },
+    {
+      "category": "startup",
+      "id": "startup.clock",
+      "title": "Desktop Clock",
+      "description": "eww clock widget on the desktop",
+      "source": "option",
+      "key": "clock",
+      "kind": "toggle"
+    },
+    {
+      "category": "startup",
+      "id": "startup.protonvpn",
+      "title": "Proton VPN Auto-connect",
+      "description": "Start Proton VPN minimized at login and use its Auto connect setting",
+      "source": "option",
+      "key": "protonvpn",
+      "kind": "toggle"
+    },
+    {
+      "category": "startup",
+      "id": "startup.randomwallpaper",
+      "title": "Random Wallpaper",
+      "description": "Pick a random wallpaper and palette on each login",
+      "source": "option",
+      "key": "randomwallpaper",
+      "kind": "toggle"
+    },
+    {
+      "category": "apps",
+      "id": "apps.browser",
+      "title": "Browser",
+      "description": "Launched with Super+B",
+      "source": "option",
+      "key": "browser",
+      "kind": "text"
+    },
+    {
+      "category": "apps",
+      "id": "apps.terminal",
+      "title": "Terminal",
+      "description": "Launched with Super+Return",
+      "source": "option",
+      "key": "terminal",
+      "kind": "text"
+    },
+    {
+      "category": "apps",
+      "id": "apps.editor",
+      "title": "TUI Editor",
+      "description": "Used by Super+N and the TUI settings",
+      "source": "option",
+      "key": "editor",
+      "kind": "text"
+    },
+    {
+      "category": "apps",
+      "id": "apps.launcher",
+      "title": "Launcher Style",
+      "description": "Rofi layout used by Super+Space",
+      "source": "option",
+      "key": "launchertype",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Vertical",
+          "value": "vertical"
+        },
+        {
+          "label": "Horizontal",
+          "value": "horizontal"
+        }
+      ]
+    }
+  ]
+}

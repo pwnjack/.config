@@ -110,7 +110,7 @@ PACKAGES=(
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
     # Isolated deployment/hook fixtures and panel persistence tests
-    "python" "nodejs"
+    "python" "nodejs" "gjs"
     # Fonts (configs default to FiraCode Nerd Font)
     "ttf-firacode-nerd" "ttf-cascadia-mono-nerd" "ttf-nerd-fonts-symbols"
     "noto-fonts" "noto-fonts-emoji"
@@ -120,8 +120,6 @@ AUR_PACKAGES=(
     "zen-browser-bin"
     "vesktop"
     "waybar-weather"
-    "aylurs-gtk-shell"   # ags (settings panel)
-    "libastal-meta"      # astal CLI used by keybinds/waybar
 )
 
 info "Checking system dependencies..."

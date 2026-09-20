@@ -17,9 +17,6 @@ return function(apps)
         hl.exec_cmd("wl-paste --type text --watch cliphist store")
         hl.exec_cmd("wl-paste --type image --watch cliphist store")
 
-        -- AGS settings panel
-        hl.exec_cmd("ags run $HOME/.config/ags/app.ts")
-
         -- User startup script
         hl.exec_cmd("$HOME/.config/scripts/hyprland/startup.sh")
     end)

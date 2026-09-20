@@ -34,6 +34,7 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 | Window Manager | Hyprland |
 | Status Bar | Waybar |
 | Launcher | Rofi |
+| Settings panel | Quickshell (Super+I, exits when closed) |
 | Terminal | Ghostty (`options/terminal`) |
 | Notifications | SwayNC |
 | Lock Screen | Hyprlock |
@@ -51,6 +52,7 @@ Dynamic pywal theming adapts colors from your wallpaper across all components. H
 ├── waybar/        # Bar: config.jsonc, style.css, pywal colors
 ├── rofi/          # Launcher, power/screenshot menus, keybinds cheatsheet
 ├── swaync/        # Notification daemon and sidebar
+├── quickshell/    # On-demand settings panel and wallpaper carousel
 ├── options/       # User preferences, one value per text file
 ├── scripts/       # doctor/, theming/, waybar/, hyprland/, hooks/, docs/
 ├── fish/ ghostty/ nvim/ btop/ cava/ starship/   # Per-app config
@@ -103,8 +105,9 @@ What it checks:
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 `core.hooksPath`) runs `shellcheck` on staged shell scripts, the test suites
-covering whatever the commit touches, and `ags bundle` on staged panel
-sources. All checks run in a private snapshot of the index, so partially staged
+covering whatever the commit touches, and `ags bundle` on staged legacy AGS
+sources when AGS is installed. The Quickshell panel has its own UI and backend
+suite. All checks run in a private snapshot of the index, so partially staged
 changes are checked as they will be committed. The working tree and real index
 are untouched. The snapshot contains staged files and blobs, without commit
 history. Bypass with `git commit --no-verify`.
@@ -202,13 +205,12 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
-               zoxide atuin shellcheck python nodejs pacman-contrib ttf-firacode-nerd \
+               zoxide atuin shellcheck python nodejs gjs pacman-contrib ttf-firacode-nerd \
                ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
                noto-fonts-emoji
 
 # AUR / CachyOS-only (paru or yay)
-paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources \
-        aylurs-gtk-shell libastal-meta
+paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources
 
 # Initialize pywal and render every component's cache file
 wal -i ~/.config/wallpapers/wall1.jpg

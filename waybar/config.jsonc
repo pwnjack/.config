@@ -208,7 +208,7 @@
   // Settings
   "custom/settings": {
     "format": "󰢻",
-    "on-click": "astal -i settings-panel --toggle-window settings-panel",
+    "on-click": "~/.config/scripts/hyprland/settings-panel.sh",
     "tooltip-format": "Settings",
   },
 

@@ -110,14 +110,33 @@ and the SDDM watcher unchanged. Waypaper cannot persist percent signs, and the
 query/INI boundary cannot represent line breaks; the helper rejects those names
 before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 
-### Settings panel persistence
+### Settings panel (Super+I)
 
-`ags/lib/persist.ts` serializes Hyprland apply/save operations. It waits for an
+`quickshell/settings-panel/shell.qml` starts on demand through
+`scripts/hyprland/settings-panel.sh`, used by both Super+I and Waybar. It exits
+on close after pending saves finish; failed saves reopen the panel with an
+error. There is no login autostart or wallpaper-triggered AGS restart.
+`catalog.json` declares the 56 settings in nine categories. The frame appears
+before values arrive; a short-lived, GTK-free GJS helper reads values outside
+the UI thread. One value snapshot covers all categories; switching tabs/search
+only builds the selected rows, with no new helper or loading layout shift.
+The snapshot refreshes after edits and on every fresh opening.
+`scripts/settings/panel-request.sh` serializes requests with a cache-backed
+lock. Text fields save with Enter/Save; sliders save on release.
+
+`quickshell/settings-panel/persist.js` serializes Hyprland apply/save operations. It waits for an
 `ok` reply before saving, reloads the saved configuration if a write fails,
-and propagates failures to the panel's visible status message. Resets remove
+and propagates failures to the panel's visible status message. The legacy AGS
+modules re-export this shared implementation, so its regression tests exercise
+the same code. Resets remove
 only the selected override and reload the Lua configuration; there is no
 second table of default values. Failed resets attempt to restore the previous
 file and reload it. `hyprctl configerrors -j` may report `[""]` when healthy.
+
+`backend.js` preserves custom hypridle/hyprsunset content when editing timeouts
+and profiles, and rolls file changes back on reload failure. Night light state
+still goes through `nightlight.sh`. Theme colors come from the shared palette
+loader at launch. See `docs/settings-panel.md` for measurements and checks.
 
 ### Night Light (hyprsunset)
 
@@ -129,7 +148,7 @@ Gotchas, all found by probing the binary rather than reading docs:
 
 - **Profile `gamma` is a multiplier, not a percentage.** `gamma = 100` inside a `profile` block is read as `10000%` and the daemon *exits*. It is optional and defaults to 100%, so the profiles simply omit it. Top-level `max-gamma` **is** a percentage.
 - **`identity` has no getter.** Bare `hyprctl hyprsunset identity` is a *setter* returning `ok`, and `temperature` keeps reporting its last set value while identity masks it — so identity state is unreadable. `off` therefore writes the neutral temperature instead of using identity, keeping state readable.
-- **`--config` is not a working flag** in v0.4.0 despite the string being in the binary; the path is fixed. Changing the schedule means restarting the daemon (there is no reload request), which is what `ags/lib/hyprsunset.ts` does.
+- **`--config` is not a working flag** in v0.4.0 despite the string being in the binary; the path is fixed. Changing the schedule means restarting the daemon (there is no reload request), which is what `quickshell/settings-panel/backend.js` does.
 - **A crashed daemon leaves a stale socket**, so `pgrep` is not a liveness probe — only an actual request is.
 - `reset temperature` re-applies the active profile; that is the `auto` subcommand.
 - The waybar module declares `"signal": 8` so the script can `pkill -RTMIN+8 waybar` for an instant icon update instead of waiting out the interval.

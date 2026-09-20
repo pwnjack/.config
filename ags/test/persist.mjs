@@ -40,7 +40,7 @@ registerHooks({
         if (names[specifier]) return {
             url: 'data:text/javascript,' + encodeURIComponent(`export default globalThis.panelMocks.${names[specifier]}`), shortCircuit: true,
         }
-        if (specifier === 'ags/process') return {
+        if (specifier === 'ags/process' || specifier === './process.js') return {
             url: 'data:text/javascript,export const execAsync = globalThis.panelMocks.execAsync', shortCircuit: true,
         }
         if (specifier === './hyprctl') return next('./hyprctl.ts', context)
