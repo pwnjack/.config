@@ -8,13 +8,12 @@
 --
 
 local apps = require("config.apptype")
-local cursor_theme = require("config.cursortheme")
 local colors = require("config.colors")
 
 require("config.hardware.monitor")
 require("config.hardware.input")
 
-require("config.setup.envvars")(cursor_theme)
+require("config.setup.envvars")(apps.cursorTheme)
 require("config.setup.autostart")(apps)
 
 require("config.looks.decor")(colors)

@@ -1,4 +1,4 @@
--- Default applications used by keybinds and autostart.
+-- Default applications and preferences used by keybinds, autostart and envvars.
 
 local home = os.getenv("HOME") or ""
 
@@ -19,8 +19,9 @@ end
 return {
     browser = read_option("browser", "firefox"),
     terminal = read_option("terminal", "ghostty"),
+    editor = read_option("editor", "nvim"), -- TUI editor, opened in the terminal
+    cursorTheme = read_option("cursortheme", "Bibata-Modern-Classic"),
     fileManager = "thunar", -- GUI file manager (yazi for CLI)
-    textEditor = "nvim", -- Text editor (neovim)
 
     -- The package ships this systemd user unit rather than a PATH executable.
     polkitAgent = "hyprpolkitagent.service",

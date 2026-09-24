@@ -713,7 +713,7 @@
       "category": "apps",
       "id": "apps.editor",
       "title": "TUI Editor",
-      "description": "Used by Super+N and the TUI settings",
+      "description": "Used by Super+N and the monitor setup tool",
       "source": "option",
       "key": "editor",
       "kind": "text"

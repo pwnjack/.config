@@ -1,91 +1,31 @@
 #!/usr/bin/env bash
 #
 # Screenshot Menu
-# Full screen, window, or region capture
+# Full screen, window, or region capture, annotation, and settings.
 #
 
-dir="$HOME/.config/rofi/themes/screenshot"
+delay=$(cat "${XDG_CACHE_HOME:-$HOME/.cache}/screenshot-delay" 2>/dev/null)
+[[ "$delay" =~ ^[0-9]+$ ]] || delay=0
 
-timer="$(cat "$HOME/.config/rofi/options/screenshot/timer")"
-freeze="$(cat "$HOME/.config/rofi/options/screenshot/freeze")"
+# Nerd Font glyphs, escaped so no editor can silently drop them.
+monitor=$'\U000F0E51' window=$'\uEB23' region=$'\U000F1285' annotate=$'\U000F03EB' settings=$'\uE690'
 
-# Options
-option_1="󰹑"
-option_2=""
-option_3="󱊅"
-option_4="󰏫"
-option_5=""
+chosen=$(printf '%s\n' "$monitor" "$window" "$region" "$annotate" "$settings" | rofi -dmenu \
+    -theme "$HOME/.config/rofi/themes/screenshot/main.rasi" \
+    -p $'\uF007'" $USER" \
+    -mesg "Monitor | Window | Selection | Annotate | Settings")
 
-rofi_cmd() {
-    rofi -dmenu \
-        -theme "${dir}/main.rasi" \
-        -p " $USER" \
-        -mesg "Monitor | Window | Selection | Annotate | Settings"
+# Let rofi's window close before capturing, then wait out the chosen delay.
+shoot() {
+    sleep 0.5
+    sleep "$delay"
+    "$HOME/.config/scripts/hyprland/screenshot.sh" "$1"
 }
 
-run_rofi() {
-    echo -e "$option_1\n$option_2\n$option_3\n$option_4\n$option_5" | rofi_cmd
-}
-
-shotscreen() {
-    $timer
-    # shellcheck disable=SC2086  # optional flag is intentionally word-split
-    hyprshot -m output -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
-}
-
-shotwin() {
-    $timer
-    # shellcheck disable=SC2086  # optional flag is intentionally word-split
-    hyprshot -m window -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
-}
-
-shotarea() {
-    $timer
-    # shellcheck disable=SC2086  # optional flag is intentionally word-split
-    hyprshot -m region -o ~/Pictures/Screenshots -f "Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png" $freeze
-}
-
-settings() {
-    "$HOME/.config/rofi/screenshot-settings.sh"
-}
-
-annotate() {
-    "$HOME/.config/scripts/hyprland/screenshot-annotate.sh"
-}
-
-run_cmd() {
-    if [[ "$1" == '--opt1' ]]; then
-        sleep 0.5
-        shotscreen
-    elif [[ "$1" == '--opt2' ]]; then
-        sleep 0.5
-        shotwin
-    elif [[ "$1" == '--opt3' ]]; then
-        sleep 0.5
-        shotarea
-    elif [[ "$1" == '--opt4' ]]; then
-        sleep 0.5
-        annotate
-    elif [[ "$1" == '--opt5' ]]; then
-        settings
-    fi
-}
-
-chosen="$(run_rofi)"
-case ${chosen} in
-    "$option_1")
-        run_cmd --opt1
-        ;;
-    "$option_2")
-        run_cmd --opt2
-        ;;
-    "$option_3")
-        run_cmd --opt3
-        ;;
-    "$option_4")
-        run_cmd --opt4
-        ;;
-    "$option_5")
-        run_cmd --opt5
-        ;;
+case "$chosen" in
+    "$monitor")  shoot output ;;
+    "$window")   shoot window ;;
+    "$region")   shoot region ;;
+    "$annotate") sleep 0.5; "$HOME/.config/scripts/hyprland/screenshot-annotate.sh" ;;
+    "$settings") "$HOME/.config/rofi/screenshot-settings.sh" ;;
 esac

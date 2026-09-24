@@ -1,16 +1,33 @@
 #!/bin/bash
+#
+# Render the pywal palette as a ghostty color include.
+#
+# ghostty/config and ghostty/ai-sidebar both pull it in with
+# `config-file = ?colors`, and ghostty/colors is a tracked symlink to the file
+# written here. Rendering from the shared loader keeps it complete on a fresh
+# checkout, before pywal has ever run.
+#
 
-# Render pywal colors for ghostty into the cache.
-# ghostty/config pulls them in via: config-file = ?colors
-# (ghostty/colors is a symlink to the rendered file)
-wal_colors="$HOME/.cache/wal/colors-ghostty"
+set -uo pipefail
 
-mkdir -p "$HOME/.cache/wal"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
 
-# The output must exist even before pywal has ever run: ghostty/colors is a
-# tracked symlink to it, and a tracked symlink with no target is an ERROR in
-# doctor.sh. ghostty's `?colors` include tolerates an empty file.
+declare -a wal=()
+# shellcheck source=scripts/theming/palette.sh
+. "$config_dir/scripts/theming/palette.sh"
+wal_load
+
+mkdir -p "$cache_dir"
+
 {
     echo "# Automatically generated from the pywal palette - do not edit manually"
-    [[ -f "$wal_colors" ]] && tail -n +3 "$wal_colors"
-} > "$HOME/.cache/wal/ghostty-colors"
+    echo
+    echo "background = ${wal[0]}"
+    echo "foreground = ${wal[7]}"
+    echo "cursor-color = ${wal[7]}"
+    echo
+    for i in "${!wal[@]}"; do
+        echo "palette = $i=${wal[$i]}"
+    done
+} > "$cache_dir/ghostty-colors"

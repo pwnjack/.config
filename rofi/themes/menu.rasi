@@ -1,3 +1,6 @@
+// Shared layout for the icon-grid menus (screenshot, power). Each menu
+// imports this and overrides only what differs: width, columns, title.
+
 @import "options/font.rasi"
 @import "options/wallpaper.rasi"
 @import "options/colors.rasi"
@@ -15,7 +18,7 @@ window {
     location:                    center;
     anchor:                      center;
     fullscreen:                  false;
-    width:                       450;
+    width:                       600;
 
     // FOR ALL WIDGETS
     enabled:                     true;
@@ -52,7 +55,7 @@ dummy {
 textbox-prompt-colon {
     enabled:                     true;
     expand:                      false;
-    str:                         "󰸱 Mode";
+    str:                         "  Screenshot";
     padding:                     12px;
     border-radius:               100%;
     text-color:                  @foreground;
@@ -69,7 +72,7 @@ prompt {
 // LIST
 listview {
     enabled:                     true;
-    columns:                     3;
+    columns:                     5;
     lines:                       1;
     cycle:                       true;
     dynamic:                     true;

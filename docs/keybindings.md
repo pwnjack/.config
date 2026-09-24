@@ -25,7 +25,7 @@ checkout.
 |-----|--------|
 | `Super + Enter` | Terminal (`options/terminal`) |
 | `Super + E` | File manager (thunar) |
-| `Super + N` | Text editor (nvim) |
+| `Super + N` | Text editor (`options/editor`) |
 | `Super + T` | Text editor (KWrite) |
 | `Super + B` | Web browser (`options/browser`) |
 | `Super + S` | Screenshot a region |

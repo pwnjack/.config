@@ -6,8 +6,8 @@
 # It also swaps waybar-weather's colour emoji for monochrome Nerd Font
 # glyphs. The emoji were the only colour glyphs on an otherwise monochrome
 # bar, and being bitmap emoji they ignore the pywal palette entirely.
-# Mapped glyphs arrive pre-wrapped in <span size="large"> to match the bar
-# scale (13px base, glyph promoted by a fifth) -- see waybar/style.css.
+# Mapped bar glyphs are wrapped in <span size="large"> (see `large` below)
+# to match the bar scale (13px base, glyph promoted by a fifth) -- see waybar/style.css.
 #
 # An unmapped condition keeps its emoji rather than being replaced by a
 # generic glyph: showing the wrong weather is worse than showing a
@@ -15,7 +15,7 @@
 # added here.
 #
 
-TEXT_MAP='{"☀":"<span size=\"large\" letter_spacing=\"4096\">󰖙</span>","☁":"<span size=\"large\" letter_spacing=\"4096\">󰖐</span>","⛅":"<span size=\"large\" letter_spacing=\"4096\">󰖕</span>","🌤":"<span size=\"large\" letter_spacing=\"4096\">󰖕</span>","⛈":"<span size=\"large\" letter_spacing=\"4096\">󰙾</span>","🌩":"<span size=\"large\" letter_spacing=\"4096\">󰖓</span>","🌫":"<span size=\"large\" letter_spacing=\"4096\">󰖑</span>","🌦":"<span size=\"large\" letter_spacing=\"4096\">󰖗</span>","🌧":"<span size=\"large\" letter_spacing=\"4096\">󰖖</span>","🌨":"<span size=\"large\" letter_spacing=\"4096\">󰖘</span>","🌑":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌒":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌓":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌔":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌕":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌖":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌗":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌘":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>","🌙":"<span size=\"large\" letter_spacing=\"4096\">󰖔</span>"}'
+TEXT_MAP='{"☀":"󰖙","☁":"󰖐","⛅":"󰖕","🌤":"󰖕","⛈":"󰙾","🌩":"󰖓","🌫":"󰖑","🌦":"󰖗","🌧":"󰖖","🌨":"󰖘","🌑":"󰖔","🌒":"󰖔","🌓":"󰖔","🌔":"󰖔","🌕":"󰖔","🌖":"󰖔","🌗":"󰖔","🌘":"󰖔","🌙":"󰖔"}'
 TIP_MAP='{"🌅":"󰖜","🌇":"󰖛"}'
 
 # Function to check network connectivity
@@ -70,7 +70,8 @@ printf '%s' "$output" | jq -c \
     --argjson text_map "$TEXT_MAP" \
     --argjson tip_map "$TIP_MAP" '
     def strip_vs: gsub("️"; "");
-    def swap($m): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value));
-    .text = (.text | strip_vs | swap($text_map))
-    | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map)) else . end
+    def swap($m; wrap): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value | wrap));
+    def large: "<span size=\"large\" letter_spacing=\"4096\">" + . + "</span>";
+    .text = (.text | strip_vs | swap($text_map; large))
+    | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map; .)) else . end
 ' 2>/dev/null || printf '%s' "$output"

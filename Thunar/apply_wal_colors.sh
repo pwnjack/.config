@@ -1,50 +1,42 @@
 #!/bin/bash
-
-# Render pywal colors for Thunar into the cache as GTK 3 CSS.
-
-wal_css="$HOME/.cache/wal/colors-waybar.css"
-thunar_css="$HOME/.cache/wal/thunar-gtk.css"
-
-# A missing input is not an early exit: gtk-3.0/thunar-colors.css is a tracked
-# symlink to the output, and a tracked symlink with no target is an ERROR in
-# doctor.sh. The greps below simply come back empty and the fallbacks apply.
 #
-# Extract colors from wal's waybar css
-bg=$(grep -m1 "@define-color background" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
-fg=$(grep -m1 "@define-color foreground" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
-sel=$(grep -m1 "@define-color color5" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
-rb=$(grep -m1 "@define-color color1" "$wal_css" 2>/dev/null | awk '{print $3}' | tr -d ';')
+# Render the pywal palette as GTK 3 CSS for Thunar.
+#
+# gtk-3.0/thunar-colors.css is a tracked symlink to the file written here.
+# Thunar reads GTK CSS on startup, so open windows keep the old colors.
+#
 
-# Fallbacks in case parsing failed
-bg=${bg:-#05090C}
-fg=${fg:-#cfddde}
-sel=${sel:-#8DAFB4}
-rb=${rb:-#2A7789}
+set -uo pipefail
 
-mkdir -p "$HOME/.cache/wal"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
+cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
 
-# Render new block
-{
-    echo "/* Automatically generated - do not edit manually */"
-    echo ".thunar,"
-    echo ".thunar .view,"
-    echo ".thunar toolbar,"
-    echo ".thunar scrolledwindow.sidebar treeview.view {"
-    echo "    background-color: $bg;"
-    echo "    color: $fg;"
-    echo "}"
-    echo ""
-    echo ".thunar .view widget:selected,"
-    echo ".thunar treeview *:selected {"
-    echo "    background-color: $sel;"
-    echo "    color: $bg;"
-    echo "}"
-    echo ""
-    echo ".thunar .view .rubberband,"
-    echo ".thunar treeview rubberband,"
-    echo ".thunar scrolledwindow.sidebar treeview.view .rubberband {"
-    echo "    background-color: $rb;"
-    echo "}"
-} > "$thunar_css"
+declare -a wal=()
+# shellcheck source=scripts/theming/palette.sh
+. "$config_dir/scripts/theming/palette.sh"
+wal_load
 
-# Thunar reads GTK theme on startup; existing windows may need restart
+mkdir -p "$cache_dir"
+
+cat > "$cache_dir/thunar-gtk.css" <<EOF
+/* Automatically generated - do not edit manually */
+.thunar,
+.thunar .view,
+.thunar toolbar,
+.thunar scrolledwindow.sidebar treeview.view {
+    background-color: ${wal[0]};
+    color: ${wal[7]};
+}
+
+.thunar .view widget:selected,
+.thunar treeview *:selected {
+    background-color: ${wal[5]};
+    color: ${wal[0]};
+}
+
+.thunar .view .rubberband,
+.thunar treeview rubberband,
+.thunar scrolledwindow.sidebar treeview.view .rubberband {
+    background-color: ${wal[1]};
+}
+EOF

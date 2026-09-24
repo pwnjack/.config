@@ -20,6 +20,7 @@ rendered="$cache_dir/starship.toml"
 
 [ -r "$template" ] || exit 0
 
+# shellcheck disable=SC2034  # read by wal_render from palette.sh
 declare -a wal=()
 # shellcheck source=scripts/theming/palette.sh
 . "$config_dir/scripts/theming/palette.sh"
@@ -27,14 +28,6 @@ wal_load
 
 mkdir -p "$cache_dir"
 
-# Highest index first: @color1@ is a prefix of @color15@, so substituting it
-# first would leave a stray "5" behind.
-sed_args=()
-for i in 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0; do
-    sed_args+=(-e "s|@color$i@|${wal[$i]}|g")
-    sed_args+=(-e "s|@oncolor$i@|$(wal_readable_on "${wal[$i]}")|g")
-done
-
-sed "${sed_args[@]}" "$template" > "$rendered"
+wal_render "$template" "$rendered"
 
 exit 0

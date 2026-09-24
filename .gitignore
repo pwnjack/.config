@@ -47,14 +47,9 @@ logs/
 **/DawnWebGPUCache/
 **/GraphiteDawnCache/
 
-# AGS build artifacts
-ags/node_modules/
-ags/@girs/
-
 # Pywal cache
 wal/cache/
-wal/templates/*
-!wal/templates/colors-hyprland.lua
+wal/templates/
 **/.cache/wal/
 
 # -------------------------------------------------------------------------------
@@ -203,15 +198,6 @@ chromium/Default/
 chromium/Profile*/
 chromium/*Profile*/
 
-# Waybar/rofi/hypr/ghostty/gtk/alacritty: keep config, exclude backups
-waybar/**/*.bak
-rofi/**/*.bak
-hypr/**/*.bak
-ghostty/**/*.bak
-gtk-3.0/**/*.bak
-gtk-4.0/**/*.bak
-alacritty/**/*.bak
-
 # -------------------------------------------------------------------------------
 # LOG AND CRASH FILES
 # -------------------------------------------------------------------------------
@@ -328,7 +314,6 @@ TODO.md
 !ghostty/
 !nvim/
 !rofi/
-!swaylock/
 !sddm/
 
 # Appearance
@@ -341,7 +326,6 @@ TODO.md
 # System utilities
 !btop/
 !fastfetch/
-!flameshot/
 
 # Custom directories (newly created)
 !scripts/
@@ -363,3 +347,8 @@ zed/settings.json
 # Herdr session state and logs (runtime, not config)
 herdr/
 /orca/
+
+# Defaults that cava and bottom recreate on startup; nothing in them is customised.
+cava/shaders/
+cava/themes/
+bottom/

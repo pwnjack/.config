@@ -2,7 +2,7 @@
 #
 # Night Light Control
 # Single entry point for hyprsunset -- the keybind, the waybar module and the
-# AGS settings panel all call this, and none of them talks to hyprctl directly.
+# settings panel all call this, and none of them talks to hyprctl directly.
 #
 # The daemon owns the schedule (hypr/hyprsunset.conf) and switches profiles on
 # its own timer, so a manual override set here expires by itself at the next

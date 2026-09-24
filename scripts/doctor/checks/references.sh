@@ -76,7 +76,7 @@
 #     target legitimately containing # would be truncated. Hyprland has no
 #     escape for it either.
 #   - A reference reachable two ways (hypr/hyprland.lua's require call and
-#     scripts/settings/settings.sh's literal $HOME/.config/hypr/... path) is
+#     scripts/settings/advanced/monitor.sh's literal $HOME/.config/hypr/... path) is
 #     reported once per referrer. Both findings are true and each names a
 #     different file to fix.
 #   - The extraction pattern has no way to express a space, so a referenced

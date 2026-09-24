@@ -3,9 +3,14 @@ if test -f /usr/share/cachyos-fish-config/cachyos-config.fish
     source /usr/share/cachyos-fish-config/cachyos-config.fish
 end
 
-# Load environment variables from .env file
+# Load KEY=value lines from .env. Parsed here rather than through xargs, which
+# splits values on spaces and strips quotes unpredictably.
 if test -f ~/.config/.env
-    export (cat ~/.config/.env | grep -v '^#' | grep -v '^$' | xargs)
+    for line in (string match -rv '^\s*(#|$)' < ~/.config/.env)
+        set -l pair (string split -m1 = -- (string replace -r '^\s*export\s+' '' -- $line))
+        test (count $pair) -eq 2; or continue
+        set -gx (string trim -- $pair[1]) (string trim -- $pair[2] | string trim -c '"\'')
+    end
 end
 
 # Load aliases
@@ -31,9 +36,3 @@ end
 if type -q starship
     starship init fish | source
 end
-
-# overwrite greeting
-# potentially disabling fastfetch
-#function fish_greeting
-#    # smth smth
-#end

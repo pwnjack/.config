@@ -59,8 +59,7 @@
 @import "colors.css";
 
 * {
-    font-family:
-        "FiraCode Nerd Font", "JetbrainsMono Nerd", "Hack Nerd", sans-serif;
+    font-family: "FiraCode Nerd Font", "JetbrainsMono Nerd", "Hack Nerd", sans-serif;
     border: none;
 }
 

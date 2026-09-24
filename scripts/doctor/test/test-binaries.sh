@@ -37,7 +37,7 @@ echo "absent-browser-qq" > "$bin_fixture/options/browser"
 cat > "$bin_fixture/hypr/config/apptype.lua" <<'BIN_EOF'
 return {
     fileManager = "ls",
-    textEditor = "cat",
+    calculator = "cat",
     polkitAgent = "absent-polkit-qq",
 }
 BIN_EOF
@@ -74,7 +74,7 @@ DOCTOR_ROOT="$bin_fixture"
 assert_eq "$(_bin_resolve_var terminal)" "bash" "\$terminal resolves from options/"
 assert_eq "$(_bin_resolve_var browser)" "absent-browser-qq" "\$browser resolves from options/"
 assert_eq "$(_bin_resolve_var fileManager)" "ls" "\$fileManager resolves from apptype.lua"
-assert_eq "$(_bin_resolve_var textEditor)" "cat" "\$textEditor resolves from apptype.lua"
+assert_eq "$(_bin_resolve_var calculator)" "cat" "\$calculator resolves from apptype.lua"
 assert_eq "$(_bin_resolve_var polkitAgent)" "absent-polkit-qq" "\$polkitAgent resolves from apptype.lua"
 assert_eq "$(_bin_resolve_var undefinedVariable)" "" "unknown variable resolves to empty"
 

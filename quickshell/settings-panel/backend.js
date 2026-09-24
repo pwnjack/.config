@@ -165,6 +165,8 @@ async function change(request) {
         const text = row.kind === "toggle" ? (value ? "enabled" : "disabled") : value.trim()
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
+            // hypr/config/apptype.lua reads these at parse time.
+            if (["terminal", "browser", "editor"].includes(row.key)) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"])))
         })
     }
@@ -221,7 +223,7 @@ export async function dispatch(request) {
     }
     if (request.op === "action") {
         if (request.id === "reload") { await persistReload(); return {} }
-        const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh", advanced: "/scripts/settings/settings.sh", monitors: "/scripts/settings/advanced/monitor.sh" }
+        const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh", monitors: "/scripts/settings/advanced/monitor.sh" }
         if (!Object.hasOwn(scripts, request.id)) throw new Error("Unknown action")
         const path = configDir + scripts[request.id]
         detached(request.id === "waybar" ? ["bash", path] : [readOption("terminal") || "ghostty", "-e", path])

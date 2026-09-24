@@ -5,10 +5,10 @@ return function(apps)
     -- ## Applications
     hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(apps.terminal)) -- Terminal ($terminal)
     hl.bind("SUPER + E", hl.dsp.exec_cmd(apps.fileManager)) -- File manager ($fileManager)
-    hl.bind("SUPER + N", hl.dsp.exec_cmd(apps.terminal .. " -e " .. apps.textEditor)) -- Text editor ($textEditor)
+    hl.bind("SUPER + N", hl.dsp.exec_cmd(apps.terminal .. " -e " .. apps.editor)) -- Text editor ($editor)
     hl.bind("SUPER + T", hl.dsp.exec_cmd("kwrite")) -- Text editor (KWrite)
     hl.bind("SUPER + B", hl.dsp.exec_cmd(apps.browser)) -- Web browser ($browser)
-    hl.bind("SUPER + S", hl.dsp.exec_cmd([[hyprshot -m region -o $HOME/Pictures/Screenshots -f Screenshot_$(date "+%Y-%m-%d_%H:%M:%S").png -z]])) -- Screenshot a region
+    hl.bind("SUPER + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot.sh region")) -- Screenshot a region
     hl.bind("SUPER + ALT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot-annotate.sh")) -- Screenshot a region and annotate
     hl.bind("SUPER + G", hl.dsp.exec_cmd("zeditor")) -- Code editor (Zed)
     hl.bind("SUPER + K", hl.dsp.exec_cmd("gnome-calculator")) -- Calculator
@@ -121,8 +121,8 @@ return function(apps)
     hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true, repeating = true }) -- Mute output
     hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true, repeating = true }) -- Mute microphone
     hl.bind("XF86Calculator", hl.dsp.exec_cmd("gnome-calculator")) -- Calculator
-    hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"), { locked = true }) -- Next track
-    hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true }) -- Play/pause
-    hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true }) -- Play/pause
-    hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true }) -- Previous track
+    hl.bind("XF86AudioNext", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh next"), { locked = true }) -- Next track
+    hl.bind("XF86AudioPause", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh play-pause"), { locked = true }) -- Play/pause
+    hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh play-pause"), { locked = true }) -- Play/pause
+    hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh previous"), { locked = true }) -- Previous track
 end

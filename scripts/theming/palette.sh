@@ -77,3 +77,20 @@ wal_readable_on() {
         printf '%s' "${wal[15]}"
     fi
 }
+
+# wal_render <template> <output>
+#
+# Copies a template with every @colorN@ replaced by wal[N] and every
+# @oncolorN@ by the text color readable on it. Call wal_load first.
+#
+# Highest index first: @color1@ is a prefix of @color15@, so substituting it
+# first would leave a stray "5" behind.
+wal_render() {
+    local -a sed_args=()
+    local i
+    for ((i = 15; i >= 0; i--)); do
+        sed_args+=(-e "s|@color$i@|${wal[$i]}|g")
+        sed_args+=(-e "s|@oncolor$i@|$(wal_readable_on "${wal[$i]}")|g")
+    done
+    sed "${sed_args[@]}" "$1" > "$2"
+}

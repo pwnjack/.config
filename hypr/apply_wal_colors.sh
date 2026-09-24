@@ -10,8 +10,6 @@
 
 set -uo pipefail
 
-command -v Hyprland >/dev/null 2>&1 || exit 0
-
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wal"
 
@@ -45,6 +43,8 @@ background="${wal[0]#\#}"
 # A running Lua-configured Hyprland picks up the new module on reload. During
 # the one-time migration from Hyprlang, Hyprland intentionally stays on the
 # language it started with until the next session, so this is harmless there.
-hyprctl reload >/dev/null 2>&1 || true
+if command -v hyprctl >/dev/null 2>&1; then
+    hyprctl reload >/dev/null 2>&1 || true
+fi
 
 exit 0

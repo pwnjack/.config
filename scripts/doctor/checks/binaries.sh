@@ -192,7 +192,7 @@ _bin_scan_lua() {
     done < <(sed -nE \
         -e 's/.*exec_cmd\(\[\[(.*)\]\]\).*/\1/p' \
         -e 's/.*exec_cmd\("([^"]*)"\).*/\1/p' \
-        -e 's/.*exec_cmd\(apps\.terminal \.\. " -e " \.\. apps\.textEditor\).*/$terminal -e $textEditor/p' \
+        -e 's/.*exec_cmd\(apps\.terminal \.\. " -e " \.\. apps\.editor\).*/$terminal -e $editor/p' \
         -e 's/.*exec_cmd\(apps\.([A-Za-z_][A-Za-z0-9_]*)\).*/$\1/p' \
         -e 's/.*exec_cmd\("([^"]*)" \.\. apps\.([A-Za-z_][A-Za-z0-9_]*)\).*/\1$\2/p' \
         "$DOCTOR_ROOT/$conf")

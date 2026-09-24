@@ -2,6 +2,8 @@
 
 mapfile -t MONITORS < <(hyprctl monitors | grep -oP '(?<=Monitor )[^ ]+')
 CONFIG="$HOME/.config/hypr/config/hardware/monitor.lua"
+EDITOR_CMD=$(cat "$HOME/.config/options/editor" 2>/dev/null)
+EDITOR_CMD=${EDITOR_CMD:-nano}
 
 clear
 
@@ -37,7 +39,7 @@ monitoradd() {
         clear
         while true; do
             echo "Please enter the resolution of your monitor."
-            echo "You can enter 'skip' to automatically select the preferred resolution."
+            echo "You can enter 'skip' to use the highest resolution at its highest refresh rate."
             echo "Examples: 1920x1080 - 3840x2160@60 - 2560x1440@144 etc."
             echo
             echo "Below are the available resolutions the selected monitor."
@@ -49,7 +51,9 @@ monitoradd() {
             read -r resolution
 
             if [[ "$resolution" == "skip" ]]; then
-                resolution='preferred'
+                # Not `preferred`: that is the EDID timing, which on a 144 Hz
+                # panel picked 60 Hz. See hypr/config/hardware/monitor.lua.
+                resolution='highres@highrr'
                 break
             fi
 
@@ -74,7 +78,7 @@ monitoradd() {
             echo "5: Auto Below"
             echo "6: Custom"
             echo ""
-            read -p " ■ " choice
+            read -r -p " ■ " choice
 
             case $choice in 
                 1)
@@ -101,7 +105,7 @@ monitoradd() {
                     echo 
                     echo "Enter the x and y coordinates of the monitor."
                     echo "Example: 100x100"
-                    read -p " ■ " pos
+                    read -r -p " ■ " pos
 
                     if [[ "$pos" =~ ^[0-9]+x[0-9]+$ ]]; then
                         break
@@ -127,7 +131,7 @@ monitoradd() {
             echo
             echo "Common scale factors include: 1, 1.25, 1.5, 1.75, 2. etc."
             echo ""
-            read -p " ■ " scale
+            read -r -p " ■ " scale
 
             if [[ "$scale" =~ ^[0-9]+\.[0-9]+$ ]] || [[ "$scale" =~ ^[0-9]+$ ]]; then
                 break
@@ -147,7 +151,7 @@ monitoradd() {
             echo "2 - 180 degrees"
             echo "3 - 270 degrees"
             echo 
-            read -p " ■ " choice
+            read -r -p " ■ " choice
 
             if [[ "$choice" == "0" ]]; then
                 transform=""
@@ -174,7 +178,7 @@ monitoradd() {
         echo -e "ID: $mon\nResolution: $resolution\nPosition: $pos\nScale: $scale\nTransform: $tenabled"
         echo
         echo "Add monitor to config file? [Y/N]"
-        read -p " ■ " choice
+        read -r -p " ■ " choice
 
         case $choice in
             [Yy])
@@ -184,13 +188,13 @@ monitoradd() {
                 echo "$monitor_line" >> "$CONFIG"
                 clear
                 echo "Finished, press ENTER to return."
-                read -p " ■ "
+                read -r -p " ■ "
                 break
                 ;;
             [Nn])
                 clear
                 echo "Abandoned, press ENTER to return."
-                read -p " ■ "
+                read -r -p " ■ "
                 break
                 ;;
             *)
@@ -211,7 +215,7 @@ monitorremove() {
     if [ ${#monitors[@]} -eq 0 ]; then
         echo "No per-monitor rules are configured — only the host-neutral catch-all, which is not removable."
         echo "Press ENTER to return."
-        read -p " ■ "
+        read -r -p " ■ "
         clear
         return
     fi
@@ -243,7 +247,7 @@ monitorremove() {
         mv "$tmp" "$CONFIG"
         clear
         echo "Finished, press ENTER to return."
-        read -p " ■ "
+        read -r -p " ■ "
     else
         clear
         echo "X Please try again."
@@ -255,7 +259,7 @@ while true; do
     echo "-- MONITOR CUSTOMIZATION --"
     echo 
     echo "Current configuration:"
-    cat $CONFIG
+    cat "$CONFIG"
     echo 
     echo "-------------------------------------------------------"
     echo "1. Configure a monitor                               󰍹" 
@@ -265,7 +269,7 @@ while true; do
     echo "Q. Return                                             󰌑"
     echo "-------------------------------------------------------"
     echo ""
-    read -p " ■ " choice
+    read -r -p " ■ " choice
 
     case $choice in 
         1)
@@ -280,12 +284,12 @@ while true; do
             ;;
         3)
             clear
-            nano "$CONFIG"
+            $EDITOR_CMD "$CONFIG"
             clear
             ;;
         [qQ])
             clear
-            exit 1
+            exit 0
             ;;
         *)
             clear

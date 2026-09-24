@@ -91,7 +91,7 @@ PACKAGES=(
     "hyprland" "hyprlock" "hypridle" "hyprpolkitagent"
     "hyprshot" "hyprpicker" "hyprsunset" "swappy"
     # Bar, notifications, OSD, wallpaper
-    "waybar" "swaync" "swayosd" "awww" "waypaper" "quickshell"
+    "waybar" "swaync" "awww" "waypaper" "quickshell"
     # Launchers and menus
     "rofi" "rofi-emoji"
     # Terminals, shell, editors
@@ -220,20 +220,6 @@ else
     warning "Could not initialize pywal - run 'wal -i /path/to/wallpaper' manually later"
 fi
 
-# Pywal symlinks for Hyprland (Lua) and hyprlock (Hyprlang) colors.
-# The target is relative on purpose. An absolute one bakes this machine's home
-# path into a tracked file, which doctor.sh reports as a portability warning
-# and which breaks the moment the repo is checked out under a different user.
-info "Setting up pywal integration..."
-execute ln -sfn "../../../.cache/wal/colors-hyprland.conf" "$CONFIG_DIR/hypr/config/colors.conf"
-execute ln -sfn "../../../.cache/wal/colors-hyprland.lua" "$CONFIG_DIR/hypr/config/colors.lua"
-if [ -f "$HOME/.cache/wal/colors-hyprland.conf" ] \
-    && [ -f "$HOME/.cache/wal/colors-hyprland.lua" ]; then
-    success "Pywal symlinks created"
-else
-    warning "Pywal colors not generated yet - the theming pass below will create fallbacks"
-fi
-
 # Current-wallpaper state + generated configs (cache-backed, symlinked from the repo)
 if [ -n "$FIRST_WALLPAPER" ]; then
     execute ln -sfn "$FIRST_WALLPAPER" "$HOME/.cache/current_wallpaper"
@@ -272,14 +258,8 @@ fi
 # ------------------------------------------------------------------
 # Final wiring
 # ------------------------------------------------------------------
-info "Making scripts executable..."
-if [ "$DRY_RUN" = false ]; then
-    find "$CONFIG_DIR/scripts" "$CONFIG_DIR/rofi" "$CONFIG_DIR/swaync" \
-         "$CONFIG_DIR/waybar" "$CONFIG_DIR/sddm" "$CONFIG_DIR/ghostty" \
-         "$CONFIG_DIR/Thunar" \
-         -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
-fi
-success "Scripts are executable"
+# Script modes need no fixing here: git tracks the executable bit, and the
+# deployment copies preserve it.
 
 # API keys template
 if [ ! -f "$CONFIG_DIR/.env" ] && [ -f "$CONFIG_DIR/.env.example" ]; then

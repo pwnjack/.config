@@ -2,7 +2,7 @@
 # Themed terminal for aichat sidebar
 
 # Inherit pywal colors dynamically
-config-file = ~/.cache/wal/colors-ghostty
+config-file = ?colors
 
 # Typography
 font-family = "Fira Code Nerd Font"

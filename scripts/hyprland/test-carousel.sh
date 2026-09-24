@@ -43,8 +43,8 @@ with tempfile.TemporaryDirectory() as tmp:
         path.chmod(0o755)
     executable(bins / 'awww', '''
 if [[ ${QUERY_FAIL:-0} == 1 ]]; then exit 1; fi
-printf ': DP-1: image: %s\n' "$(cat "$FIXTURE/selected")"
-printf ': HDMI-A-1: image: %s\n' "$(cat "$FIXTURE/selected")"
+printf ': FIXTURE-A: image: %s\n' "$(cat "$FIXTURE/selected")"
+printf ': FIXTURE-B: image: %s\n' "$(cat "$FIXTURE/selected")"
 ''')
     executable(bins / 'hyprctl', 'echo \'{"bool":false,"set":true}\'\n')
     executable(bins / 'notify-send', 'printf "%s\\n" "$*" >> "$FIXTURE/notices"\n')

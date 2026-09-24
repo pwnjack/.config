@@ -160,7 +160,6 @@ FocusScope {
                     PanelButton { theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy; onClicked: view.controller.action("reload") }
                     PanelButton { theme: view; text: "Restart Waybar"; onClicked: view.controller.action("waybar") }
                     PanelButton { theme: view; text: "Update system"; onClicked: view.controller.action("update") }
-                    PanelButton { theme: view; text: "Advanced (TUI)"; onClicked: view.controller.action("advanced") }
                 }
             }
         }

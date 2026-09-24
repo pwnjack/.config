@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 #
 # Application Launcher
-# Uses rofi with vertical layout
+# Layout comes from options/launchertype: vertical or horizontal.
 #
 
-launcher="$(cat $HOME/.config/options/launchertype)"
-dir="$HOME/.config/rofi/themes/launcher"
+launcher=$(cat "$HOME/.config/options/launchertype" 2>/dev/null)
+[[ "$launcher" == horizontal ]] || launcher=vertical
 
-rofi \
-    -show drun \
-    -theme ${dir}/${launcher}.rasi
+rofi -show drun -theme "$HOME/.config/rofi/themes/launcher/$launcher.rasi"

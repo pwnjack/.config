@@ -1,118 +1,92 @@
 #!/usr/bin/env bash
+#
+# Apply options/font and options/font-gtk to every config that names a font.
+# Run by the settings panel after either option changes; a nonzero exit makes
+# the panel restore the previous option.
+#
+# Every rofi theme imports rofi/options/font.rasi, so rofi needs one file
+# rewritten rather than each theme. Other fonts named inside themes (the
+# `feather` icon font, the cheatsheet's monospace) are deliberate and left alone.
+#
 
-##
-## Apply Font Configuration
-## Reads font from $HOME/.config/options/font and applies it to all configs
-## Created by : @GeodeArc
-##
+config_dir="$HOME/.config"
 
-# Read font options
-main_font="$(cat "$HOME/.config/options/font" 2>/dev/null || echo "FiraCode Nerd Font")"
-gtk_font="$(cat "$HOME/.config/options/font-gtk" 2>/dev/null || echo "Cascadia Mono Semi-Bold")"
+read_font() {
+    local value
+    value=$(head -n1 "$config_dir/options/$1" 2>/dev/null)
+    value=${value#\"}
+    printf '%s' "${value%\"}"
+}
 
-# Remove quotes if present
-main_font=$(echo "$main_font" | sed 's/^"//;s/"$//')
-gtk_font=$(echo "$gtk_font" | sed 's/^"//;s/"$//')
+main_font=$(read_font font)
+gtk_font=$(read_font font-gtk)
+main_font=${main_font:-FiraCode Nerd Font}
+gtk_font=${gtk_font:-Cascadia Mono Semi-Bold}
 
-echo "Applying fonts..."
+# Every target quotes the name with double quotes, so one inside it cannot be
+# written anywhere safely.
+if [[ "$main_font$gtk_font" == *\"* ]]; then
+    echo "Font names cannot contain double quotes" >&2
+    exit 1
+fi
+
+# Escape the characters a sed replacement treats specially (| is the delimiter).
+sed_escape() { printf '%s' "$1" | sed 's/[\\&|]/\\&/g'; }
+main_sed=$(sed_escape "$main_font")
+gtk_sed=$(sed_escape "$gtk_font")
+
 echo "Main font: $main_font"
-echo "GTK font: $gtk_font"
+echo "GTK font:  $gtk_font"
 
-# Update Rofi font
-rofi_font_file="$HOME/.config/rofi/options/font.rasi"
-mkdir -p "$(dirname "$rofi_font_file")"
-echo "configuration { font: \"$main_font 10\"; }" > "$rofi_font_file"
-echo "✓ Updated Rofi font"
+failed=0
 
-# Update hardcoded fonts in Rofi theme files (keybinds, etc.)
-find "$HOME/.config/rofi" -name "*.rasi" -type f | while read theme_file; do
-    # Skip the font.rasi file itself
-    if [[ "$theme_file" == "$rofi_font_file" ]]; then
-        continue
-    fi
-    
-    # Update hardcoded font references
-    if grep -qE "font:.*\"[^\"]*(FiraCode|JetbrainsMono|Hack|Cascadia|CommitMono)" "$theme_file" 2>/dev/null; then
-        # Create backup
-        cp "$theme_file" "$theme_file.bak" 2>/dev/null
-        
-        # Extract size from existing font (e.g., "Font Name 10" -> "10")
-        font_size=$(grep -oE "font:.*\"[^\"]* [0-9]+\"" "$theme_file" | grep -oE "[0-9]+" | head -1)
-        if [[ -z "$font_size" ]]; then
-            font_size="10"
-        fi
-        
-        # Update font references
-        sed -i "s|font:[[:space:]]*\"[^\"]*\"|font: \"$main_font $font_size\"|g" "$theme_file"
-    fi
-done
-echo "✓ Updated Rofi theme fonts"
+# Rofi
+printf 'configuration { font: "%s 10"; }\n' "$main_font" > "$config_dir/rofi/options/font.rasi" || failed=1
 
-# Update Waybar font (CSS)
-waybar_css="$HOME/.config/waybar/style.css"
+# Waybar. The declaration may be wrapped over several lines, so the substitution
+# runs on the whole file (-z) and [^;]* spans the line break.
+waybar_css="$config_dir/waybar/style.css"
 if [[ -f "$waybar_css" ]]; then
-    cp "$waybar_css" "$waybar_css.bak" 2>/dev/null
-    sed -i "s|font-family:.*;|font-family: \"$main_font\", \"JetbrainsMono Nerd\", \"Hack Nerd\", sans-serif;|" "$waybar_css"
-    echo "✓ Updated Waybar font"
+    sed -z -i -E \
+        "s|font-family:[^;]*;|font-family: \"$main_sed\", \"JetbrainsMono Nerd\", \"Hack Nerd\", sans-serif;|" \
+        "$waybar_css" || failed=1
 fi
 
-# Update Ghostty font
-ghostty_conf="$HOME/.config/ghostty/config"
+# Ghostty
+ghostty_conf="$config_dir/ghostty/config"
 if [[ -f "$ghostty_conf" ]]; then
-    cp "$ghostty_conf" "$ghostty_conf.bak" 2>/dev/null
-    if grep -q "^font-family = " "$ghostty_conf"; then
-        # Replace in place so the line keeps its position (no churn)
-        sed -i "s|^font-family = .*|font-family = \"$main_font\"|" "$ghostty_conf"
-    elif grep -q "^# pywal colors" "$ghostty_conf"; then
-        sed -i "/^# pywal colors/i font-family = \"$main_font\"" "$ghostty_conf"
+    if grep -q '^font-family = ' "$ghostty_conf"; then
+        sed -i "s|^font-family = .*|font-family = \"$main_sed\"|" "$ghostty_conf" || failed=1
     else
-        echo "" >> "$ghostty_conf"
-        echo "font-family = \"$main_font\"" >> "$ghostty_conf"
+        printf '\nfont-family = "%s"\n' "$main_font" >> "$ghostty_conf" || failed=1
     fi
-    echo "✓ Updated Ghostty font"
 fi
 
-# Update Alacritty font
-alacritty_conf="$HOME/.config/alacritty/alacritty.toml"
+# Alacritty (untracked, optional)
+alacritty_conf="$config_dir/alacritty/alacritty.toml"
 if [[ -f "$alacritty_conf" ]]; then
-    cp "$alacritty_conf" "$alacritty_conf.bak" 2>/dev/null
-    if grep -q 'normal.family =' "$alacritty_conf"; then
-        sed -i "s|normal.family = \".*\"|normal.family = \"$main_font\"|" "$alacritty_conf"
-    fi
-    echo "✓ Updated Alacritty font"
+    sed -i "s|normal.family = \".*\"|normal.family = \"$main_sed\"|" "$alacritty_conf" || failed=1
 fi
 
-# Update GTK font
-gtk3_conf="$HOME/.config/gtk-3.0/settings.ini"
-gtk4_conf="$HOME/.config/gtk-4.0/settings.ini"
-
-for gtk_conf in "$gtk3_conf" "$gtk4_conf"; do
-    if [[ -f "$gtk_conf" ]]; then
-        cp "$gtk_conf" "$gtk_conf.bak" 2>/dev/null
-        if grep -q "^gtk-font-name=" "$gtk_conf"; then
-            existing_font=$(grep "^gtk-font-name=" "$gtk_conf" | cut -d'=' -f2-)
-            if echo "$existing_font" | grep -q "@wght="; then
-                size=$(echo "$existing_font" | sed 's/.* \([0-9]\+\) @wght=.*/\1/')
-                weight=$(echo "$existing_font" | sed 's/.*@wght=\([0-9]\+\).*/\1/')
-                if [[ -z "$size" ]] || [[ "$size" == "$existing_font" ]]; then size="11"; fi
-                if [[ -z "$weight" ]] || [[ "$weight" == "$existing_font" ]]; then
-                    sed -i "s|^gtk-font-name=.*|gtk-font-name=$gtk_font $size|" "$gtk_conf"
-                else
-                    sed -i "s|^gtk-font-name=.*|gtk-font-name=$gtk_font $size @wght=$weight|" "$gtk_conf"
-                fi
-            else
-                size=$(echo "$existing_font" | grep -oE "[0-9]+" | tail -1)
-                if [[ -z "$size" ]]; then size="11"; fi
-                sed -i "s|^gtk-font-name=.*|gtk-font-name=$gtk_font $size|" "$gtk_conf"
-            fi
-        else
-            echo "gtk-font-name=$gtk_font 11" >> "$gtk_conf"
-        fi
-        echo "✓ Updated GTK font: $(basename "$(dirname "$gtk_conf")")"
+# GTK 3 and 4. Keep the size and any variable-font weight already configured:
+# "Name 11" or "Name 11 @wght=500".
+for gtk_conf in "$config_dir/gtk-3.0/settings.ini" "$config_dir/gtk-4.0/settings.ini"; do
+    [[ -f "$gtk_conf" ]] || continue
+    current=$(sed -n 's/^gtk-font-name=//p' "$gtk_conf" | head -n1)
+    size=11 weight=""
+    if [[ "$current" =~ ([0-9]+)( @wght=[0-9]+)?$ ]]; then
+        size=${BASH_REMATCH[1]}
+        weight=${BASH_REMATCH[2]}
+    fi
+    if [[ -n "$current" ]]; then
+        sed -i "s|^gtk-font-name=.*|gtk-font-name=$gtk_sed $size$weight|" "$gtk_conf" || failed=1
+    else
+        echo "gtk-font-name=$gtk_font $size$weight" >> "$gtk_conf" || failed=1
     fi
 done
 
-echo ""
-echo "Font configuration applied successfully!"
-echo "You may need to restart applications for changes to take effect."
-
+if [[ "$failed" -ne 0 ]]; then
+    echo "Some configs could not be updated" >&2
+    exit 1
+fi
+echo "Fonts applied. Restart open applications to see the change."
