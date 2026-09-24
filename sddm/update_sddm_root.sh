@@ -34,15 +34,26 @@ if ! wallpaper=$("$RUNUSER" -u "$TARGET_USER" -- /bin/bash -c '
     user_home=$1
     [[ -d "$user_home" ]] || exit 10
 
-    # Empty preference means "no preference": use the newest entry for any
-    # monitor instead of guessing a connector name.
+    # Empty preference means "no preference": consider every monitor instead
+    # of guessing a connector name. The newest entry that names an existing
+    # file wins, so the frame-cache file of an animated wallpaper (binary, not a
+    # path) cannot shadow a real entry. This whole block is single-quoted, so
+    # it uses double quotes only.
     monitor=$(cat "$user_home/.config/options/mainmonitor" 2>/dev/null)
     if [[ -n "$monitor" ]]; then
-        cache_file=$(ls -t "$user_home/.cache/awww/"*/"$monitor" 2>/dev/null | head -n1)
+        files=("$user_home/.cache/awww/"*/"$monitor")
     else
-        cache_file=$(ls -t "$user_home/.cache/awww/"*/* 2>/dev/null | head -n1)
+        files=("$user_home/.cache/awww/"*/*)
     fi
-    wallpaper=$(grep -aoE '/.+$' "$cache_file" 2>/dev/null)
+    wallpaper="" newest=""
+    for file in "${files[@]}"; do
+        [[ -f "$file" ]] || continue
+        [[ -z "$newest" || "$file" -nt "$newest" ]] || continue
+        path=$(grep -aoE "/.+\$" "$file" 2>/dev/null | tr -d "\000")
+        [[ -f "$path" && "$path" != *[[:cntrl:]]* ]] || continue
+        newest=$file
+        wallpaper=$path
+    done
 
     # Fallback: the current-wallpaper symlink maintained by wall.sh.
     if [[ -z "$wallpaper" ]] || [[ ! -f "$wallpaper" ]]; then

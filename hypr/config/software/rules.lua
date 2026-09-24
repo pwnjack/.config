@@ -58,7 +58,9 @@ hl.window_rule({
     match = { title = "^(Picture-in-Picture)$" },
     float = true,
     pin = true,
-    move = "69.5% 4%",
+    -- Top right. Written as an expression: "69.5% 4%" was silently ignored
+    -- and the window opened centred.
+    move = "monitor_w*0.695 monitor_h*0.04",
 })
 
 -- Game window rules. See docs/gaming-wow.md before changing these.
