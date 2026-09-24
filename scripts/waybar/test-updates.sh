@@ -19,16 +19,8 @@ UPDATES="$TEST_DIR/updates.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-PASSED=0
-FAILED=0
-
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() {
-    FAILED=$((FAILED + 1))
-    echo "  FAIL $1"
-    shift
-    printf '       %s\n' "$@"
-}
+# shellcheck source=scripts/lib/assert.sh
+. "$TEST_DIR/../lib/assert.sh"
 
 # fake <name> <exit> <line>... — a stub command on PATH that prints the given
 # lines and exits with the given status.
@@ -114,36 +106,6 @@ assert_total() {
     fi
 }
 
-assert_field() {
-    local actual
-    actual=$(printf '%s' "$1" | jq -r "$2" 2>/dev/null)
-    if [ "$actual" = "$3" ]; then
-        pass "$4"
-    else
-        fail "$4" "filter:   $2" "expected: $3" "actual:   $actual" "json:     $1"
-    fi
-}
-
-assert_contains() {
-    local actual
-    actual=$(printf '%s' "$1" | jq -r "$2" 2>/dev/null)
-    if printf '%s' "$actual" | grep -qF -- "$3"; then
-        pass "$4"
-    else
-        fail "$4" "expected to contain: $3" "actual: $actual"
-    fi
-}
-
-assert_lacks() {
-    local actual
-    actual=$(printf '%s' "$1" | jq -r "$2" 2>/dev/null)
-    if printf '%s' "$actual" | grep -qF -- "$3"; then
-        fail "$4" "expected NOT to contain: $3" "actual: $actual"
-    else
-        pass "$4"
-    fi
-}
-
 echo "updates.sh"
 
 H_PARU=$(helper_file "paru -Syu")
@@ -161,7 +123,7 @@ fake checkupdates 0 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2"
 fake paru 1
 out=$(run checkupdates paru)
 assert_total "$out" "2" "two repo updates are counted"
-assert_contains "$out" '.tooltip' "2 repo" "tooltip names the repo count"
+assert_json_contains "$out" '.tooltip' "2 repo" "tooltip names the repo count"
 
 fake checkupdates 1 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2" "baz 3-1 -> 3-2"
 fake paru 1
@@ -174,14 +136,14 @@ fake checkupdates 0 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2"
 fake paru 0 "aurpkg 1-1 -> 1-2"
 out=$(run checkupdates paru)
 assert_total "$out" "3" "text shows the combined total"
-assert_contains "$out" '.tooltip' "2 repo" "tooltip shows the repo count"
-assert_contains "$out" '.tooltip' "1 AUR" "tooltip shows the AUR count"
+assert_json_contains "$out" '.tooltip' "2 repo" "tooltip shows the repo count"
+assert_json_contains "$out" '.tooltip' "1 AUR" "tooltip shows the AUR count"
 
 fake checkupdates 2
 fake paru 0 "aurpkg 1-1 -> 1-2"
 out=$(run checkupdates paru)
 assert_total "$out" "1" "AUR-only updates still show the module"
-assert_lacks "$out" '.tooltip' "0 repo" "a zero side is left out of the tooltip"
+assert_json_lacks "$out" '.tooltip' "0 repo" "a zero side is left out of the tooltip"
 
 # --- deriving the helper from options/aurhelper ----------------------------
 # UPDATES_AUR_CMD is unset in every case below, so the script has to read the
@@ -191,17 +153,17 @@ fake checkupdates 0 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2"
 fake paru 0 "aurpkg 1-1 -> 1-2"
 out=$(run_derived checkupdates "$H_PARU")
 assert_total "$out" "3" "the helper name is taken from the first word of aurhelper"
-assert_contains "$out" '.tooltip' "1 AUR" "a derived helper's count reaches the tooltip"
+assert_json_contains "$out" '.tooltip' "1 AUR" "a derived helper's count reaches the tooltip"
 
 fake checkupdates 0 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2"
 out=$(run_derived checkupdates "$H_EMPTY")
 assert_total "$out" "2" "empty aurhelper still reports the repo count"
-assert_lacks "$out" '.tooltip' "AUR" "empty aurhelper gives a repo-only tooltip"
+assert_json_lacks "$out" '.tooltip' "AUR" "empty aurhelper gives a repo-only tooltip"
 
 fake checkupdates 0 "foo 1-1 -> 1-2" "bar 2-1 -> 2-2"
 out=$(run_derived checkupdates "$H_GONE")
 assert_total "$out" "2" "an uninstalled helper still reports the repo count"
-assert_lacks "$out" '.tooltip' "AUR" "an uninstalled helper gives a repo-only tooltip"
+assert_json_lacks "$out" '.tooltip' "AUR" "an uninstalled helper gives a repo-only tooltip"
 
 fake checkupdates 0 "foo 1-1 -> 1-2"
 out=$(run_derived checkupdates "$TMP/definitely-not-here")
@@ -209,6 +171,4 @@ assert_total "$out" "1" "a missing aurhelper file is not fatal"
 
 # --- summary ---------------------------------------------------------------
 
-echo
-echo "  $PASSED passed, $FAILED failed"
-[ "$FAILED" -eq 0 ]
+test_summary

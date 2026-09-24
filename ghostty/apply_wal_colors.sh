@@ -2,9 +2,9 @@
 #
 # Render the pywal palette as a ghostty color include.
 #
-# ghostty/config and ghostty/ai-sidebar both pull it in with
-# `config-file = ?colors`, and ghostty/colors is a tracked symlink to the file
-# written here. Rendering from the shared loader keeps it complete on a fresh
+# ghostty/config pulls it in with `config-file = ?colors` (the AI sidebar
+# inherits it, since ghostty loads that file first), and ghostty/colors is a
+# tracked symlink to the file written here. Rendering from the shared loader keeps it complete on a fresh
 # checkout, before pywal has ever run.
 #
 

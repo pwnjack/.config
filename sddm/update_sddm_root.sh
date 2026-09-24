@@ -22,12 +22,14 @@ if [[ ! -x "$RUNUSER" ]]; then
     exit 1
 fi
 
-# awww cache layout: ~/.cache/awww/<version>/<monitor>, line format: "<crop> <filter> <path>"
+# awww cache layout: ~/.cache/awww/<version>/<monitor>, ending in the image
+# path. awww 0.12 separates the fields with NUL bytes, so grep needs -a (without
+# it grep prints "binary file matches" and the path is never found); older
+# releases used spaces, and the same pattern reads both.
 #
-# This lookup is duplicated in scripts/hyprland/restore-wallpaper.sh and in
-# sddm/watch_wallpaper.sh, deliberately. THIS script runs as root against
-# another user's home, so sourcing a shared helper out of a user-writable
-# $USER_HOME/.config/scripts/ would hand that user a root shell.
+# This lookup duplicates scripts/lib/wallpaper.sh, deliberately. THIS script
+# runs as root against another user's home, so sourcing a shared helper out of
+# a user-writable $USER_HOME/.config/scripts/ would hand that user a root shell.
 if ! wallpaper=$("$RUNUSER" -u "$TARGET_USER" -- /bin/bash -c '
     user_home=$1
     [[ -d "$user_home" ]] || exit 10
@@ -40,7 +42,7 @@ if ! wallpaper=$("$RUNUSER" -u "$TARGET_USER" -- /bin/bash -c '
     else
         cache_file=$(ls -t "$user_home/.cache/awww/"*/* 2>/dev/null | head -n1)
     fi
-    wallpaper=$(grep -oE '/.+$' "$cache_file" 2>/dev/null)
+    wallpaper=$(grep -aoE '/.+$' "$cache_file" 2>/dev/null)
 
     # Fallback: the current-wallpaper symlink maintained by wall.sh.
     if [[ -z "$wallpaper" ]] || [[ ! -f "$wallpaper" ]]; then

@@ -35,14 +35,19 @@ hl.window_rule({
 })
 hl.window_rule({ name = "float-portal-picker", match = { class = "^(xdg-desktop-portal-gtk)$" }, float = true })
 
--- AI sidebar (Super+A)
+-- AI sidebar (Super+A). scripts/hyprland/launch-chatbox.sh starts it with this
+-- class; matching the class rather than the title is what lets size and move
+-- apply, because the window opens titled "Ghostty" and only later becomes
+-- "aichat".
 hl.window_rule({
     name = "ai-sidebar",
-    match = { title = "^(aichat)$" },
+    match = { class = "^(aichat[.]sidebar)$" },
     float = true,
     workspace = "special:aichat",
-    size = "800 95%",
-    move = "100%-810 2.5%",
+    -- Expressions, not percentages: with size "800 95%" and move "100%-810 2.5%"
+    -- the window opened at the default size, centred, with no config error.
+    size = "800 monitor_h-20",
+    move = "monitor_w-810 10",
     opacity = "0.95",
     dim_around = true,
 })

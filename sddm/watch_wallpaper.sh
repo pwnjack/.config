@@ -9,7 +9,9 @@
 # script FAILS rather than degrades on an empty value: the inotify guard below
 # compares a filename against it, so an empty string matches nothing and SDDM
 # sync stops with no error printed anywhere. Both use sites branch explicitly.
-monitor=$(cat "$HOME/.config/options/mainmonitor" 2>/dev/null)
+# shellcheck source=scripts/lib/wallpaper.sh
+. "$(dirname "${BASH_SOURCE[0]}")/../scripts/lib/wallpaper.sh"
+monitor=$(wallpaper_main_monitor)
 cache_dir="$HOME/.cache/awww"
 update_script="$HOME/.config/sddm/update_sddm.sh"
 
@@ -40,12 +42,7 @@ else
     # Fallback: poll every 5 seconds if inotifywait is not available
     while true; do
         sleep 5
-        if [ -n "$monitor" ]; then
-            cache_file=$(ls -t "$cache_dir"/*/"$monitor" 2>/dev/null | head -n1)
-        else
-            cache_file=$(ls -t "$cache_dir"/*/* 2>/dev/null | head -n1)
-        fi
-        current_wallpaper=$(grep -oE '/.+$' "$cache_file" 2>/dev/null)
+        current_wallpaper=$(wallpaper_from_cache "$cache_dir")
         if [[ -n "$current_wallpaper" ]] && [[ "$current_wallpaper" != "$last_wallpaper" ]]; then
             last_wallpaper="$current_wallpaper"
             update_sddm

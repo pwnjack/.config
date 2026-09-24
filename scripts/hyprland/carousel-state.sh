@@ -5,9 +5,16 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 command -v python3 >/dev/null || { echo 'python3 is required' >&2; exit 1; }
 # shellcheck source=scripts/theming/palette.sh
 source "$script_dir/../theming/palette.sh"
+# shellcheck source=scripts/lib/wallpaper.sh
+source "$script_dir/../lib/wallpaper.sh"
 wal=()
 wal_load
-python3 - "${wal[0]}" "$(wal_readable_on "${wal[0]}")" "${wal[4]}" <<'PY'
+# awww is the visible state; the palette symlink can still be catching up.
+shown=""
+if query=$(timeout 2 awww query 2>/dev/null); then
+    shown=$(wallpaper_from_query "$query")
+fi
+python3 - "${wal[0]}" "$(wal_readable_on "${wal[0]}")" "${wal[4]}" "$shown" <<'PY'
 import configparser
 import json
 import os
@@ -59,17 +66,12 @@ try:
     data['entries'] = [dict(path=str(p), url=p.as_uri(), name=p.name) for p, _ in values]
     data['error'] = '; '.join(errors)
     data['current'] = str(Path(settings.get('wallpaper', '')).expanduser())
-    # awww is the visible state; the palette symlink can still be catching up.
-    try:
-        query = subprocess.run(['awww', 'query'], capture_output=True, text=True, timeout=2, check=True).stdout
-        primary = (config / 'options/mainmonitor').read_text().strip()
-        lines = [line for line in query.splitlines() if 'image: ' in line]
-        line = next((line for line in lines if primary and line.startswith(f': {primary}:')), lines[0] if lines else '')
-        if line:
-            data['current'] = line.split('image: ', 1)[1]
-    except (OSError, subprocess.SubprocessError):
-        if not data['current'] and (cache / 'current_wallpaper').exists():
-            data['current'] = str((cache / 'current_wallpaper').resolve())
+    # sys.argv[4]: what awww shows now (scripts/lib/wallpaper.sh), empty when
+    # awww could not be queried.
+    if sys.argv[4]:
+        data['current'] = sys.argv[4]
+    elif not data['current'] and (cache / 'current_wallpaper').exists():
+        data['current'] = str((cache / 'current_wallpaper').resolve())
     try:
         option = json.loads(subprocess.run(['hyprctl', 'getoption', 'animations:enabled', '-j'],
                             capture_output=True, text=True, timeout=2, check=True).stdout)

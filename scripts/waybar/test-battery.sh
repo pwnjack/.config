@@ -19,8 +19,8 @@ BATTERY="$TEST_DIR/battery.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-PASSED=0
-FAILED=0
+# shellcheck source=scripts/lib/assert.sh
+. "$TEST_DIR/../lib/assert.sh"
 
 # fixture — a fresh empty sysfs root
 fixture() {
@@ -40,39 +40,9 @@ run() {
     BATTERY_SYSFS="$1" bash "$BATTERY" 2>"$TMP/stderr"
 }
 
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() {
-    FAILED=$((FAILED + 1))
-    echo "  FAIL $1"
-    shift
-    printf '       %s\n' "$@"
-}
-
 # assert_silent <output> <label>
 assert_silent() {
     if [ -z "$1" ]; then pass "$2"; else fail "$2" "expected no output" "got: $1"; fi
-}
-
-# assert_field <output> <jq-filter> <expected> <label>
-assert_field() {
-    local actual
-    actual=$(printf '%s' "$1" | jq -r "$2" 2>/dev/null)
-    if [ "$actual" = "$3" ]; then
-        pass "$4"
-    else
-        fail "$4" "filter:   $2" "expected: $3" "actual:   $actual" "json:     $1"
-    fi
-}
-
-# assert_contains <output> <jq-filter> <needle> <label>
-assert_contains() {
-    local actual
-    actual=$(printf '%s' "$1" | jq -r "$2" 2>/dev/null)
-    if printf '%s' "$actual" | grep -qF -- "$3"; then
-        pass "$4"
-    else
-        fail "$4" "expected to contain: $3" "actual: $actual"
-    fi
 }
 
 echo "battery.sh"
@@ -99,22 +69,22 @@ supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=24" \
     "POWER_SUPPLY_MODEL_NAME=Mouse"
 out=$(run "$r")
-assert_field "$out" '.class' "low" "peripheral at 24% is low"
-assert_contains "$out" '.text' "24%" "peripheral at 24% shows its level"
+assert_json_field "$out" '.class' "low" "peripheral at 24% is low"
+assert_json_contains "$out" '.text' "24%" "peripheral at 24% shows its level"
 
 r=$(fixture)
 supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=Device" \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=10" \
     "POWER_SUPPLY_MODEL_NAME=Mouse"
-assert_field "$(run "$r")" '.class' "low" "peripheral at exactly 10% is low, not critical"
+assert_json_field "$(run "$r")" '.class' "low" "peripheral at exactly 10% is low, not critical"
 
 r=$(fixture)
 supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=Device" \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=9" \
     "POWER_SUPPLY_MODEL_NAME=Mouse"
-assert_field "$(run "$r")" '.class' "critical" "peripheral at 9% is critical"
+assert_json_field "$(run "$r")" '.class' "critical" "peripheral at 9% is critical"
 
 # --- the powered-off case: the whole reason ONLINE is read -----------------
 
@@ -133,21 +103,21 @@ supply "$r" BAT0 \
     "POWER_SUPPLY_CAPACITY=64" "POWER_SUPPLY_STATUS=Discharging" \
     "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
 out=$(run "$r")
-assert_contains "$out" '.text' "64%" "system battery at 64% is shown"
-assert_field "$out" '.class' "ok" "system battery at 64% is class ok"
+assert_json_contains "$out" '.text' "64%" "system battery at 64% is shown"
+assert_json_field "$out" '.class' "ok" "system battery at 64% is class ok"
 
 r=$(fixture)
 supply "$r" BAT0 \
     "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_CAPACITY=100" \
     "POWER_SUPPLY_STATUS=Full" "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
-assert_contains "$(run "$r")" '.text' "100%" "system battery with no SCOPE and no ONLINE is shown"
+assert_json_contains "$(run "$r")" '.text' "100%" "system battery with no SCOPE and no ONLINE is shown"
 
 r=$(fixture)
 supply "$r" BAT0 \
     "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=System" \
     "POWER_SUPPLY_CAPACITY=8" "POWER_SUPPLY_STATUS=Discharging" \
     "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
-assert_field "$(run "$r")" '.class' "critical" "system battery at 8% discharging is critical"
+assert_json_field "$(run "$r")" '.class' "critical" "system battery at 8% discharging is critical"
 
 r=$(fixture)
 supply "$r" BAT0 \
@@ -155,8 +125,8 @@ supply "$r" BAT0 \
     "POWER_SUPPLY_CAPACITY=8" "POWER_SUPPLY_STATUS=Charging" \
     "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
 out=$(run "$r")
-assert_field "$out" '.class' "ok" "system battery at 8% charging is not an alert"
-assert_contains "$out" '.text' "8%" "charging system battery still shows its level"
+assert_json_field "$out" '.class' "ok" "system battery at 8% charging is not an alert"
+assert_json_contains "$out" '.text' "8%" "charging system battery still shows its level"
 
 # "Not charging" is what a ThinkPad (and Dell/ASUS platform modules) report when
 # AC is connected but a charge_control_end_threshold is inhibiting the charge.
@@ -167,8 +137,8 @@ supply "$r" BAT0 \
     "POWER_SUPPLY_CAPACITY=8" "POWER_SUPPLY_STATUS=Not charging" \
     "POWER_SUPPLY_MODEL_NAME=DELL ABC123"
 out=$(run "$r")
-assert_field "$out" '.class' "ok" "system battery at 8% 'Not charging' is on mains, not an alert"
-assert_contains "$out" '.tooltip' "Not charging" "the tooltip says why it is not charging"
+assert_json_field "$out" '.class' "ok" "system battery at 8% 'Not charging' is on mains, not an alert"
+assert_json_contains "$out" '.tooltip' "Not charging" "the tooltip says why it is not charging"
 
 # --- both kinds present ----------------------------------------------------
 
@@ -182,10 +152,10 @@ supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=18" \
     "POWER_SUPPLY_MODEL_NAME=G Pro Wireless Gaming Mouse"
 out=$(run "$r")
-assert_contains "$out" '.text' "64%" "system battery present in text"
-assert_contains "$out" '.text' "18%" "low peripheral joins the text"
-assert_field "$out" '.class' "low" "class comes from the most urgent entry"
-assert_field "$out" '.text | test("64%.*18%")' "true" "system battery is rendered first"
+assert_json_contains "$out" '.text' "64%" "system battery present in text"
+assert_json_contains "$out" '.text' "18%" "low peripheral joins the text"
+assert_json_field "$out" '.class' "low" "class comes from the most urgent entry"
+assert_json_field "$out" '.text | test("64%.*18%")' "true" "system battery is rendered first"
 
 r=$(fixture)
 supply "$r" BAT0 \
@@ -197,8 +167,8 @@ supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=80" \
     "POWER_SUPPLY_MODEL_NAME=G Pro Wireless Gaming Mouse"
 out=$(run "$r")
-assert_field "$out" '.text | test("80%")' "false" "healthy peripheral stays out of the text"
-assert_contains "$out" '.tooltip' "80%" "healthy peripheral is still in the tooltip"
+assert_json_field "$out" '.text | test("80%")' "false" "healthy peripheral stays out of the text"
+assert_json_contains "$out" '.tooltip' "80%" "healthy peripheral is still in the tooltip"
 
 # --- two low peripherals at once -------------------------------------------
 
@@ -212,9 +182,9 @@ supply "$r" hidpp_battery_1 \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=9" \
     "POWER_SUPPLY_MODEL_NAME=Keyboard"
 out=$(run "$r")
-assert_contains "$out" '.text' "24%" "first low peripheral joins the text"
-assert_contains "$out" '.text' "9%" "second low peripheral joins the text"
-assert_field "$out" '.class' "critical" "class comes from the lower of two low peripherals"
+assert_json_contains "$out" '.text' "24%" "first low peripheral joins the text"
+assert_json_contains "$out" '.text' "9%" "second low peripheral joins the text"
+assert_json_field "$out" '.class' "critical" "class comes from the lower of two low peripherals"
 
 # --- two system batteries: dual-battery laptops are common, and the design
 # names them as a target. system_text and system_worst must accumulate, not
@@ -231,9 +201,9 @@ supply "$r" BAT1 \
     "POWER_SUPPLY_CAPACITY=90" "POWER_SUPPLY_STATUS=Discharging" \
     "POWER_SUPPLY_MODEL_NAME=BAT1 healthy"
 out=$(run "$r")
-assert_contains "$out" '.text' "5%" "nearly-flat system battery appears in text"
-assert_contains "$out" '.text' "90%" "healthy second system battery also appears in text"
-assert_field "$out" '.class' "critical" "class comes from the lower of two system batteries"
+assert_json_contains "$out" '.text' "5%" "nearly-flat system battery appears in text"
+assert_json_contains "$out" '.text' "90%" "healthy second system battery also appears in text"
+assert_json_field "$out" '.class' "critical" "class comes from the lower of two system batteries"
 
 # --- nothing to report -----------------------------------------------------
 
@@ -272,7 +242,7 @@ supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_TYPE=Battery" "POWER_SUPPLY_SCOPE=Device" \
     "POWER_SUPPLY_ONLINE=1" "POWER_SUPPLY_CAPACITY=18" \
     "POWER_SUPPLY_MODEL_NAME=Corsair HS80 & Mouse"
-assert_contains "$(run "$r")" '.tooltip' "&amp;" "an ampersand in a model name is escaped"
+assert_json_contains "$(run "$r")" '.tooltip' "&amp;" "an ampersand in a model name is escaped"
 
 # --- a real hidpp uevent, TYPE twice and all ------------------------------
 
@@ -286,9 +256,7 @@ supply "$r" hidpp_battery_0 \
     "POWER_SUPPLY_MODEL_NAME=G Pro Wireless Gaming Mouse" \
     "POWER_SUPPLY_MANUFACTURER=Logitech" "POWER_SUPPLY_SERIAL_NUMBER=5c-1c-d2-07"
 out=$(run "$r")
-assert_field "$out" '.class' "low" "a verbatim hidpp uevent parses"
-assert_contains "$out" '.tooltip' "G Pro Wireless Gaming Mouse" "model name reaches the tooltip"
+assert_json_field "$out" '.class' "low" "a verbatim hidpp uevent parses"
+assert_json_contains "$out" '.tooltip' "G Pro Wireless Gaming Mouse" "model name reaches the tooltip"
 
-echo
-echo "battery.sh: $PASSED passed, $FAILED failed"
-[ "$FAILED" -eq 0 ]
+test_summary battery.sh

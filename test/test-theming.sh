@@ -19,9 +19,8 @@ for stub in pkill hyprctl; do
     chmod +x "$tmp/bin/$stub"
 done
 
-PASSED=0 FAILED=0
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() { FAILED=$((FAILED + 1)); echo "  FAIL $1"; }
+# shellcheck source=scripts/lib/assert.sh
+. "$ROOT/scripts/lib/assert.sh"
 
 # component script -> the cache file its tracked symlink points at
 declare -A outputs=(
@@ -74,6 +73,4 @@ else
     fail "wal_render produced '$(cat "$tmp/rendered")', expected '$expected'"
 fi
 
-echo
-echo "  $PASSED passed, $FAILED failed"
-[ "$FAILED" -eq 0 ]
+test_summary

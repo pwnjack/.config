@@ -1,8 +1,9 @@
 # AI Sidebar - Ghostty Configuration
 # Themed terminal for aichat sidebar
 
-# Inherit pywal colors dynamically
-config-file = ?colors
+# Colors: ghostty loads ghostty/config before this file, and that already
+# includes the pywal palette. Including it again here is a "cycle detected"
+# configuration error.
 
 # Typography
 font-family = "Fira Code Nerd Font"
@@ -21,11 +22,8 @@ cursor-style-blink = true
 scrollback-limit = 10000
 
 # Disable tabs (single purpose sidebar)
-gtk-tabs-location = hidden
+window-show-tab-bar = never
 
 # Clean minimal look
 resize-overlay = never
 mouse-hide-while-typing = true
-
-# Performance
-bold-is-bright = false

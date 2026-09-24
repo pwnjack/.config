@@ -600,7 +600,9 @@ mkdir -p "$sddm_decode_home/.config/options" \
          "$sddm_decode_theme/Backgrounds" \
          "$sddm_decode_bin"
 printf 'fixture-monitor\n' > "$sddm_decode_home/.config/options/mainmonitor"
-printf 'crop filter %s\n' "$sddm_decode_source" > \
+# awww 0.12's real format: NUL-separated fields, no trailing newline. A helper
+# that reads it without grep -a finds no path and never reaches the decode.
+printf '\0crop:center\0Lanczos3\0%s' "$sddm_decode_source" > \
     "$sddm_decode_home/.cache/awww/1/fixture-monitor"
 printf '[Theme]\nCurrent=fixture-theme\n' > "$sddm_decode_conf"
 printf 'decodable\n' > "$sddm_decode_source"

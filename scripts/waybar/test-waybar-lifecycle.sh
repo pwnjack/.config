@@ -7,11 +7,8 @@ TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-PASSED=0
-FAILED=0
-
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() { FAILED=$((FAILED + 1)); echo "  FAIL $1"; }
+# shellcheck source=scripts/lib/assert.sh
+. "$TEST_DIR/../lib/assert.sh"
 
 mkdir -p "$TMP/bin"
 # These single-quoted lines are intentionally written verbatim into the fakes.
@@ -83,6 +80,4 @@ assert_running_case "$TEST_DIR/waybartoggle.sh" -USR1 \
 assert_absent_case "$TEST_DIR/waybartoggle.sh" \
     "visibility toggle starts Waybar when it is absent"
 
-echo
-echo "$PASSED passed, $FAILED failed"
-exit "$((FAILED > 0))"
+test_summary

@@ -14,6 +14,14 @@ INSTALLED_HELPER="/usr/local/bin/sddm-wallpaper-update"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_SCRIPT="$SCRIPT_DIR/update_sddm_root.sh"
 
+# The rule is written for $USER. Under `sudo` that is root, which would replace
+# the user's grant with a useless one for root, so refuse and say how to run it.
+if [[ "$EUID" -eq 0 ]]; then
+    echo "✗ Run this as your own user, not with sudo: bash $SCRIPT_DIR/setup-sudo.sh" >&2
+    echo "  It asks for your sudo password itself when it needs to." >&2
+    exit 1
+fi
+
 echo "Setting up passwordless sudo for SDDM wallpaper updates..."
 echo ""
 

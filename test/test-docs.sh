@@ -21,16 +21,8 @@ CHEATSHEET="$ROOT/rofi/keybinds-cheatsheet.sh"
 DOC="$ROOT/docs/keybindings.md"
 CONF="$ROOT/hypr/config/software/keybinds.lua"
 
-PASSED=0
-FAILED=0
-
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() {
-    FAILED=$((FAILED + 1))
-    echo "  FAIL $1"
-    shift
-    printf '       %s\n' "$@"
-}
+# shellcheck source=scripts/lib/assert.sh
+. "$ROOT/scripts/lib/assert.sh"
 
 # --- the generated file is current ------------------------------------------
 
@@ -134,6 +126,4 @@ fi
 
 # --- summary -----------------------------------------------------------------
 
-echo
-echo "  $PASSED passed, $FAILED failed"
-[ "$FAILED" -eq 0 ]
+test_summary

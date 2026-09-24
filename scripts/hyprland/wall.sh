@@ -6,6 +6,9 @@ set -uo pipefail
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
 
+# shellcheck source=scripts/lib/wallpaper.sh
+. "$(dirname "${BASH_SOURCE[0]}")/../lib/wallpaper.sh"
+
 notify() {
     command -v notify-send >/dev/null 2>&1 || return 0
     notify-send -i preferences-desktop-wallpaper "$1" "$2" 9>&- || true
@@ -23,19 +26,7 @@ flock 9 || fail "Cannot lock the wallpaper pipeline"
 
 # Children must not keep our lock alive (several renderers start daemons).
 query=$(awww query 9>&-) || fail "Cannot read the current wallpaper"
-primary_monitor=$(cat "$config_dir/options/mainmonitor" 2>/dev/null) || primary_monitor=""
-wallpaper=""
-if [ -n "$primary_monitor" ]; then
-    while IFS= read -r line; do
-        case "$line" in
-            ": $primary_monitor:"*) wallpaper=${line#*image: }; break ;;
-        esac
-    done <<< "$query"
-fi
-if [ -z "$wallpaper" ]; then
-    line=${query%%$'\n'*}
-    wallpaper=${line#*image: }
-fi
+wallpaper=$(wallpaper_from_query "$query")
 [ -f "$wallpaper" ] || fail "The selected wallpaper is unavailable"
 
 # wal is synchronous. Do not publish new wallpaper state or reload consumers

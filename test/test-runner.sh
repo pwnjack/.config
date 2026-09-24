@@ -18,43 +18,8 @@ RUNNER="$REPO_DIR/test.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-PASSED=0
-FAILED=0
-
-pass() { PASSED=$((PASSED + 1)); echo "  ok   $1"; }
-fail() {
-    FAILED=$((FAILED + 1))
-    echo "  FAIL $1"
-    shift
-    printf '       %s\n' "$@"
-}
-
-# assert_contains <output> <needle> <label>
-assert_contains() {
-    if printf '%s' "$1" | grep -qF -- "$2"; then
-        pass "$3"
-    else
-        fail "$3" "expected to contain: $2" "actual:" "$1"
-    fi
-}
-
-# assert_not_contains <output> <needle> <label>
-assert_not_contains() {
-    if printf '%s' "$1" | grep -qF -- "$2"; then
-        fail "$3" "expected NOT to contain: $2" "actual:" "$1"
-    else
-        pass "$3"
-    fi
-}
-
-# assert_eq <actual> <expected> <label>
-assert_eq() {
-    if [ "$1" = "$2" ]; then
-        pass "$3"
-    else
-        fail "$3" "expected: $2" "actual:   $1"
-    fi
-}
+# shellcheck source=scripts/lib/assert.sh
+. "$REPO_DIR/scripts/lib/assert.sh"
 
 # suite <root> <path> <exit-code> [exec|noexec] -- a one-line stub suite that
 # prints its own name so the runner's output capture can be asserted on.
@@ -293,6 +258,4 @@ assert_eq "$RC" "1" "a non-repository root exits 1"
 assert_contains "$out" "not a git repository" "a non-repository root says so"
 assert_not_contains "$out" "no test suites found" "a non-repository is not reported as an empty repo"
 
-echo
-echo "test.sh: $PASSED passed, $FAILED failed"
-[ "$FAILED" -eq 0 ]
+test_summary test.sh
