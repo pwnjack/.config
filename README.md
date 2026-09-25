@@ -13,7 +13,6 @@ A clean, production-ready Hyprland setup featuring:
 - Modern dark aesthetic with blur and rounded corners
 - Dynamic color theming via pywal (colors generated from wallpaper)
 - Modular configuration structure for easy customization
-- macOS-inspired keybindings
 
 ## Screenshots
 
