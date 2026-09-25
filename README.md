@@ -138,6 +138,13 @@ neither can drift from the bindings it documents. After editing the config, run
 `./scripts/docs/generate-keybindings.sh`; `test/test-docs.sh` fails on a stale
 copy, so the pre-commit hook catches a forgotten regeneration.
 
+Navigation follows one rule: **every window and workspace binding carries `Super`**,
+so `Alt`/`Ctrl` + arrows always reach the focused app (browser back/forward,
+shell word jumps, editor line moves, TUI prompts). On the arrows, `Super` alone
+moves focus, `+ Shift` moves the window, `+ Alt` resizes it, and `+ Ctrl`
+switches workspace (`+ Ctrl + Shift` takes the window along). Ghostty's own
+`Ctrl + Enter` fullscreen is unbound; `Super + F` is the one fullscreen key.
+
 ### Feature notes
 
 The **colour picker** (`Super + Shift + C`) copies the selected screen pixel as

@@ -91,20 +91,20 @@ checkout.
 |-----|--------|
 | `Super + 1-9/0` | Switch to workspace |
 | `Super + Shift + 1-9/0` | Move window to workspace |
-| `Super + Ctrl + 1-9/0` | Move window to workspace silently |
-| `Super + Left/Right` | Previous/next workspace |
-| `Super + Ctrl + Left/Right` | Move window to prev/next workspace, stay here |
-| `Super + Shift + Left/Right` | Move window to prev/next workspace and follow |
+| `Super + Ctrl + Shift + 1-9/0` | Move window to workspace silently |
+| `Super + Ctrl + Left/Right` | Previous/next workspace |
+| `Super + Ctrl + Shift + Left/Right` | Move window to prev/next workspace and follow |
+| `Super + Scroll down/Scroll up` | Scroll through workspaces |
 
 ## Window Focus & Movement
 
 | Key | Action |
 |-----|--------|
-| `Alt + Arrows` | Move focus |
+| `Super + Arrows` | Move focus |
 | `Super + Tab` | Cycle to next window |
 | `Super + Shift + Tab` | Cycle to previous window |
-| `Alt + Ctrl + Arrows` | Resize window |
-| `Alt + Shift + Arrows` | Move window |
+| `Super + Alt + Arrows` | Resize window |
+| `Super + Shift + Arrows` | Move window |
 
 ## Mouse Bindings
 

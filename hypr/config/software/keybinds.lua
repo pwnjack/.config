@@ -74,42 +74,44 @@ return function(apps)
     hl.bind("SUPER + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = true })) -- Move window to workspace
     hl.bind("SUPER + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = true })) -- Move window to workspace
 
-    hl.bind("SUPER + CTRL + 1", hl.dsp.window.move({ workspace = 1, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 2", hl.dsp.window.move({ workspace = 2, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 3", hl.dsp.window.move({ workspace = 3, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 4", hl.dsp.window.move({ workspace = 4, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 5", hl.dsp.window.move({ workspace = 5, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 6", hl.dsp.window.move({ workspace = 6, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 7", hl.dsp.window.move({ workspace = 7, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 8", hl.dsp.window.move({ workspace = 8, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 1", hl.dsp.window.move({ workspace = 1, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 2", hl.dsp.window.move({ workspace = 2, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 3", hl.dsp.window.move({ workspace = 3, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 4", hl.dsp.window.move({ workspace = 4, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 5", hl.dsp.window.move({ workspace = 5, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 6", hl.dsp.window.move({ workspace = 6, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 7", hl.dsp.window.move({ workspace = 7, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 8", hl.dsp.window.move({ workspace = 8, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window to workspace silently
 
-    hl.bind("SUPER + left", hl.dsp.focus({ workspace = "r-1" })) -- Previous/next workspace
-    hl.bind("SUPER + right", hl.dsp.focus({ workspace = "r+1" })) -- Previous/next workspace
-    hl.bind("SUPER + CTRL + left", hl.dsp.window.move({ workspace = "r-1", follow = false })) -- Move window to prev/next workspace, stay here
-    hl.bind("SUPER + CTRL + right", hl.dsp.window.move({ workspace = "r+1", follow = false })) -- Move window to prev/next workspace, stay here
-    hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({ workspace = "r-1", follow = true })) -- Move window to prev/next workspace and follow
-    hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ workspace = "r+1", follow = true })) -- Move window to prev/next workspace and follow
+    hl.bind("SUPER + CTRL + left", hl.dsp.focus({ workspace = "r-1" })) -- Previous/next workspace
+    hl.bind("SUPER + CTRL + right", hl.dsp.focus({ workspace = "r+1" })) -- Previous/next workspace
+    hl.bind("SUPER + CTRL + SHIFT + left", hl.dsp.window.move({ workspace = "r-1", follow = true })) -- Move window to prev/next workspace and follow
+    hl.bind("SUPER + CTRL + SHIFT + right", hl.dsp.window.move({ workspace = "r+1", follow = true })) -- Move window to prev/next workspace and follow
+    hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" })) -- Scroll through workspaces
+    hl.bind("SUPER + mouse_up", hl.dsp.focus({ workspace = "e-1" })) -- Scroll through workspaces
 
     -- ## Window Focus & Movement
-    hl.bind("ALT + left", hl.dsp.focus({ direction = "l" })) -- Move focus
-    hl.bind("ALT + right", hl.dsp.focus({ direction = "r" })) -- Move focus
-    hl.bind("ALT + up", hl.dsp.focus({ direction = "u" })) -- Move focus
-    hl.bind("ALT + down", hl.dsp.focus({ direction = "d" })) -- Move focus
+    -- Every navigation bind carries SUPER so Alt/Ctrl+arrows reach the app
+    -- (browser back/forward, shell word jumps, editor line moves, TUIs).
+    hl.bind("SUPER + left", hl.dsp.focus({ direction = "l" })) -- Move focus
+    hl.bind("SUPER + right", hl.dsp.focus({ direction = "r" })) -- Move focus
+    hl.bind("SUPER + up", hl.dsp.focus({ direction = "u" })) -- Move focus
+    hl.bind("SUPER + down", hl.dsp.focus({ direction = "d" })) -- Move focus
 
     hl.bind("SUPER + TAB", hl.dsp.window.cycle_next({ next = true })) -- Cycle to next window
     hl.bind("SUPER + SHIFT + TAB", hl.dsp.window.cycle_next({ next = false })) -- Cycle to previous window
 
-    hl.bind("ALT + CTRL + left", hl.dsp.window.resize({ x = -50, y = 0, relative = true })) -- Resize window
-    hl.bind("ALT + CTRL + right", hl.dsp.window.resize({ x = 50, y = 0, relative = true })) -- Resize window
-    hl.bind("ALT + CTRL + up", hl.dsp.window.resize({ x = 0, y = -50, relative = true })) -- Resize window
-    hl.bind("ALT + CTRL + down", hl.dsp.window.resize({ x = 0, y = 50, relative = true })) -- Resize window
+    hl.bind("SUPER + ALT + left", hl.dsp.window.resize({ x = -50, y = 0, relative = true }), { repeating = true }) -- Resize window
+    hl.bind("SUPER + ALT + right", hl.dsp.window.resize({ x = 50, y = 0, relative = true }), { repeating = true }) -- Resize window
+    hl.bind("SUPER + ALT + up", hl.dsp.window.resize({ x = 0, y = -50, relative = true }), { repeating = true }) -- Resize window
+    hl.bind("SUPER + ALT + down", hl.dsp.window.resize({ x = 0, y = 50, relative = true }), { repeating = true }) -- Resize window
 
-    hl.bind("ALT + SHIFT + left", hl.dsp.window.move({ direction = "l" })) -- Move window
-    hl.bind("ALT + SHIFT + right", hl.dsp.window.move({ direction = "r" })) -- Move window
-    hl.bind("ALT + SHIFT + up", hl.dsp.window.move({ direction = "u" })) -- Move window
-    hl.bind("ALT + SHIFT + down", hl.dsp.window.move({ direction = "d" })) -- Move window
+    hl.bind("SUPER + SHIFT + left", hl.dsp.window.move({ direction = "l" })) -- Move window
+    hl.bind("SUPER + SHIFT + right", hl.dsp.window.move({ direction = "r" })) -- Move window
+    hl.bind("SUPER + SHIFT + up", hl.dsp.window.move({ direction = "u" })) -- Move window
+    hl.bind("SUPER + SHIFT + down", hl.dsp.window.move({ direction = "d" })) -- Move window
 
     -- ## Mouse Bindings
     hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true }) -- Move window (drag)
