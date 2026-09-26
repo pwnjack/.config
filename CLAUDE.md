@@ -192,6 +192,18 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
+### Agent CLI status lines (`claude/`, `codex/`)
+
+Both agent CLIs keep their config outside `~/.config` and write machine state
+into it, so neither config file is tracked. `claude/statusline.sh` is the Claude
+Code status line; `~/.claude/settings.json` points `statusLine.command` at it
+(the exact entry is in the script's header). `codex/statusline.toml` holds only
+the Codex `[tui]` status-bar keys, and `codex/apply-config.sh` merges every
+`codex/*.toml` fragment into `~/.codex/config.toml` key by key — idempotent,
+single-line values only, a no-op without Codex. Edit the fragment, then run the
+script; never track `config.toml` itself, which Codex rewrites with project
+trust entries and hook hashes.
+
 ### Scripts (`scripts/`)
 
 - `hyprland/` — Startup, wallpaper switching (`wall.sh`), media control, night light (`nightlight.sh`), AI chatbox launcher
