@@ -58,9 +58,12 @@ hl.window_rule({
     match = { title = "^(Picture-in-Picture)$" },
     float = true,
     pin = true,
-    -- Top right. Written as an expression: "69.5% 4%" was silently ignored
-    -- and the window opened centred.
-    move = "monitor_w*0.695 monitor_h*0.04",
+    -- Fixed size, flush top right: the browser's own size ran off-screen.
+    -- Inset by gaps_out (10) from the right and by the bar's reserved 48px
+    -- plus gaps_out from the top, so it lines up with tiled windows.
+    -- Percentages ("69.5% 4%") were silently ignored; use expressions.
+    size = "768 432",
+    move = "monitor_w-778 58", -- 768 + 10; 0.56 has no window_w variable
 })
 
 -- Game window rules. See docs/gaming-wow.md before changing these.
