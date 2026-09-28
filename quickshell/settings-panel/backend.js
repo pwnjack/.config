@@ -132,17 +132,32 @@ function gvariantValue(text) {
     return quoted ? quoted[1] : Number(text)
 }
 const gvariantLiteral = value => typeof value === "number" ? String(value) : `'${String(value).replace(/[\\']/g, "\\$&")}'`
-function iniSet(path, text, key, value) {
+const regexEscape = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+function iniSection(text, name) {
+    const header = new RegExp(`^(\\[${regexEscape(name)}\\])(\\r\\n|\\n|\\r|$)`, "m").exec(text)
+    if (!header) return null
+    const start = header.index + header[0].length
+    const next = /^\[[^\r\n]*\](?=\r?$)/m.exec(text.slice(start))
+    return { header, start, end: next ? start + next.index : text.length }
+}
+function iniValue(text, key, sectionName = "Settings") {
+    const section = iniSection(text, sectionName)
+    if (!section) return ""
+    const pattern = new RegExp(`^${regexEscape(key)}=([^\\r\\n]*)(?=\\r?$)`, "m")
+    return (pattern.exec(text.slice(section.start, section.end)) || [, ""])[1]
+}
+function iniSet(path, text, key, value, sectionName = "Settings") {
     if (/[\r\n]/.test(value)) throw new Error(`Cannot write a multiline value to ${path}`)
-    const section = /^(\[Settings\])(\r\n|\n|\r|$)/m
-    if (!section.test(text)) throw new Error(`${path} has no [Settings] section`)
+    const section = iniSection(text, sectionName)
+    if (!section) throw new Error(`${path} has no [${sectionName}] section`)
     const line = `${key}=${value}`
-    const pattern = new RegExp(`^${key}=[^\\r\\n]*(?=\\r?$)`, "m")
-    return pattern.test(text)
-        ? text.replace(pattern, () => line)
-        : text.replace(section, (_match, header, ending) => ending
-            ? `${header}${ending}${line}${ending}`
-            : `${header}\n${line}\n`)
+    const body = text.slice(section.start, section.end)
+    const pattern = new RegExp(`^${regexEscape(key)}=[^\\r\\n]*(?=\\r?$)`, "m")
+    if (pattern.test(body))
+        return text.slice(0, section.start) + body.replace(pattern, () => line) + text.slice(section.end)
+    const ending = section.header[2]
+    const insertion = ending ? `${line}${ending}` : `\n${line}\n`
+    return text.slice(0, section.start) + insertion + text.slice(section.start)
 }
 // GTK 3 on Wayland reads some keys from gsettings and others from settings.ini,
 // so both are written; the ini files are tracked and keep every other line.
@@ -207,7 +222,7 @@ async function snapshot(ids, includeMonitors) {
             case "idle": value = (await once("idle", () => idleValues(read(idlePath))))[row.key]; break
             case "sunset": value = (await once("sunset", () => sunsetValues(read(sunsetPath))))[row.key]; break
             case "swaync": value = (await once("swaync", () => JSON.parse(read(swayPath))))[row.key] ?? row.default; break
-            case "kvantum": value = exists(kvantumPath) ? (read(kvantumPath).match(/^theme=(.*)$/m) || [, ""])[1] : ""; break
+            case "kvantum": value = exists(kvantumPath) ? iniValue(read(kvantumPath), "theme", "General") : ""; break
             }
             if (row.default !== undefined) reset = value !== row.default
             values[id] = row.choices ? { value, reset, choices: await choicesFor(row) } : { value, reset }
@@ -339,10 +354,9 @@ async function change(request) {
     }
     case "kvantum": {
         const text = exists(kvantumPath) ? read(kvantumPath) : "[General]\n"
-        if (!/^\[General\]$/m.test(text)) throw new Error("kvantum.kvconfig has no [General] section")
-        return write(kvantumPath, /^theme=.*$/m.test(text)
-            ? text.replace(/^theme=.*$/m, `theme=${value}`)
-            : text.replace(/^\[General\]\n/m, `[General]\ntheme=${value}\n`))
+        const updated = iniSet(kvantumPath, text, "theme", value, "General")
+        if (!exists(kvantumDirs[0])) Gio.File.new_for_path(kvantumDirs[0]).make_directory_with_parents(null)
+        return write(kvantumPath, updated)
     }
     case "gtk": return setGtk(row, value)
     }

@@ -76,6 +76,11 @@ globalThis.settingsMocks = {
                 files.set(path,new TextDecoder().decode(bytes))
                 return [true,'etag']
             },
+            make_directory_with_parents: () => {
+                events.push(['mkdir',path])
+                dirs.set(path,[])
+                return true
+            },
         })},
     },
     execAsync: async args => {
@@ -260,12 +265,27 @@ assert.equal(result.values['appearance.kvantum'].value,'Carl')
 assert.deepEqual(result.values['appearance.kvantum'].choices.map(c=>c.value),['Carl','KvArc'])
 await dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'})
 assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\ntheme=KvArc\n')
+files.set(base+'/Kvantum/kvantum.kvconfig','[Other]\ntheme=Wrong\n[General]\ntheme=Carl\n')
+result = await dispatch({op:'read',ids:['appearance.kvantum']})
+assert.equal(result.values['appearance.kvantum'].value,'Carl')
+await dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'})
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[Other]\ntheme=Wrong\n[General]\ntheme=KvArc\n')
+files.set(base+'/Kvantum/kvantum.kvconfig','[General]\r\nkeep=true\r\n')
+await dispatch({op:'set',id:'appearance.kvantum',value:'Carl'})
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\r\ntheme=Carl\r\nkeep=true\r\n')
 files.delete(base+'/Kvantum/kvantum.kvconfig')
 await dispatch({op:'set',id:'appearance.kvantum',value:'Carl'})
 assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\ntheme=Carl\n')
 files.set(base+'/Kvantum/kvantum.kvconfig','[Other]\ntheme=Carl\n')
 await assert.rejects(dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'}),/has no \[General\] section/)
 assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[Other]\ntheme=Carl\n')
+files.delete(base+'/Kvantum/kvantum.kvconfig')
+dirs.delete(base+'/Kvantum')
+events=[]
+await dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'})
+assert.equal(dirs.has(base+'/Kvantum'),true)
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\ntheme=KvArc\n')
+assert.deepEqual(events.filter(e=>e[0]==='mkdir'),[['mkdir',base+'/Kvantum']])
 console.log('ok: Kvantum theme is chosen from installed themes')
 
 events=[]
