@@ -67,8 +67,17 @@ export function networkView(snap, { protonApp = false, mode = PROTON_MODE } = {}
     }
 }
 
+// UTF-8 length without TextEncoder, which QML's V4 engine lacks.
+function utf8Length(text) {
+    let bytes = 0
+    for (const char of text) {
+        const code = char.codePointAt(0)
+        bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4
+    }
+    return bytes
+}
 function validSsid(ssid) {
-    if (typeof ssid !== "string" || !ssid || /[\0\r\n]/.test(ssid) || new TextEncoder().encode(ssid).length > 32) throw new Error("Invalid network name")
+    if (typeof ssid !== "string" || !ssid || /[\0\r\n]/.test(ssid) || utf8Length(ssid) > 32) throw new Error("Invalid network name")
     return ssid
 }
 function validPsk(psk) {
@@ -77,18 +86,22 @@ function validPsk(psk) {
     return psk
 }
 function validSae(psk) {
-    if (typeof psk !== "string" || !psk || /[\0\r\n]/.test(psk) || new TextEncoder().encode(psk).length > 256)
-        throw new Error("The password must not be empty or contain line breaks")
+    if (typeof psk !== "string" || !psk || /[\0\r\n]/.test(psk)) throw new Error("The password must not be empty or contain line breaks")
+    if (utf8Length(psk) > 256) throw new Error("The password is too long")
     return psk
 }
 export function connectPlan(snap, request) {
     const ssid = validSsid(request.ssid)
     const net = wifiNetworks(snap).find(n => n.ssid === ssid)
     if (!net) throw new Error("That network is no longer in range")
-    if (net.security === "unsupported") throw new Error("Enterprise and WEP networks are not supported here; use Advanced…")
     const supplied = request.psk === "" || request.psk === undefined || request.psk === null ? null : request.psk
-    const saved = savedWifi(snap).filter(c => c.ssid === ssid).map(c => c.uuid)
-    if (saved.length && supplied === null) return { kind: "activate", uuid: saved[0] }
+    const profiles = savedWifi(snap).filter(c => c.ssid === ssid)
+    const saved = profiles.map(c => c.uuid)
+    // A saved profile needs no security handling here, whatever made it (Advanced… included);
+    // the one in use or connecting wins over older duplicates.
+    const current = profiles.find(c => c.state === "activated") || profiles.find(c => c.state === "activating") || profiles[0]
+    if (current && supplied === null) return { kind: "activate", uuid: current.uuid }
+    if (net.security === "unsupported") throw new Error("Enterprise and WEP networks are not supported here; use Advanced…")
     if (net.security === "open" || net.security === "owe")
         return { kind: "add", ssid, psk: null, keyMgmt: net.security === "owe" ? "owe" : null, replace: saved }
     if (supplied === null) throw new Error("Enter the network password")
@@ -117,6 +130,6 @@ const reasons = {
     DEPENDENCY_FAILED: "A connection this one depends on failed",
 }
 export const failureMessage = name => {
-    if (Object.hasOwn(reasons, name)) return reasons[name]
-    return name === undefined ? "Connection failed" : `Connection failed (${String(name).toLowerCase().replace(/_/g, " ")})`
+    if (Object.prototype.hasOwnProperty.call(reasons, name)) return reasons[name]
+    return name === undefined || name === null ? "Connection failed" : `Connection failed (${String(name).toLowerCase().replace(/_/g, " ")})`
 }

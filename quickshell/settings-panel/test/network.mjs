@@ -129,7 +129,7 @@ for (const [request, message] of [
     [{ssid: 'New3'}, /Enter the network password/],
     [{ssid: 'New3', psk: ''}, /Enter the network password/],
     [{ssid: 'New3', psk: 'bad\npassword'}, /must not be empty or contain line breaks/],
-    [{ssid: 'New3', psk: 'x'.repeat(257)}, /must not be empty or contain line breaks/],
+    [{ssid: 'New3', psk: 'x'.repeat(257)}, /too long/],
     [{ssid: ''}, /Invalid network name/],
     [{ssid: 'x'.repeat(33)}, /Invalid network name/],
     [{ssid: 'é'.repeat(17)}, /Invalid network name/],
@@ -157,3 +157,28 @@ assert.equal(network.failureMessage('SOMETHING_NEW'), 'Connection failed (someth
 assert.equal(network.failureMessage('constructor'), 'Connection failed (constructor)')
 assert.equal(network.failureMessage(undefined), 'Connection failed')
 console.log('ok: VPN plans and readable failure reasons')
+
+{
+    const saved = {...snap, connections: [...snap.connections,
+        {uuid: 'u-office', id: 'Office', type: '802-11-wireless', ssid: 'Office', state: null, iface: null},
+        {uuid: 'u-saved-live', id: 'Saved 2', type: '802-11-wireless', ssid: 'Saved', state: 'activating', iface: 'wlan0'}]}
+    assert.deepEqual(network.connectPlan(saved, {ssid: 'Office'}), {kind: 'activate', uuid: 'u-office'})
+    assert.throws(() => network.connectPlan(saved, {ssid: 'Office', psk: 'password1'}), /not supported/)
+    assert.deepEqual(network.connectPlan(saved, {ssid: 'Saved'}), {kind: 'activate', uuid: 'u-saved-live'})
+    assert.throws(() => network.connectPlan(snap, {ssid: 'New3', psk: 'é'.repeat(129)}), /too long/)
+    assert.equal(network.failureMessage(null), 'Connection failed')
+}
+console.log('ok: saved enterprise profiles activate, the live duplicate wins, SAE length message, null reason')
+
+// QML's V4 engine has neither TextEncoder nor Object.hasOwn: the module must not need them.
+{
+    const {TextEncoder: encoder} = globalThis, hasOwn = Object.hasOwn
+    delete globalThis.TextEncoder; delete Object.hasOwn
+    try {
+        assert.throws(() => network.connectPlan(snap, {ssid: 'é'.repeat(17)}), /Invalid network name/)
+        assert.equal(network.connectPlan(snap, {ssid: 'New3', psk: 'pässwörd1'}).keyMgmt, 'sae')
+        assert.deepEqual(network.forgetPlan(snap, 'Saved'), ['u-saved', 'u-saved2'])
+        assert.equal(network.failureMessage('constructor'), 'Connection failed (constructor)')
+    } finally { globalThis.TextEncoder = encoder; Object.hasOwn = hasOwn }
+}
+console.log('ok: works without TextEncoder and Object.hasOwn (QML V4)')
