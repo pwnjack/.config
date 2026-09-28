@@ -19,11 +19,11 @@ export const transforms = ["Normal", "90°", "180°", "270°", "Flipped", "Flipp
 
 const modePattern = /^(\d+)x(\d+)@(\d+(?:\.\d+)?)$/
 export function modeChoices(monitor) {
-    return [{ label: "Automatic", value: AUTOMATIC.mode }].concat((monitor.availableModes || []).map(mode => {
-        const value = mode.replace(/Hz$/, "")
-        const [, width, height, hertz] = value.match(modePattern)
-        return { label: `${width} × ${height} · ${Math.round(Number(hertz))} Hz`, value }
-    }))
+    // An entry in a format this code does not know is skipped, never fatal:
+    // one odd mode must not take the whole Displays page down.
+    const modes = (monitor.availableModes || []).map(mode => mode.replace(/Hz$/, "").match(modePattern)).filter(Boolean)
+    return [{ label: "Automatic", value: AUTOMATIC.mode }].concat(modes.map(([value, width, height, hertz]) =>
+        ({ label: `${width} × ${height} · ${Math.round(Number(hertz))} Hz`, value })))
 }
 // highres@highrr picks the largest mode, so Automatic scales against that one.
 export function modeSize(mode, monitor) {
@@ -53,7 +53,7 @@ export function monitorLine(output, config) {
     return `hl.monitor({ output = ${quoted(output)}, mode = ${quoted(config.mode)}, position = ${quoted(config.position)}, scale = ${config.scale}, transform = ${config.transform} })`
 }
 
-const linePattern = /^hl\.monitor\(\{ output = "([\w.@:+-]+)", (?:disabled = true|mode = "([\w.@:+-]+)", position = "([\w-]+)", scale = ([\d.]+), transform = ([0-7])) \}\)$/
+const linePattern = /^hl\.monitor\(\{ output = "([\w.@:+-]+)", (?:disabled = true|mode = "([\w.@:+-]+)", position = "([\w-]+)", scale = (\d+(?:\.\d+)?), transform = ([0-7])) \}\)$/
 // Lines in any other shape were edited by hand; the panel leaves those outputs alone.
 export function parseStateFile(text) {
     const outputs = {}
@@ -77,5 +77,7 @@ export function stateFileWith(text, output, line) {
     const base = text || STATE_HEADER
     const own = new RegExp(`^hl\\.monitor\\(\\{ output = "${escaped(output)}", .*\\n?`, "m")
     if (own.test(base)) return base.replace(own, () => line ? line + "\n" : "")
-    return line ? base + line + "\n" : base
+    if (!line) return base
+    // A hand-edited file may lack its final newline; never glue onto its last line.
+    return (base.endsWith("\n") ? base : base + "\n") + line + "\n"
 }

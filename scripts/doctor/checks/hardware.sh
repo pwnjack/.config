@@ -43,6 +43,9 @@
 #
 # Accepted limitations:
 #
+#   - The test/ skip keys on the directory name alone, so a live config kept
+#     under a directory called test would go unscanned. test.sh already treats
+#     every test/ directory as suite-owned, so no config belongs there.
 #   - A connector name inside a comment reads the same as one in a live
 #     setting. Distinguishing them means knowing the comment syntax of every
 #     tracked file type, which is a worse trade than one occasional finding on

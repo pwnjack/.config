@@ -9,17 +9,28 @@ hl.monitor({ output = "", mode = "highres@highrr", position = "auto", scale = 1 
 -- Per-machine displays live outside the repo, written by the Super+I Displays
 -- page to ${XDG_STATE_HOME:-~/.local/state}/hypr/monitors.lua. A named output
 -- beats the catch-all above regardless of order; no file means all automatic.
--- A broken file must not take the whole config down, so it is loaded under
--- pcall and the catch-all stands.
+--
+-- A broken file must not take the whole config down, nor leave half a layout
+-- behind: it runs in an environment that can only record hl.monitor() calls,
+-- and they are applied only once all of it has run. On any failure the
+-- catch-all stands and a notification says so. Its text is fixed on purpose:
+-- the Lua error comes from file content and must never reach a shell.
+local function monitors_failed(reason)
+    print("monitors.lua: " .. tostring(reason))
+    hl.exec_cmd("notify-send -u critical Displays 'monitors.lua could not be applied; displays use automatic settings'")
+end
 local state_home = os.getenv("XDG_STATE_HOME")
 if not state_home or state_home == "" then state_home = (os.getenv("HOME") or "") .. "/.local/state" end
 local machine = state_home .. "/hypr/monitors.lua"
-local file = io.open(machine, "r")
+local file, open_err, errno = io.open(machine, "r")
 if file then
     file:close()
-    local ok, err = pcall(dofile, machine)
-    if not ok then
-        print("monitors.lua: " .. tostring(err))
-        hl.exec_cmd("notify-send -u critical Displays 'monitors.lua failed to load; displays use automatic settings'")
-    end
+    local specs = {}
+    local chunk, err = loadfile(machine, "t", { hl = { monitor = function(spec) specs[#specs + 1] = spec end } })
+    local ok = chunk ~= nil
+    if ok then ok, err = pcall(chunk) end
+    if ok then ok, err = pcall(function() for _, spec in ipairs(specs) do hl.monitor(spec) end end) end
+    if not ok then monitors_failed(err) end
+elseif errno ~= 2 then -- ENOENT: no file simply means all automatic.
+    monitors_failed(open_err)
 end

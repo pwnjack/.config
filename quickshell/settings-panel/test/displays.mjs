@@ -39,4 +39,10 @@ const hand = displays.STATE_HEADER+'hl.monitor({ output = "DP-1", mode = "prefer
 assert.deepEqual([...displays.parseStateFile(hand).handEdited],['DP-1'])
 assert.deepEqual(displays.parseStateFile(hand).outputs,{})
 assert.deepEqual([...displays.parseStateFile(displays.STATE_HEADER+'hl.monitor({ output = "", mode = "preferred" })\n').handEdited],['*'])
+const malformed = displays.STATE_HEADER+'hl.monitor({ output = "DP-1", mode = "2560x1440@120.00", position = "auto", scale = 1..2, transform = 0 })\n'
+assert.deepEqual([...displays.parseStateFile(malformed).handEdited],['DP-1'])
+const unterminated = '-- hand comment'
+assert.equal(displays.stateFileWith(unterminated,'DP-1',line),'-- hand comment\n'+line+'\n')
 console.log('ok: the state file keeps one line per output, round-trips exactly and reports hand edits')
+assert.deepEqual(displays.modeChoices({availableModes:['2560x1440@144.00Hz','weird-mode']}).map(c=>c.value),['highres@highrr','2560x1440@144.00'])
+console.log('ok: unparseable modes are skipped, never fatal')
