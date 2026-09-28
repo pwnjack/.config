@@ -21,7 +21,7 @@
 - **Branch first.** `main` is the default branch. Run `git switch -c settings-panel-round-2` before Task 1. Round 1 is merged at `b6ca971`, which is the review base in Task 8.
 - **Run all tests:** `./test.sh` from `~/.config`. The panel suite is `quickshell/settings-panel/test/run-tests.sh`: QML tests (`tst_Settings.qml`), then `persist.mjs`, then `backend.mjs`, plus the new `displays.mjs` added in Task 4. `backend.mjs` runs the real `backend.js` against in-memory mocks of Gio, GLib and `execAsync`. **Every backend change gets a case in `backend.mjs`.**
 - **Talk to the real backend without the UI:** `bash scripts/settings/panel-request.sh '<json>'`. Reads are side-effect free.
-- **Drive the panel from a shell:** `qs -p ~/.config/quickshell/settings-panel/shell.qml ipc call settings status`. Task 3 adds `ipc call settings show <category>`.
+- **Drive the panel from a shell:** `qs -p ~/.config/quickshell/settings-panel/shell.qml ipc call settings status`. Task 3 adds `ipc call settings page <category>`.
 - **The pre-commit hook** runs shellcheck plus the suites that own the staged paths. Never bypass it.
 - **Nothing may become a second source of truth** (see `CLAUDE.md` → Conventions). The catalog is the only list of settings. Live refresh derives its ids from rows' `live` tag; display choices come from `hyprctl` and `displays.mjs`.
 - **PipeWire trap (verified):** `pactl -f json list sinks` reports `"card": null` for every sink. A sink's card is `sink.properties["device.name"]`, which equals the card's `name`.
@@ -165,7 +165,7 @@ git commit -m "docs(settings): verify live monitor eval, reload revert and scale
 - [ ] A slider with `format: "percent"` shows `62 %`
 - [ ] Live: all six rows read without `error`; Output Port lists `Headphones` but not `Line Out`; Input Device does not list any `Monitor of …`
 
-**Verify:** `bash quickshell/settings-panel/test/run-tests.sh` → all pass. Then `bash scripts/settings/panel-request.sh "$(jq -c '{op:"read",ids:[.rows[]|select(.category=="sound")|.id]}' quickshell/settings-panel/catalog.json)" | jq -c '.values|map_values({value,error,choices:(.choices|map(.label)?)})'` → six values, no `error`.
+**Verify:** `bash quickshell/settings-panel/test/run-tests.sh` → all pass. Then `bash scripts/settings/panel-request.sh "$(jq -c '{op:"read",ids:[.rows[]|select(.category=="sound")|.id]}' quickshell/settings-panel/catalog.json)" | jq -c '.values|map_values({value,error,choices:((.choices // [])|map(.label))})'` → six values, no `error`.
 
 **Steps:**
 
@@ -421,7 +421,7 @@ sink.card is resolved through device.name."
 - [ ] Events while `busy` or while a full read runs are dropped
 - [ ] At most one live read runs; events during it cause exactly one follow-up
 - [ ] A live merge skips `controller.interacting`; pressing a slider sets it to the row id and releasing clears it; an open dropdown popup sets it too
-- [ ] `ipc call settings status` reports `liveTags` and `liveReads`; `ipc call settings show <category>` switches the page
+- [ ] `ipc call settings status` reports `liveTags` and `liveReads`; `ipc call settings page <category>` switches the page
 - [ ] Live: `pgrep -fa "pactl subscribe"` finds a process only while the Sound page is shown, and none after close; audio playback plus notifications cause 0 live reads, and one real default-sink change causes 1
 
 **Verify:** `bash quickshell/settings-panel/test/run-tests.sh` → pass. Then the live sequence in Step 5.
@@ -507,7 +507,7 @@ In `drain()`, change the first line to `if (writer.running || reader.running || 
 In `IpcHandler`, add:
 
 ```qml
-        function show(category: string): void { root.select(category); }
+        function page(category: string): void { root.select(category); }
 ```
 
 and add `liveTags: root.liveTags, liveReads: root.liveReads,` to the object that `status()` stringifies.
@@ -559,7 +559,7 @@ Add the watchers and the reader before `PanelWindow`:
 qs=(qs -p ~/.config/quickshell/settings-panel/shell.qml ipc call settings)
 bash scripts/hyprland/settings-panel.sh; sleep 1
 pgrep -fa "pactl subscribe" || echo none                 # → none (Appearance page)
-"${qs[@]}" show sound; sleep 0.5
+"${qs[@]}" page sound; sleep 0.5
 pgrep -fa "pactl subscribe"                              # → one process
 before=$("${qs[@]}" status | jq .liveReads)
 paplay /usr/share/sounds/freedesktop/stereo/complete.oga; for i in 1 2 3; do notify-send -t 500 probe; done; sleep 2
@@ -567,7 +567,7 @@ echo $(( $("${qs[@]}" status | jq .liveReads) - before ))  # → 0
 sink=$(pactl get-default-sink); pactl set-default-sink alsa_output.pci-0000_01_00.1.hdmi-stereo; sleep 1
 echo $(( $("${qs[@]}" status | jq .liveReads) - before ))  # → 1
 pactl set-default-sink "$sink"; sleep 1
-"${qs[@]}" show appearance; sleep 0.5
+"${qs[@]}" page appearance; sleep 0.5
 pgrep -fa "pactl subscribe" || echo none                 # → none
 "${qs[@]}" close; sleep 1
 pgrep -fa "pactl subscribe" || echo none                 # → none

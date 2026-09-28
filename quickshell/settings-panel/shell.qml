@@ -128,7 +128,8 @@ ShellRoot {
             else { root.closing = false; root.opened = true; }
         }
         function close(): void { root.close(); }
-        function show(category: string): void { root.select(category); }
+        // Not `show`: qs parses that word as its own `ipc show` subcommand even inside `ipc call`.
+        function page(category: string): void { root.select(category); }
         function status(): string {
             return JSON.stringify({opened: root.opened, loading: root.loading, busy: root.busy,
                 category: root.category, rows: root.visibleRows.length, error: root.problem,
