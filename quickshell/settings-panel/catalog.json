@@ -31,6 +31,11 @@
       "description": "Devices, ports and microphone level. Volume lives in the notification sidebar."
     },
     {
+      "id": "network",
+      "title": "Network",
+      "description": "Wi-Fi, wired and VPN connections"
+    },
+    {
       "id": "notifications",
       "title": "Notifications",
       "description": "SwayNC toasts and control center"
@@ -832,6 +837,18 @@
       "step": 1,
       "format": "percent",
       "live": "audio"
+    },
+    {
+      "category": "network",
+      "id": "network.wifi",
+      "title": "Wi-Fi",
+      "description": "Turn the Wi-Fi radio on or off",
+      "keywords": ["wireless", "wlan", "radio"],
+      "source": "network",
+      "key": "wifi",
+      "kind": "toggle",
+      "live": "network",
+      "inView": true
     },
     {
       "category": "notifications",

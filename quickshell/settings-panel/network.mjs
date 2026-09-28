@@ -102,8 +102,12 @@ export function connectPlan(snap, request) {
     const current = profiles.find(c => c.state === "activated") || profiles.find(c => c.state === "activating") || profiles[0]
     if (current && supplied === null) return { kind: "activate", uuid: current.uuid }
     if (net.security === "unsupported") throw new Error("Enterprise and WEP networks are not supported here; use Advanced…")
-    if (net.security === "open" || net.security === "owe")
+    if (net.security === "open" || net.security === "owe") {
+        // Open/OWE take no user password, but a supplied one is still checked
+        // rather than silently discarded — it is more likely a mistake than intent.
+        if (supplied !== null) validPsk(supplied)
         return { kind: "add", ssid, psk: null, keyMgmt: net.security === "owe" ? "owe" : null, replace: saved }
+    }
     if (supplied === null) throw new Error("Enter the network password")
     const psk = net.security === "sae" ? validSae(supplied) : validPsk(supplied)
     return { kind: "add", ssid, psk, keyMgmt: net.security === "sae" ? "sae" : "wpa-psk", replace: saved }

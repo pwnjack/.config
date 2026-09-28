@@ -6,6 +6,8 @@ import { checkedHyprctl } from "./hyprctl.js"
 import * as persist from "./persist.js"
 import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 import * as displays from "./displays.mjs"
+import { nmSnapshot, setWifiEnabled, requestScan, activate, addAndActivate, deactivate, removeConnections } from "./nm.js"
+import * as network from "./network.mjs"
 
 const configDir = GLib.get_home_dir() + "/.config"
 const catalog = JSON.parse(read(configDir + "/quickshell/settings-panel/catalog.json"))
@@ -88,6 +90,13 @@ async function choicesFor(row, current, once = onceCache()) {
     return enumerators[row.choices](row, current, once)
 }
 function readOption(key) { return read(optionPath(key)).trim() }
+function networkValue(key, snap) {
+    if (!snap.running) throw new Error("NetworkManager is not running")
+    if (key !== "wifi") throw new Error("Unknown network setting")
+    if (!snap.wifiDevices.length) throw new Error("No Wi-Fi device")
+    return snap.wifiEnabled
+}
+const networkPage = snap => network.networkView(snap, { protonApp: !!GLib.find_program_in_path("protonvpn-app") })
 function idleValues(text) {
     const values = {}
     for (const block of text.match(/listener\s*\{[^}]*\}/g) || []) {
@@ -244,7 +253,7 @@ function onceCache() {
         return cached.get(key)
     }
 }
-async function snapshot(ids, includeMonitors) {
+async function snapshot(ids, includeMonitors, views = {}) {
     const once = onceCache()
     const values = {}
     await Promise.all(ids.map(async id => {
@@ -281,6 +290,7 @@ async function snapshot(ids, includeMonitors) {
             case "powerprofile": value = (await execAsync(["powerprofilesctl", "get"])).trim(); break
             case "mime": value = await mimeDefault(row.mimes[0]); break
             case "pulse": value = pulseValue(row.key, await once("pulse", pulseState)); break
+            case "network": value = networkValue(row.key, await once("nm", nmSnapshot)); break
             }
             if (row.default !== undefined) reset = value !== row.default
             values[id] = row.choices ? { value, reset, choices: await choicesFor(row, value, once) } : { value, reset }
@@ -292,6 +302,7 @@ async function snapshot(ids, includeMonitors) {
         result.mainMonitor = readOption("mainmonitor")
         result.displayPending = exists(pendingPath) && await guardArmed() ? JSON.parse(read(pendingPath)) : null
     }
+    if (views.network) result.network = networkPage(await once("nm", nmSnapshot))
     return result
 }
 
@@ -431,6 +442,7 @@ async function change(request) {
     case "gtk": return setGtk(row, value)
     case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
     case "pulse": return setPulse(row.key, value, await once("pulse", pulseState))
+    case "network": return setWifiEnabled(value)
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])
@@ -566,7 +578,7 @@ export async function dispatch(request) {
         throw new Error("Keep or Revert the display change first")
     if (request.op === "read") {
         if (!Array.isArray(request.ids) || request.ids.length > catalog.rows.length) throw new Error("Invalid settings request")
-        return snapshot([...new Set(request.ids)], request.monitors === true)
+        return snapshot([...new Set(request.ids)], request.monitors === true, { network: request.network === true, startup: request.startup === true })
     }
     if (request.op === "set" || request.op === "reset") { await change(request); return {} }
     if (request.op === "mainMonitor") {
@@ -583,6 +595,23 @@ export async function dispatch(request) {
     if (request.op === "displayApply") return displayApply(request)
     if (request.op === "displayKeep") return displayKeep()
     if (request.op === "displayRevert") return displayRevert()
+    if (request.op === "networkScan") { await requestScan(); return {} }
+    if (request.op === "wifiConnect") {
+        const plan = network.connectPlan(nmSnapshot(), request)
+        if (plan.kind === "activate") await activate(plan.uuid)
+        else {
+            await addAndActivate(plan)
+            // Only once the new profile works are the old ones for this SSID removed.
+            if (plan.replace.length) await removeConnections(plan.replace)
+        }
+        return {}
+    }
+    if (request.op === "wifiForget") { await removeConnections(network.forgetPlan(nmSnapshot(), request.ssid)); return {} }
+    if (request.op === "vpn") {
+        const plan = network.vpnPlan(nmSnapshot(), request)
+        if (plan.active) await activate(plan.uuid); else await deactivate(plan.uuid)
+        return {}
+    }
     if (request.op === "action") {
         if (request.id === "reload") { await persistReload(); return {} }
         if (request.id === "displays-file") {
@@ -590,6 +619,8 @@ export async function dispatch(request) {
             detached([readOption("terminal") || "ghostty", "-e", ...(readOption("editor") || "nvim").split(/\s+/), displayStatePath])
             return {}
         }
+        if (request.id === "protonApp") { detached(["protonvpn-app"]); return {} }
+        if (request.id === "networkEditor") { detached(["nm-connection-editor"]); return {} }
         const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh" }
         if (!Object.hasOwn(scripts, request.id)) throw new Error("Unknown action")
         const path = configDir + scripts[request.id]

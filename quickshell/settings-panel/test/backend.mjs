@@ -96,6 +96,26 @@ let guardArmed = false, failEval = false, failHyprReload = false, stopFails = fa
 const mockEnv = {XDG_STATE_HOME:'/fixture/.local/state',HYPRLAND_INSTANCE_SIGNATURE:'sig'}
 const running = new Set()
 const encoder = new TextEncoder()
+// Shape produced by nm.js on NetworkManager 1.58 (trimmed from this machine).
+const nmState = {
+    running: true, wifiEnabled: true, wifiDevices: [{iface:'wlan0'}],
+    accessPoints: [{ssid:'Dimensione-E92F',strength:84,flags:1,wpaFlags:0,rsnFlags:392},{ssid:'Cafe',strength:60,flags:0,wpaFlags:0,rsnFlags:0}],
+    wired: [{iface:'eno1',carrier:true,speed:1000,ip4:'192.168.1.10/24',gateway:'192.168.1.1'}],
+    connections: [
+        {uuid:'u-old',id:'Dimensione-E92F',type:'802-11-wireless',ssid:'Dimensione-E92F',state:null,iface:null},
+        {uuid:'u-proton',id:'ProtonVPN IT#113',type:'wireguard',ssid:null,state:'activated',iface:'proton0'},
+        {uuid:'u-kill',id:'pvpn-killswitch-ipv6',type:'dummy',ssid:null,state:'activated',iface:'ipv6leakintrf0'}],
+}
+let nmCalls = [], nmFailAdd = ''
+const nmMock = {
+    nmSnapshot: () => structuredClone(nmState),
+    setWifiEnabled: async on => { nmCalls.push(['wifi', on]); nmState.wifiEnabled = on },
+    requestScan: async () => { nmCalls.push(['scan']) },
+    activate: async uuid => { nmCalls.push(['activate', uuid]) },
+    addAndActivate: async plan => { nmCalls.push(['add', plan.ssid, plan.psk, plan.keyMgmt]); if (nmFailAdd) throw new Error(nmFailAdd) },
+    deactivate: async uuid => { nmCalls.push(['deactivate', uuid]) },
+    removeConnections: async uuids => { nmCalls.push(['remove', ...uuids]) },
+}
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
@@ -196,11 +216,13 @@ globalThis.settingsMocks = {
         }
         return 'ok'
     },
+    nm: nmMock,
 }
 registerHooks({resolve(specifier,context,next) {
     const names = {'gi://GLib':'GLib','gi://Gio':'Gio','gi://GioUnix':'GioUnix'}
     if (names[specifier]) return {url:'data:text/javascript,'+encodeURIComponent(`export default globalThis.settingsMocks.${names[specifier]}`),shortCircuit:true}
     if (specifier === './process.js') return {url:'data:text/javascript,export const execAsync = globalThis.settingsMocks.execAsync',shortCircuit:true}
+    if (specifier === './nm.js') return {url:'data:text/javascript,'+encodeURIComponent('const m = () => globalThis.settingsMocks.nm; export const nmSnapshot = (...a) => m().nmSnapshot(...a), setWifiEnabled = (...a) => m().setWifiEnabled(...a), requestScan = (...a) => m().requestScan(...a), activate = (...a) => m().activate(...a), addAndActivate = (...a) => m().addAndActivate(...a), deactivate = (...a) => m().deactivate(...a), removeConnections = (...a) => m().removeConnections(...a)'),shortCircuit:true}
     return next(specifier,context)
 }})
 const {dispatch} = await import('../backend.js')
@@ -726,7 +748,7 @@ assert.equal(files.has(pendingPath),false)
 assert.equal(guardArmed,false)
 console.log('ok: pending follows eval, an expired guard reverts, Keep reloads, contradictions touch nothing')
 await dispatch(apply)
-for (const request of [{op:'action',id:'reload'},{op:'reset',id:'appearance.shadows'},{op:'reset',id:'anim.windows'},{op:'set',id:'appearance.blur',value:false},{op:'mainMonitor',value:'DP-1'},{op:'action',id:'displays-file'}])
+for (const request of [{op:'action',id:'reload'},{op:'reset',id:'appearance.shadows'},{op:'reset',id:'anim.windows'},{op:'set',id:'appearance.blur',value:false},{op:'mainMonitor',value:'DP-1'},{op:'action',id:'displays-file'},{op:'wifiConnect',ssid:'Cafe'},{op:'networkScan'}])
     await assert.rejects(dispatch(request),/Keep or Revert/,JSON.stringify(request))
 result = await dispatch({op:'read',ids:['appearance.blur'],monitors:true})
 assert.equal(result.displayPending.output,'DP-1')
@@ -742,3 +764,52 @@ monitorsFixture.pop()
 await dispatch({op:'mainMonitor',value:''})
 assert.equal(files.get(base+'/hypr/config/hardware/primary.conf'),'$monitor =\n')
 console.log('ok: the main display cannot be turned off, and no main display writes no trailing space')
+
+nmCalls = []; events = []
+result = await dispatch({op:'read',ids:['network.wifi'],network:true})
+assert.equal(result.values['network.wifi'].value, true)
+assert.deepEqual(result.network.wifi.networks.map(n => [n.ssid, n.known]), [['Dimensione-E92F', true], ['Cafe', false]])
+assert.deepEqual(result.network.vpn.map(v => v.name), ['ProtonVPN IT#113'])
+assert.equal(nmCalls.length, 0)
+assert.equal(events.some(e => e[0] === 'write' || e[0] === 'spawn'), false)
+console.log('ok: network read shapes the page and has no side effects')
+
+nmState.running = false
+result = await dispatch({op:'read',ids:['network.wifi'],network:true})
+assert.match(result.values['network.wifi'].error, /not running/)
+assert.deepEqual(result.network, {running:false})
+nmState.running = true
+console.log('ok: network — NetworkManager down is a row error, not a failed read')
+
+await dispatch({op:'set',id:'network.wifi',value:false})
+assert.deepEqual(nmCalls.at(-1), ['wifi', false])
+await dispatch({op:'set',id:'network.wifi',value:true})
+await dispatch({op:'networkScan'})
+assert.deepEqual(nmCalls.at(-1), ['scan'])
+console.log('ok: network radio switch and scan go through the adapter')
+
+nmCalls = []
+await dispatch({op:'wifiConnect',ssid:'Dimensione-E92F'})
+assert.deepEqual(nmCalls, [['activate','u-old']])
+nmCalls = []
+await dispatch({op:'wifiConnect',ssid:'Dimensione-E92F',psk:'new password'})
+assert.deepEqual(nmCalls, [['add','Dimensione-E92F','new password','wpa-psk'],['remove','u-old']])
+nmCalls = []; nmFailAdd = 'Wrong password'
+await assert.rejects(dispatch({op:'wifiConnect',ssid:'Dimensione-E92F',psk:'bad password'}), /Wrong password/)
+assert.deepEqual(nmCalls, [['add','Dimensione-E92F','bad password','wpa-psk']])
+nmFailAdd = ''; nmCalls = []
+await dispatch({op:'wifiConnect',ssid:'Cafe'})
+assert.deepEqual(nmCalls, [['add','Cafe',null,null]])
+await assert.rejects(dispatch({op:'wifiConnect',ssid:'Cafe',psk:'short'}), /8–63/)
+console.log('ok: network connect activates saved, adds new, replaces old only after success')
+
+nmCalls = []
+await dispatch({op:'wifiForget',ssid:'Dimensione-E92F'})
+assert.deepEqual(nmCalls, [['remove','u-old']])
+await assert.rejects(dispatch({op:'vpn',uuid:'u-proton',active:false}), /Proton VPN app/)
+await assert.rejects(dispatch({op:'vpn',uuid:'u-kill',active:false}), /not a VPN/)
+events = []
+await dispatch({op:'action',id:'protonApp'})
+await dispatch({op:'action',id:'networkEditor'})
+assert.deepEqual(events.filter(e => e[0] === 'spawn').map(e => e[1][0]), ['protonvpn-app','nm-connection-editor'])
+console.log('ok: network forget, VPN refusal in app mode, and the two launch actions')
