@@ -109,8 +109,9 @@ state file only changes on Keep, so a reload restores the last kept layout)
 before disarming the guard. Keep writes the evaluated line while the guard is
 still armed, stops it, and reloads so the live layout always equals the saved
 file. If the panel dies or its screen goes dark, the guard reverts at 20 s.
-While a change is pending every other setting, Edit file and Reload Hyprland
-wait, and the backend refuses reloads, since a reload would silently undo it.
+While a change is pending every other setting, Set as main, Edit file and
+Reload Hyprland wait, and the backend refuses every request but reads and the
+display operations, since a reset or reload would silently undo it.
 
 Verified on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2:
 

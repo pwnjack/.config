@@ -158,8 +158,8 @@ FocusScope {
                         Flow {
                             visible: view.controller.category === "monitors" && !view.controller.query.trim()
                             Layout.fillWidth: true; spacing: 8
-                            PanelButton { theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
-                            PanelButton { theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
+                            PanelButton { objectName: "editDisplaysFile"; theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
+                            PanelButton { objectName: "automaticMainDisplay"; theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
                         }
                         Label { visible: !view.controller.visibleRows.length && !view.controller.loading; text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24 }
                         Repeater {

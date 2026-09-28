@@ -46,7 +46,8 @@ Rectangle {
             PanelButton {
                 theme: card.theme
                 text: card.controller.mainMonitor === card.monitor.name ? "Main display" : "Set as main"
-                enabled: !card.controller.busy && card.controller.mainMonitor !== card.monitor.name && !card.monitor.disabled
+                objectName: "mainDisplay-" + card.monitor.name
+                enabled: !card.controller.busy && !card.controller.pendingDisplay && card.controller.mainMonitor !== card.monitor.name && !card.monitor.disabled
                 onClicked: card.controller.submit({op: "mainMonitor", value: card.monitor.name})
             }
         }

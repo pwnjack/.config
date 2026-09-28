@@ -556,7 +556,12 @@ async function displayKeep() {
     return { pending: null }
 }
 
+// While a display change awaits Keep or Revert, anything else could reload
+// Hyprland (resets, reloading rows, actions) and silently undo it.
+const displayOps = new Set(["read", "displayApply", "displayKeep", "displayRevert"])
 export async function dispatch(request) {
+    if (!displayOps.has(request.op) && exists(pendingPath) && await guardArmed())
+        throw new Error("Keep or Revert the display change first")
     if (request.op === "read") {
         if (!Array.isArray(request.ids) || request.ids.length > catalog.rows.length) throw new Error("Invalid settings request")
         return snapshot([...new Set(request.ids)], request.monitors === true)
@@ -592,8 +597,6 @@ export async function dispatch(request) {
     throw new Error("Unknown operation")
 }
 async function persistReload() {
-    // A reload would silently undo a display change still awaiting Keep or Revert.
-    if (exists(pendingPath) && await guardArmed()) throw new Error("Keep or Revert the display change first")
     await checkedHyprctl(["reload"])
     const errors = JSON.parse(await execAsync(["hyprctl", "configerrors", "-j"]))
     if (!Array.isArray(errors) || errors.some(error => String(error).trim())) throw new Error("Hyprland reports configuration errors")

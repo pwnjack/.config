@@ -265,7 +265,10 @@ Item {
             controller.pendingDisplay = {output:"DP-1",deadline:Date.now() + 60000}; wait(20);
             verify(!findChild(view,"toggle-blur").enabled);
             verify(!findChild(view,"reloadHyprland").enabled);
-            controller.pendingDisplay = null; wait(20);
+            controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
+            for (const name of ["mainDisplay-DP-1","editDisplaysFile","automaticMainDisplay","applyDisplay-DP-1","automaticDisplay-DP-1"])
+                verify(!findChild(view,name).enabled, name + " waits");
+            controller.pendingDisplay = null; controller.select("appearance"); wait(20);
             verify(findChild(view,"toggle-blur").enabled);
             verify(findChild(view,"reloadHyprland").enabled);
         }
