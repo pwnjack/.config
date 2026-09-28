@@ -14,8 +14,15 @@ request_arg=$1
 # never be copied into argv or the environment.
 if [[ $request_arg == - ]]; then
     request_line=
-    if ! IFS= read -r request_line; then
-        : # Preserve a final unterminated line, or pass an empty line to request.js.
+    if IFS= read -r -t 30 request_line; then
+        :
+    else
+        read_status=$?
+        if (( read_status > 128 )); then
+            printf '%s\n' '{"ok":false,"error":"Expected one JSON request on stdin"}'
+            exit 1
+        fi
+        # Preserve a final unterminated line, or pass an empty line to request.js.
     fi
 fi
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/settings-panel"
@@ -24,7 +31,7 @@ exec 9>"$cache_dir/request.lock"
 flock -w 30 9 || { echo 'Settings are busy; try again.' >&2; exit 1; }
 # `-` means the request arrives on stdin (the panel's writes: they can carry a Wi-Fi password).
 if [[ $request_arg == - ]]; then
-    printf '%s\n' "$request_line" | gjs -m "$request_js" -
+    exec gjs -m "$request_js" - <<<"$request_line"
 else
     exec gjs -m "$request_js" "$request_arg"
 fi

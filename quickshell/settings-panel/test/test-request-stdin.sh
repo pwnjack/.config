@@ -49,10 +49,24 @@ job=$!
 
 # The request helper is blocked in read here. Its sole request argument must be
 # the stdin marker, never the JSON that will arrive through the pipe.
-for _ in $(seq 1 1000); do
-    [[ -s /proc/$job/cmdline ]] && break
+panel_ready=false
+for _ in $(seq 1 300); do
+    panel_argv=()
+    if [[ -r /proc/$job/cmdline ]]; then
+        mapfile -d '' -t panel_argv < "/proc/$job/cmdline"
+        for arg in "${panel_argv[@]}"; do
+            if [[ $arg == "$request_sh" ]]; then
+                panel_ready=true
+                break 2
+            fi
+        done
+    fi
+    sleep 0.01
 done
-mapfile -d '' -t panel_argv < "/proc/$job/cmdline"
+if [[ $panel_ready != true ]]; then
+    echo 'timed out waiting for panel-request.sh to exec' >&2
+    exit 1
+fi
 [[ ${panel_argv[-1]} == - && ${#panel_argv[@]} == 3 ]] || {
     printf 'unexpected panel-request argv:' >&2
     printf ' <%s>' "${panel_argv[@]}" >&2
@@ -60,14 +74,20 @@ mapfile -d '' -t panel_argv < "/proc/$job/cmdline"
     exit 1
 }
 
-# Sample continuously for the full request lifetime; a 20 ms interval can miss
-# a short-lived process that accidentally receives the request in argv.
-: > "$tmp/found"
-while [[ -s /proc/$job/cmdline ]]; do
-    grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/cmdline >> "$tmp/found" 2>/dev/null || true
+# Sample continuously for the full request lifetime. The fake gjs delay keeps
+# the job alive long enough that a zero-iteration sampler is itself a failure.
+: > "$tmp/found-argv"
+: > "$tmp/found-environ"
+sample_count=0
+while kill -0 "$job" 2>/dev/null; do
+    sample_count=$((sample_count + 1))
+    grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/cmdline >> "$tmp/found-argv" 2>/dev/null || true
+    grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/environ >> "$tmp/found-environ" 2>/dev/null || true
 done
 wait "$job"
-if [[ -s $tmp/found ]]; then echo "request text visible in argv: $(sort -u "$tmp/found")" >&2; exit 1; fi
+(( sample_count > 0 )) || { echo 'process sampler ran zero times' >&2; exit 1; }
+if [[ -s $tmp/found-argv ]]; then echo "request text visible in argv: $(sort -u "$tmp/found-argv")" >&2; exit 1; fi
+if [[ -s $tmp/found-environ ]]; then echo "request text visible in environment: $(sort -u "$tmp/found-environ")" >&2; exit 1; fi
 mapfile -d '' -t gjs_argv < "$tmp/gjs-argv"
 [[ ${#gjs_argv[@]} == 3 && ${gjs_argv[0]} == -m && ${gjs_argv[1]} == "$request_js" && ${gjs_argv[2]} == - ]] || {
     printf 'unexpected gjs argv:' >&2
@@ -75,7 +95,7 @@ mapfile -d '' -t gjs_argv < "$tmp/gjs-argv"
     printf '\n' >&2
     exit 1
 }
-echo 'ok: request text never in argv'
+echo 'ok: request text never in argv or environment'
 
 set +e
 reply=$(bash "$request_sh" - < /dev/null)
