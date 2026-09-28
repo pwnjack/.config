@@ -4,6 +4,7 @@ import GioUnix from "gi://GioUnix"
 import { execAsync } from "./process.js"
 import { checkedHyprctl } from "./hyprctl.js"
 import * as persist from "./persist.js"
+import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 
 const configDir = GLib.get_home_dir() + "/.config"
 const catalog = JSON.parse(read(configDir + "/quickshell/settings-panel/catalog.json"))
@@ -69,11 +70,12 @@ const enumerators = {
     "power-profiles": async () => (await execAsync(["powerprofilesctl", "list"])).split("\n")
         .map(line => line.match(/^\*?\s*([\w-]+):$/)).filter(Boolean)
         .map(([, name]) => ({ label: name.replace(/(^|-)(\w)/g, (_, dash, c) => (dash ? " " : "") + c.toUpperCase()), value: name })),
+    ...pulseEnumerators,
 }
-async function choicesFor(row, current) {
+async function choicesFor(row, current, once = onceCache()) {
     if (row.items) return row.items
     if (!Object.hasOwn(enumerators, row.choices)) throw new Error("This setting has no choices")
-    return enumerators[row.choices](row, current)
+    return enumerators[row.choices](row, current, once)
 }
 function readOption(key) { return read(optionPath(key)).trim() }
 function idleValues(text) {
@@ -224,13 +226,16 @@ async function setGtk(row, value) {
     }
 }
 
-async function snapshot(ids, includeMonitors) {
-    // Share category reads, including one animation tree per request.
+// One cache per request: rows that share a source share its reads.
+function onceCache() {
     const cached = new Map()
-    const once = (key, fn) => {
+    return (key, fn) => {
         if (!cached.has(key)) cached.set(key, Promise.resolve().then(fn))
         return cached.get(key)
     }
+}
+async function snapshot(ids, includeMonitors) {
+    const once = onceCache()
     const values = {}
     await Promise.all(ids.map(async id => {
         const row = byId.get(id)
@@ -265,9 +270,10 @@ async function snapshot(ids, includeMonitors) {
             case "kvantum": value = exists(kvantumPath) ? iniValue(read(kvantumPath), "theme", "General") : ""; break
             case "powerprofile": value = (await execAsync(["powerprofilesctl", "get"])).trim(); break
             case "mime": value = await mimeDefault(row.mimes[0]); break
+            case "pulse": value = pulseValue(row.key, await once("pulse", pulseState)); break
             }
             if (row.default !== undefined) reset = value !== row.default
-            values[id] = row.choices ? { value, reset, choices: await choicesFor(row, value) } : { value, reset }
+            values[id] = row.choices ? { value, reset, choices: await choicesFor(row, value, once) } : { value, reset }
         } catch (error) { values[id] = { error: error.message } }
     }))
     const result = { values }
@@ -320,11 +326,11 @@ const checks = {
         if (!GLib.find_program_in_path(program)) throw new Error(`${program} is not installed`)
     },
 }
-async function validate(row, value) {
+async function validate(row, value, once = onceCache()) {
     if (row.kind === "toggle" && typeof value !== "boolean") throw new Error("Expected an on/off value")
     if (row.kind === "slider" && (typeof value !== "number" || !Number.isFinite(value) || value < row.min || value > row.max)) throw new Error("Value is outside this setting's range")
     if (row.kind === "slider" && row.step >= 1 && !Number.isInteger(value)) throw new Error("Expected a whole number")
-    if (row.kind === "select" && !(await choicesFor(row)).some(item => item.value === value)) throw new Error("Unknown choice")
+    if (row.kind === "select" && !(await choicesFor(row, undefined, once)).some(item => item.value === value)) throw new Error("Unknown choice")
     if (row.kind === "text") {
         if (typeof value !== "string" || /[\n\r\0]/.test(value) || value.length > 512) throw new Error("Enter a single-line value")
         if (!value.trim() && !row.optional) throw new Error("Enter a nonempty single-line value")
@@ -349,7 +355,8 @@ async function change(request) {
         if (row.default === undefined) throw new Error("This setting has no reset")
     }
     const value = request.op === "reset" ? row.default : request.value
-    await validate(row, value)
+    const once = onceCache()
+    await validate(row, value, once)
     switch (row.source) {
     case "keyword": return persist.setPersistent(row.key, row.kind === "text" ? value.trim() : value)
     case "animation": {
@@ -412,6 +419,7 @@ async function change(request) {
     }
     case "gtk": return setGtk(row, value)
     case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
+    case "pulse": return setPulse(row.key, value, await once("pulse", pulseState))
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])

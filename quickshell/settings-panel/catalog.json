@@ -26,6 +26,11 @@
       "description": "Zoom and text size"
     },
     {
+      "id": "sound",
+      "title": "Sound",
+      "description": "Devices, ports and microphone level. Volume lives in the notification sidebar."
+    },
+    {
       "id": "notifications",
       "title": "Notifications",
       "description": "SwayNC toasts and control center"
@@ -728,6 +733,105 @@
       "min": 0.75,
       "max": 2,
       "step": 0.05
+    },
+    {
+      "category": "sound",
+      "id": "sound.output",
+      "title": "Output Device",
+      "description": "Where sound plays",
+      "keywords": [
+        "speakers",
+        "headphones",
+        "audio"
+      ],
+      "source": "pulse",
+      "key": "output",
+      "kind": "select",
+      "choices": "audio-outputs",
+      "live": "audio"
+    },
+    {
+      "category": "sound",
+      "id": "sound.output-port",
+      "title": "Output Port",
+      "description": "Connector on the output device, e.g. headphones or line out",
+      "keywords": [
+        "jack",
+        "headphones",
+        "speakers"
+      ],
+      "source": "pulse",
+      "key": "output-port",
+      "kind": "select",
+      "choices": "output-ports",
+      "live": "audio"
+    },
+    {
+      "category": "sound",
+      "id": "sound.output-profile",
+      "title": "Output Profile",
+      "description": "Channel layout of the output device's card",
+      "keywords": [
+        "surround",
+        "stereo",
+        "hdmi"
+      ],
+      "source": "pulse",
+      "key": "output-profile",
+      "kind": "select",
+      "choices": "output-profiles",
+      "live": "audio"
+    },
+    {
+      "category": "sound",
+      "id": "sound.input",
+      "title": "Input Device",
+      "description": "Microphone that apps record from",
+      "keywords": [
+        "microphone",
+        "mic",
+        "recording"
+      ],
+      "source": "pulse",
+      "key": "input",
+      "kind": "select",
+      "choices": "audio-inputs",
+      "live": "audio"
+    },
+    {
+      "category": "sound",
+      "id": "sound.input-port",
+      "title": "Input Port",
+      "description": "Connector on the input device",
+      "keywords": [
+        "microphone",
+        "mic",
+        "jack"
+      ],
+      "source": "pulse",
+      "key": "input-port",
+      "kind": "select",
+      "choices": "input-ports",
+      "live": "audio"
+    },
+    {
+      "category": "sound",
+      "id": "sound.mic-level",
+      "title": "Microphone Level",
+      "description": "Recording volume of the input device",
+      "keywords": [
+        "microphone",
+        "mic",
+        "gain"
+      ],
+      "source": "pulse",
+      "key": "mic-level",
+      "kind": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "format": "percent",
+      "live": "audio"
     },
     {
       "category": "notifications",

@@ -27,9 +27,10 @@ Item {
             {id:"nickname",category:"appearance",title:"Nickname",description:"Optional label",kind:"text",optional:true},
             {id:"theme",category:"appearance",title:"Theme",description:"GTK",kind:"select",choices:"gtk-themes"},
             {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
-            {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"}
+            {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
+            {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -46,7 +47,7 @@ Item {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
             controller.calls = []; controller.busy = false;
             controller.loaded = true; controller.loading = false;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0}});
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -141,6 +142,12 @@ Item {
             const slider = findChild(view,"slider-idle");
             verify(slider);
             compare(slider.parent.children[1].text,"Never");
+        }
+        function test_percent_format() {
+            controller.select("input"); wait(20);
+            const slider = findChild(view,"slider-mic");
+            verify(slider);
+            compare(slider.parent.children[1].text,"62 %");
         }
         function test_dropdown_popup_theme_and_keyboard_selection() {
             controller.select("input"); wait(20);

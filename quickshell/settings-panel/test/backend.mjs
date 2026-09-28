@@ -61,6 +61,31 @@ const hyprOptions = {
     'input:kb_layout': {str:'us',set:true},
     'input:kb_variant': {str:'intl',set:true},
 }
+// Trimmed from `pactl -f json` on PipeWire 1.6.9. Note `card` is null on the
+// real sinks: the card is linked through properties["device.name"].
+const pulse = {
+    info: {default_sink_name:'alsa_output.analog', default_source_name:'alsa_input.analog'},
+    sinks: [
+        {name:'alsa_output.analog',description:'Built-in Audio Analog Stereo',card:null,active_port:'analog-output-headphones',properties:{'device.name':'alsa_card.analog'},
+         ports:[{name:'analog-output-lineout',description:'Line Out',availability:'not available'},{name:'analog-output-headphones',description:'Headphones',availability:'available'}]},
+        {name:'alsa_output.hdmi',description:'GA102 Digital Stereo (HDMI)',card:null,active_port:'hdmi-output-0',properties:{'device.name':'alsa_card.hdmi'},
+         ports:[{name:'hdmi-output-0',description:'HDMI / DisplayPort',availability:'available'}]},
+    ],
+    sources: [
+        {name:'alsa_output.analog.monitor',description:'Monitor of Built-in Audio Analog Stereo',monitor_source:'alsa_output.analog',active_port:'analog-output-headphones',ports:[],volume:{}},
+        {name:'alsa_input.analog',description:'Built-in Audio Analog Stereo',monitor_source:'',active_port:'analog-input-front-mic',
+         ports:[{name:'analog-input-front-mic',description:'Front Microphone',availability:'not available'},{name:'analog-input-rear-mic',description:'Rear Microphone',availability:'not available'}],
+         volume:{'front-left':{value_percent:'60%'},'front-right':{value_percent:'64%'}}},
+    ],
+    cards: [
+        {name:'alsa_card.analog',active_profile:'output:analog-stereo+input:analog-stereo',profiles:{
+            off:{description:'Off',available:true},
+            'output:analog-stereo+input:analog-stereo':{description:'Analog Stereo Duplex',available:true},
+            'output:analog-surround-51':{description:'Analog Surround 5.1 Output',available:false},
+            'output:iec958-stereo':{description:'Digital Stereo (IEC958) Output',available:true}}},
+        {name:'alsa_card.hdmi',active_profile:'output:hdmi-stereo',profiles:{'output:hdmi-stereo':{description:'Digital Stereo (HDMI) Output',available:true}}},
+    ],
+}
 const running = new Set()
 const encoder = new TextEncoder()
 globalThis.settingsMocks = {
@@ -141,6 +166,11 @@ globalThis.settingsMocks = {
         }
         if (args[0] === 'powerprofilesctl') return args[1] === 'get' ? 'performance\n'
             : args[1] === 'list' ? '* performance:\n    CpuDriver:\tintel_pstate\n\n  balanced:\n    CpuDriver:\tintel_pstate\n\n  power-saver:\n    CpuDriver:\tintel_pstate\n' : ''
+        if (args[0] === 'pactl' && args[1] === '-f') return JSON.stringify(args[3] === 'info' ? pulse.info : pulse[args[4]])
+        if (args[0] === 'pactl') {
+            if (args[1] === 'set-default-sink') pulse.info.default_sink_name = args[2]
+            return ''
+        }
         return 'ok'
     },
 }
@@ -434,3 +464,42 @@ events=[]
 await dispatch({op:'set',id:'mime.images',value:'legacy.desktop'})
 assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
 console.log('ok: file types query once, update declared MIME subclasses only, and restore mimeapps.list exactly')
+
+events=[]
+result = await dispatch({op:'read',ids:catalog.rows.filter(r=>r.source==='pulse').map(r=>r.id)})
+assert.equal(events.filter(e=>e[0]==='pactl').length,4)
+const sound = id => result.values['sound.'+id]
+assert.equal(sound('output').value,'alsa_output.analog')
+assert.deepEqual(sound('output').choices.map(c=>c.value),['alsa_output.analog','alsa_output.hdmi'])
+assert.deepEqual(sound('output-port').choices.map(c=>c.label),['Headphones'])
+assert.deepEqual(sound('output-profile').choices.map(c=>c.value),['output:analog-stereo+input:analog-stereo','output:iec958-stereo'])
+assert.deepEqual(sound('input').choices.map(c=>c.value),['alsa_input.analog'])
+assert.deepEqual(sound('input-port').choices.map(c=>c.value),['analog-input-front-mic'])
+assert.equal(sound('mic-level').value,62)
+events=[]
+await assert.rejects(dispatch({op:'set',id:'sound.output-port',value:'analog-output-lineout'}),/Unknown choice/)
+await assert.rejects(dispatch({op:'set',id:'sound.output-profile',value:'off'}),/Unknown choice/)
+await assert.rejects(dispatch({op:'set',id:'sound.input',value:'alsa_output.analog.monitor'}),/Unknown choice/)
+await assert.rejects(dispatch({op:'set',id:'sound.mic-level',value:150}),/outside/)
+await assert.rejects(dispatch({op:'reset',id:'sound.output'}),/no reset/)
+assert.equal(events.some(e=>e[0]==='pactl' && e[1].startsWith('set-')),false)
+await dispatch({op:'set',id:'sound.output-profile',value:'output:iec958-stereo'})
+await dispatch({op:'set',id:'sound.mic-level',value:40})
+await dispatch({op:'set',id:'sound.output',value:'alsa_output.hdmi'})
+assert.deepEqual(events.filter(e=>e[0]==='pactl' && e[1].startsWith('set-')).map(e=>e.slice(1)),[
+    ['set-card-profile','alsa_card.analog','output:iec958-stereo'],
+    ['set-source-volume','alsa_input.analog','40%'],
+    ['set-default-sink','alsa_output.hdmi'],
+])
+result = await dispatch({op:'read',ids:['sound.output-port','sound.output-profile']})
+assert.equal(result.values['sound.output-port'].value,'hdmi-output-0')
+assert.equal(result.values['sound.output-profile'].value,'output:hdmi-stereo')
+pulse.info.default_sink_name = 'alsa_output.analog'
+const savedSource = pulse.info.default_source_name
+pulse.info.default_source_name = ''
+result = await dispatch({op:'read',ids:['sound.input','sound.mic-level','sound.output']})
+assert.match(result.values['sound.input'].error,/No input device/)
+assert.match(result.values['sound.mic-level'].error,/No input device/)
+assert.equal(result.values['sound.output'].value,'alsa_output.analog')
+pulse.info.default_source_name = savedSource
+console.log('ok: sound rows share four pactl reads, offer only usable choices and follow the default device')
