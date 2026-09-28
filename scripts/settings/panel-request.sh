@@ -5,9 +5,26 @@ set -euo pipefail
 for binary in gjs flock; do
     command -v "$binary" >/dev/null || { echo "$binary is required" >&2; exit 1; }
 done
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+repo_root=$(cd -- "$script_dir/../.." && pwd)
+request_js="$repo_root/quickshell/settings-panel/request.js"
+request_arg=$1
+# Consume stdin before waiting for the cross-instance lock. A writer must never
+# hold the lock while it is still waiting for its request, and the request must
+# never be copied into argv or the environment.
+if [[ $request_arg == - ]]; then
+    request_line=
+    if ! IFS= read -r request_line; then
+        : # Preserve a final unterminated line, or pass an empty line to request.js.
+    fi
+fi
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/settings-panel"
 mkdir -p "$cache_dir"
 exec 9>"$cache_dir/request.lock"
 flock -w 30 9 || { echo 'Settings are busy; try again.' >&2; exit 1; }
 # `-` means the request arrives on stdin (the panel's writes: they can carry a Wi-Fi password).
-exec gjs -m "$HOME/.config/quickshell/settings-panel/request.js" "$1"
+if [[ $request_arg == - ]]; then
+    printf '%s\n' "$request_line" | gjs -m "$request_js" -
+else
+    exec gjs -m "$request_js" "$request_arg"
+fi

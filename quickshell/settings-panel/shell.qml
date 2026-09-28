@@ -188,6 +188,7 @@ ShellRoot {
         stdout: StdioCollector { onStreamFinished: root.writeReply = text }
         stderr: StdioCollector { onStreamFinished: root.writeError = text }
         onExited: code => {
+            root.writeRequest = "";
             try {
                 const result = JSON.parse(root.writeReply);
                 if (code !== 0 || !result.ok) throw new Error(result.error || "Settings helper failed");
