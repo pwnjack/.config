@@ -21,6 +21,8 @@ const hyprOptions = {
     'decoration:shadow:enabled': {bool:false,set:true},
     'general:gaps_in': {css:'4 4 4 4',set:true},
     'input:accel_profile': {str:'[[EMPTY]]',set:false},
+    'input:kb_layout': {str:'us',set:true},
+    'input:kb_variant': {str:'intl',set:true},
 }
 const running = new Set()
 const encoder = new TextEncoder()
@@ -56,6 +58,11 @@ globalThis.settingsMocks = {
         if (args[1] === 'monitors') return JSON.stringify([{name:'DP-1',width:2560,height:1440}])
         if (args[1] === 'configerrors') return '[]'
         if (args[0] === 'swaync-client' && failReload) { failReload=false; throw new Error('reload failed') }
+        if (args[0] === 'localectl') return {
+            'list-x11-keymap-layouts': 'us\nit\nde\n',
+            'list-x11-keymap-options': 'caps:escape\ngrp:alt_shift_toggle\n',
+            'list-x11-keymap-variants': args[2] === 'us' ? 'intl\ncolemak\n' : 'nodeadkeys\n',
+        }[args[1]]
         return 'ok'
     },
 }
@@ -135,3 +142,20 @@ assert.equal(files.get(base+'/hypr/hypridle.conf'),oldIdle.replace('305','330'))
 await dispatch({op:'set',id:'power.dpms',value:720})
 assert.equal(files.get(base+'/hypr/hypridle.conf'),oldIdle.replace('305','330').replace('600','720'))
 console.log('ok: idle timeout edits preserve custom content and Lua dispatcher arguments')
+
+result = await dispatch({op:'read',ids:['input.accel-profile']})
+assert.equal(result.values['input.accel-profile'].value,'')
+console.log('ok: an empty string keyword value maps through the [[EMPTY]] sentinel')
+
+events=[]
+await assert.rejects(dispatch({op:'set',id:'input.kb-layout',value:'zz'}),/Unknown keyboard layout zz/)
+await assert.rejects(dispatch({op:'set',id:'input.kb-layout',value:'de'}),/de has no variant intl/)
+await assert.rejects(dispatch({op:'set',id:'input.kb-options',value:'caps:nope'}),/Unknown keyboard option/)
+await assert.rejects(dispatch({op:'set',id:'apps.browser',value:''}),/nonempty/)
+assert.equal(events.some(e => e[1] === 'eval'),false)
+await dispatch({op:'set',id:'input.kb-variant',value:''})
+await dispatch({op:'set',id:'input.kb-options',value:'caps:escape,grp:alt_shift_toggle'})
+await dispatch({op:'set',id:'input.kb-layout',value:'us,it'})
+assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_variant = ""/)
+assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_layout = "us,it"/)
+console.log('ok: keyboard layout, variant and options are checked against XKB before applying')

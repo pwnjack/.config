@@ -21,6 +21,11 @@
       "description": "Mouse, keyboard and touchpad"
     },
     {
+      "id": "accessibility",
+      "title": "Accessibility",
+      "description": "Zoom and text size"
+    },
+    {
       "id": "notifications",
       "title": "Notifications",
       "description": "SwayNC toasts and control center"
@@ -358,6 +363,36 @@
       "kind": "toggle"
     },
     {
+      "category": "windows",
+      "id": "win.dim-inactive",
+      "title": "Dim Inactive Windows",
+      "description": "Darken every window except the focused one",
+      "source": "keyword",
+      "key": "decoration:dim_inactive",
+      "kind": "toggle"
+    },
+    {
+      "category": "windows",
+      "id": "win.dim-strength",
+      "title": "Dim Strength",
+      "description": "How dark inactive windows become",
+      "source": "keyword",
+      "key": "decoration:dim_strength",
+      "kind": "slider",
+      "min": 0.05,
+      "max": 0.8,
+      "step": 0.05
+    },
+    {
+      "category": "windows",
+      "id": "win.focus-on-activate",
+      "title": "Focus on Activation",
+      "description": "Switch to windows that ask for attention",
+      "source": "keyword",
+      "key": "misc:focus_on_activate",
+      "kind": "toggle"
+    },
+    {
       "category": "input",
       "id": "input.sensitivity",
       "title": "Mouse Sensitivity",
@@ -424,6 +459,179 @@
       "kind": "slider",
       "min": 0.1,
       "max": 2,
+      "step": 0.1
+    },
+    {
+      "category": "input",
+      "id": "input.kb-layout",
+      "title": "Keyboard Layout",
+      "description": "XKB layout, e.g. us or us,it for two",
+      "keywords": [
+        "keymap",
+        "language"
+      ],
+      "source": "keyword",
+      "key": "input:kb_layout",
+      "kind": "text",
+      "check": "xkb-layout"
+    },
+    {
+      "category": "input",
+      "id": "input.kb-variant",
+      "title": "Layout Variant",
+      "description": "Optional, one per layout, e.g. intl",
+      "keywords": [
+        "keymap"
+      ],
+      "source": "keyword",
+      "key": "input:kb_variant",
+      "kind": "text",
+      "optional": true,
+      "check": "xkb-variant"
+    },
+    {
+      "category": "input",
+      "id": "input.kb-options",
+      "title": "Keyboard Options",
+      "description": "Optional XKB options, e.g. caps:escape",
+      "keywords": [
+        "caps",
+        "compose",
+        "keymap"
+      ],
+      "source": "keyword",
+      "key": "input:kb_options",
+      "kind": "text",
+      "optional": true,
+      "check": "xkb-options"
+    },
+    {
+      "category": "input",
+      "id": "input.repeat-rate",
+      "title": "Key Repeat Rate",
+      "description": "Repeats per second while a key is held",
+      "keywords": [
+        "keyboard"
+      ],
+      "source": "keyword",
+      "key": "input:repeat_rate",
+      "kind": "slider",
+      "min": 10,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "category": "input",
+      "id": "input.repeat-delay",
+      "title": "Key Repeat Delay",
+      "description": "Milliseconds before a held key repeats",
+      "keywords": [
+        "keyboard"
+      ],
+      "source": "keyword",
+      "key": "input:repeat_delay",
+      "kind": "slider",
+      "min": 150,
+      "max": 1000,
+      "step": 25
+    },
+    {
+      "category": "input",
+      "id": "input.accel-profile",
+      "title": "Pointer Acceleration",
+      "description": "Flat keeps pointer speed constant",
+      "keywords": [
+        "mouse"
+      ],
+      "source": "keyword",
+      "key": "input:accel_profile",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Default",
+          "value": ""
+        },
+        {
+          "label": "Flat",
+          "value": "flat"
+        },
+        {
+          "label": "Adaptive",
+          "value": "adaptive"
+        }
+      ]
+    },
+    {
+      "category": "input",
+      "id": "input.left-handed",
+      "title": "Left-Handed Mouse",
+      "description": "Swap the primary and secondary buttons",
+      "source": "keyword",
+      "key": "input:left_handed",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.tap-to-click",
+      "title": "Tap to Click (Touchpad)",
+      "description": "A tap counts as a click",
+      "source": "keyword",
+      "key": "input:touchpad:tap_to_click",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.dwt",
+      "title": "Disable Touchpad While Typing",
+      "description": "Ignore the touchpad during typing",
+      "source": "keyword",
+      "key": "input:touchpad:disable_while_typing",
+      "kind": "toggle"
+    },
+    {
+      "category": "input",
+      "id": "input.hide-cursor",
+      "title": "Hide Idle Cursor",
+      "description": "Seconds without movement before the cursor hides",
+      "keywords": [
+        "mouse",
+        "pointer"
+      ],
+      "source": "keyword",
+      "key": "cursor:inactive_timeout",
+      "kind": "slider",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "format": "seconds",
+      "zeroLabel": "Never"
+    },
+    {
+      "category": "input",
+      "id": "input.no-warps",
+      "title": "Keep Cursor in Place",
+      "description": "Keyboard focus changes do not move the cursor",
+      "keywords": [
+        "warp",
+        "mouse"
+      ],
+      "source": "keyword",
+      "key": "cursor:no_warps",
+      "kind": "toggle"
+    },
+    {
+      "category": "accessibility",
+      "id": "a11y.zoom",
+      "title": "Screen Zoom",
+      "description": "Magnify around the cursor",
+      "keywords": [
+        "magnifier"
+      ],
+      "source": "keyword",
+      "key": "cursor:zoom_factor",
+      "kind": "slider",
+      "min": 1,
+      "max": 4,
       "step": 0.1
     },
     {

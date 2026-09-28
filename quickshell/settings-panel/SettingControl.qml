@@ -14,6 +14,8 @@ Rectangle {
     radius: 12
     color: theme.plate
     function formatted(value) {
+        if (row.zeroLabel && Number(value) === 0) return row.zeroLabel;
+        if (row.format === "seconds") return Math.round(value) + " s";
         if (row.format === "clock") return Math.floor(value / 60).toString().padStart(2, "0") + ":" + Math.round(value % 60).toString().padStart(2, "0");
         if (row.format === "duration") return Math.floor(value / 60) + "m" + (value % 60 ? " " + Math.round(value % 60) + "s" : "");
         if (row.format === "temperature") return Math.round(value) + " K";

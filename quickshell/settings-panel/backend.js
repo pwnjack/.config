@@ -140,12 +140,50 @@ async function snapshot(ids, includeMonitors) {
     return result
 }
 
-function validate(row, value) {
+const xkbLists = new Map()
+function xkbList(...args) {
+    const key = args.join(" ")
+    if (!xkbLists.has(key)) xkbLists.set(key, execAsync(["localectl", ...args]).then(text => text.split("\n").filter(Boolean)))
+    return xkbLists.get(key)
+}
+async function currentKeyword(key) {
+    return String(keywordValue(JSON.parse(await execAsync(["hyprctl", "getoption", key, "-j"]))))
+}
+async function checkVariants(value, layouts) {
+    if (!value) return
+    const variants = value.split(",")
+    if (variants.length > layouts.length) throw new Error("There are more variants than layouts")
+    for (const [index, variant] of variants.entries()) {
+        if (variant && !(await xkbList("list-x11-keymap-variants", layouts[index])).includes(variant))
+            throw new Error(`${layouts[index]} has no variant ${variant}`)
+    }
+}
+// A rejected keymap leaves Hyprland on its old one with only a log line, so
+// every XKB name is checked before it is applied.
+const checks = {
+    "xkb-layout": async value => {
+        const known = await xkbList("list-x11-keymap-layouts")
+        const layouts = value.split(",")
+        for (const layout of layouts) if (!known.includes(layout)) throw new Error(`Unknown keyboard layout ${layout}`)
+        await checkVariants(await currentKeyword("input:kb_variant"), layouts)
+    },
+    "xkb-variant": async value => checkVariants(value, (await currentKeyword("input:kb_layout")).split(",")),
+    "xkb-options": async value => {
+        if (!value) return
+        const known = await xkbList("list-x11-keymap-options")
+        for (const option of value.split(",")) if (!known.includes(option)) throw new Error(`Unknown keyboard option ${option}`)
+    },
+}
+async function validate(row, value) {
     if (row.kind === "toggle" && typeof value !== "boolean") throw new Error("Expected an on/off value")
     if (row.kind === "slider" && (typeof value !== "number" || !Number.isFinite(value) || value < row.min || value > row.max)) throw new Error("Value is outside this setting's range")
     if (row.kind === "slider" && row.step >= 1 && !Number.isInteger(value)) throw new Error("Expected a whole number")
     if (row.kind === "select" && !row.items.some(item => item.value === value)) throw new Error("Unknown choice")
-    if (row.kind === "text" && (typeof value !== "string" || !value.trim() || /[\n\r\0]/.test(value) || value.length > 512)) throw new Error("Enter a nonempty single-line value")
+    if (row.kind === "text") {
+        if (typeof value !== "string" || /[\n\r\0]/.test(value) || value.length > 512) throw new Error("Enter a single-line value")
+        if (!value.trim() && !row.optional) throw new Error("Enter a nonempty single-line value")
+        if (row.check) await checks[row.check](value.trim())
+    }
 }
 async function cursor(theme, size) {
     await execAsync(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", theme])
@@ -161,9 +199,9 @@ async function change(request) {
         if (row.default === undefined) throw new Error("This setting has no reset")
     }
     const value = request.op === "reset" ? row.default : request.value
-    validate(row, value)
+    await validate(row, value)
     switch (row.source) {
-    case "keyword": return persist.setPersistent(row.key, value)
+    case "keyword": return persist.setPersistent(row.key, row.kind === "text" ? value.trim() : value)
     case "animation": {
         const raw = JSON.parse(await execAsync(["hyprctl", "animations", "-j"]))
         const animation = (Array.isArray(raw[0]) ? raw[0] : raw).find(item => item.name === row.key)

@@ -24,9 +24,10 @@ Item {
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
-            {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]}
+            {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
+            {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},focus:{value:"1"}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},focus:{value:"1"},idle:{value:0}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -113,6 +114,12 @@ Item {
             wait(20);
             compare(scroll.y,y); compare(scroll.height,height);
             compare(findChild(view,"closeSettings").text,"Close");
+        }
+        function test_zero_label() {
+            controller.select("input"); wait(20);
+            const slider = findChild(view,"slider-idle");
+            verify(slider);
+            compare(slider.parent.children[1].text,"Never");
         }
         function test_dropdown_popup_theme_and_keyboard_selection() {
             controller.select("input"); wait(20);
