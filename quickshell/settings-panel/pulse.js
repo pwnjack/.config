@@ -29,9 +29,10 @@ function ports(device) {
     return device.ports.filter(port => port.availability !== "not available" || port.name === device.active_port)
         .map(port => ({ label: port.description, value: port.name }))
 }
-// "off" would remove the very device these rows describe.
+// A profile without a sink ("off", input-only) would remove the very device
+// these rows describe; pactl reports the count, so no names are listed.
 const profiles = card => Object.entries(card.profiles)
-    .filter(([name, profile]) => name === card.active_profile || (profile.available && name !== "off"))
+    .filter(([name, profile]) => name === card.active_profile || (profile.available && profile.sinks > 0))
     .map(([name, profile]) => ({ label: profile.description, value: name }))
 
 const shared = once => once("pulse", pulseState)
@@ -44,13 +45,16 @@ export const pulseEnumerators = {
 }
 export function pulseValue(key, state) {
     switch (key) {
-    case "output": return output(state).name
+    // A missing or monitor default leaves the selector empty but usable,
+    // so the panel can pick a real device and recover.
+    case "output": return state.sinks.some(sink => sink.name === state.info.default_sink_name) ? state.info.default_sink_name : ""
     case "output-port": return output(state).active_port
     case "output-profile": return cardOf(state, output(state)).active_profile
-    case "input": return input(state).name
+    case "input": return inputs(state).some(source => source.name === state.info.default_source_name) ? state.info.default_source_name : ""
     case "input-port": return input(state).active_port
     case "mic-level": {
         const channels = Object.values(input(state).volume)
+        if (!channels.length) throw new Error("The input device reports no volume")
         return Math.round(channels.reduce((sum, channel) => sum + parseFloat(channel.value_percent), 0) / channels.length)
     }
     }

@@ -818,7 +818,7 @@
       "category": "sound",
       "id": "sound.mic-level",
       "title": "Microphone Level",
-      "description": "Recording volume of the input device",
+      "description": "Recording volume of the input device; above 100 % amplifies in software",
       "keywords": [
         "microphone",
         "mic",
@@ -828,7 +828,7 @@
       "key": "mic-level",
       "kind": "slider",
       "min": 0,
-      "max": 100,
+      "max": 150,
       "step": 1,
       "format": "percent",
       "live": "audio"

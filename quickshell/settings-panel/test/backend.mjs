@@ -79,11 +79,14 @@ const pulse = {
     ],
     cards: [
         {name:'alsa_card.analog',active_profile:'output:analog-stereo+input:analog-stereo',profiles:{
-            off:{description:'Off',available:true},
-            'output:analog-stereo+input:analog-stereo':{description:'Analog Stereo Duplex',available:true},
-            'output:analog-surround-51':{description:'Analog Surround 5.1 Output',available:false},
-            'output:iec958-stereo':{description:'Digital Stereo (IEC958) Output',available:true}}},
-        {name:'alsa_card.hdmi',active_profile:'output:hdmi-stereo',profiles:{'output:hdmi-stereo':{description:'Digital Stereo (HDMI) Output',available:true}}},
+            off:{description:'Off',available:true,sinks:0},
+            // Active but reported unavailable: the active profile is always offered.
+            'output:analog-stereo+input:analog-stereo':{description:'Analog Stereo Duplex',available:false,sinks:1},
+            'output:analog-surround-51':{description:'Analog Surround 5.1 Output',available:false,sinks:1},
+            // Available, but it has no sink: choosing it would remove the output these rows describe.
+            'input:analog-stereo':{description:'Analog Stereo Input',available:true,sinks:0},
+            'output:iec958-stereo':{description:'Digital Stereo (IEC958) Output',available:true,sinks:1}}},
+        {name:'alsa_card.hdmi',active_profile:'output:hdmi-stereo',profiles:{'output:hdmi-stereo':{description:'Digital Stereo (HDMI) Output',available:true,sinks:1}}},
     ],
 }
 const running = new Set()
@@ -479,14 +482,21 @@ assert.equal(sound('mic-level').value,62)
 events=[]
 await assert.rejects(dispatch({op:'set',id:'sound.output-port',value:'analog-output-lineout'}),/Unknown choice/)
 await assert.rejects(dispatch({op:'set',id:'sound.output-profile',value:'off'}),/Unknown choice/)
+await assert.rejects(dispatch({op:'set',id:'sound.output-profile',value:'input:analog-stereo'}),/Unknown choice/)
 await assert.rejects(dispatch({op:'set',id:'sound.input',value:'alsa_output.analog.monitor'}),/Unknown choice/)
-await assert.rejects(dispatch({op:'set',id:'sound.mic-level',value:150}),/outside/)
+await assert.rejects(dispatch({op:'set',id:'sound.mic-level',value:151}),/outside/)
 await assert.rejects(dispatch({op:'reset',id:'sound.output'}),/no reset/)
 assert.equal(events.some(e=>e[0]==='pactl' && e[1].startsWith('set-')),false)
+await dispatch({op:'set',id:'sound.output-port',value:'analog-output-headphones'})
+await dispatch({op:'set',id:'sound.input',value:'alsa_input.analog'})
+await dispatch({op:'set',id:'sound.input-port',value:'analog-input-front-mic'})
 await dispatch({op:'set',id:'sound.output-profile',value:'output:iec958-stereo'})
 await dispatch({op:'set',id:'sound.mic-level',value:40})
 await dispatch({op:'set',id:'sound.output',value:'alsa_output.hdmi'})
 assert.deepEqual(events.filter(e=>e[0]==='pactl' && e[1].startsWith('set-')).map(e=>e.slice(1)),[
+    ['set-sink-port','alsa_output.analog','analog-output-headphones'],
+    ['set-default-source','alsa_input.analog'],
+    ['set-source-port','alsa_input.analog','analog-input-front-mic'],
     ['set-card-profile','alsa_card.analog','output:iec958-stereo'],
     ['set-source-volume','alsa_input.analog','40%'],
     ['set-default-sink','alsa_output.hdmi'],
@@ -497,9 +507,27 @@ assert.equal(result.values['sound.output-profile'].value,'output:hdmi-stereo')
 pulse.info.default_sink_name = 'alsa_output.analog'
 const savedSource = pulse.info.default_source_name
 pulse.info.default_source_name = ''
-result = await dispatch({op:'read',ids:['sound.input','sound.mic-level','sound.output']})
-assert.match(result.values['sound.input'].error,/No input device/)
+result = await dispatch({op:'read',ids:['sound.input','sound.input-port','sound.mic-level','sound.output']})
+// The device selector stays usable with no valid default, so the panel can recover the state.
+assert.equal(result.values['sound.input'].value,'')
+assert.deepEqual(result.values['sound.input'].choices.map(c=>c.value),['alsa_input.analog'])
+assert.match(result.values['sound.input-port'].error,/No input device/)
 assert.match(result.values['sound.mic-level'].error,/No input device/)
 assert.equal(result.values['sound.output'].value,'alsa_output.analog')
+pulse.info.default_source_name = 'alsa_output.analog.monitor'
+result = await dispatch({op:'read',ids:['sound.input']})
+assert.equal(result.values['sound.input'].value,'')
 pulse.info.default_source_name = savedSource
+pulse.info.default_sink_name = 'alsa_output.gone'
+result = await dispatch({op:'read',ids:['sound.output','sound.output-port','sound.output-profile']})
+assert.equal(result.values['sound.output'].value,'')
+assert.deepEqual(result.values['sound.output'].choices.map(c=>c.value),['alsa_output.analog','alsa_output.hdmi'])
+assert.match(result.values['sound.output-port'].error,/No output device/)
+assert.match(result.values['sound.output-profile'].error,/No output device/)
+pulse.info.default_sink_name = 'alsa_output.analog'
+const savedVolume = pulse.sources[1].volume
+pulse.sources[1].volume = {}
+result = await dispatch({op:'read',ids:['sound.mic-level']})
+assert.match(result.values['sound.mic-level'].error,/no volume/)
+pulse.sources[1].volume = savedVolume
 console.log('ok: sound rows share four pactl reads, offer only usable choices and follow the default device')
