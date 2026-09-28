@@ -97,6 +97,11 @@ function networkValue(key, snap) {
     return snap.wifiEnabled
 }
 const networkPage = snap => network.networkView(snap, { protonApp: !!GLib.find_program_in_path("protonvpn-app") })
+function requiredSnapshot() {
+    const snap = nmSnapshot()
+    if (!snap.running) throw new Error("NetworkManager is not running")
+    return snap
+}
 function idleValues(text) {
     const values = {}
     for (const block of text.match(/listener\s*\{[^}]*\}/g) || []) {
@@ -595,20 +600,27 @@ export async function dispatch(request) {
     if (request.op === "displayApply") return displayApply(request)
     if (request.op === "displayKeep") return displayKeep()
     if (request.op === "displayRevert") return displayRevert()
-    if (request.op === "networkScan") { await requestScan(); return {} }
+    if (request.op === "networkScan") { requiredSnapshot(); await requestScan(); return {} }
     if (request.op === "wifiConnect") {
-        const plan = network.connectPlan(nmSnapshot(), request)
+        const plan = network.connectPlan(requiredSnapshot(), request)
         if (plan.kind === "activate") await activate(plan.uuid)
         else {
             await addAndActivate(plan)
-            // Only once the new profile works are the old ones for this SSID removed.
-            if (plan.replace.length) await removeConnections(plan.replace)
+            // Only once the new profile works are the old ones for this SSID removed,
+            // each best-effort: a removal failure must not read back as a failed connect.
+            if (plan.replace.length) {
+                const failures = []
+                for (const uuid of plan.replace) {
+                    try { await removeConnections([uuid]) } catch (_) { failures.push(uuid) }
+                }
+                if (failures.length) throw new Error("Connected, but an old saved profile for this network could not be removed")
+            }
         }
         return {}
     }
-    if (request.op === "wifiForget") { await removeConnections(network.forgetPlan(nmSnapshot(), request.ssid)); return {} }
+    if (request.op === "wifiForget") { await removeConnections(network.forgetPlan(requiredSnapshot(), request.ssid)); return {} }
     if (request.op === "vpn") {
-        const plan = network.vpnPlan(nmSnapshot(), request)
+        const plan = network.vpnPlan(requiredSnapshot(), request)
         if (plan.active) await activate(plan.uuid); else await deactivate(plan.uuid)
         return {}
     }

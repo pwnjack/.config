@@ -7,6 +7,7 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_RUNTIME_DIR="$runtime" \
     /usr/lib/qt6/bin/qmltestrunner -input "$test_dir" "$@"
 bash "$test_dir/test-persist.sh"
 bash "$test_dir/test-request-stdin.sh"
+gjs -m "$test_dir/nm-adapter.js"
 node "$test_dir/backend.mjs"
 node "$test_dir/displays.mjs"
 node "$test_dir/monitor-lua.mjs"

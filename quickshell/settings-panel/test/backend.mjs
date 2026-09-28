@@ -106,7 +106,7 @@ const nmState = {
         {uuid:'u-proton',id:'ProtonVPN IT#113',type:'wireguard',ssid:null,state:'activated',iface:'proton0'},
         {uuid:'u-kill',id:'pvpn-killswitch-ipv6',type:'dummy',ssid:null,state:'activated',iface:'ipv6leakintrf0'}],
 }
-let nmCalls = [], nmFailAdd = ''
+let nmCalls = [], nmFailAdd = '', nmFailRemove = new Set()
 const nmMock = {
     nmSnapshot: () => structuredClone(nmState),
     setWifiEnabled: async on => { nmCalls.push(['wifi', on]); nmState.wifiEnabled = on },
@@ -114,7 +114,10 @@ const nmMock = {
     activate: async uuid => { nmCalls.push(['activate', uuid]) },
     addAndActivate: async plan => { nmCalls.push(['add', plan.ssid, plan.psk, plan.keyMgmt]); if (nmFailAdd) throw new Error(nmFailAdd) },
     deactivate: async uuid => { nmCalls.push(['deactivate', uuid]) },
-    removeConnections: async uuids => { nmCalls.push(['remove', ...uuids]) },
+    removeConnections: async uuids => {
+        nmCalls.push(['remove', ...uuids])
+        for (const uuid of uuids) if (nmFailRemove.has(uuid)) throw new Error(`Cannot remove ${uuid}`)
+    },
 }
 globalThis.settingsMocks = {
     GLib: {
@@ -813,3 +816,31 @@ await dispatch({op:'action',id:'protonApp'})
 await dispatch({op:'action',id:'networkEditor'})
 assert.deepEqual(events.filter(e => e[0] === 'spawn').map(e => e[1][0]), ['protonvpn-app','nm-connection-editor'])
 console.log('ok: network forget, VPN refusal in app mode, and the two launch actions')
+
+nmState.running = false
+for (const request of [{op:'networkScan'},{op:'wifiConnect',ssid:'Cafe'},{op:'wifiForget',ssid:'Dimensione-E92F'},{op:'vpn',uuid:'u-work',active:true}])
+    await assert.rejects(dispatch(request), /NetworkManager is not running/, JSON.stringify(request))
+nmState.running = true
+console.log('ok: network write ops fail loudly when NetworkManager is not running')
+
+nmState.connections.push({uuid:'u-old2', id:'Dimensione-E92F', type:'802-11-wireless', ssid:'Dimensione-E92F', state:null, iface:null})
+nmCalls = []; nmFailRemove = new Set(['u-old', 'u-old2'])
+await assert.rejects(dispatch({op:'wifiConnect', ssid:'Dimensione-E92F', psk:'new password'}), /old saved profile.*could not be removed/)
+assert.deepEqual(nmCalls.filter(c => c[0] === 'add'), [['add','Dimensione-E92F','new password','wpa-psk']])
+assert.deepEqual(nmCalls.filter(c => c[0] === 'remove').map(c => c[1]), ['u-old','u-old2'])
+nmFailRemove = new Set(['u-old2'])
+nmCalls = []
+await assert.rejects(dispatch({op:'wifiConnect', ssid:'Dimensione-E92F', psk:'new password'}), /old saved profile.*could not be removed/)
+assert.deepEqual(nmCalls.filter(c => c[0] === 'remove').map(c => c[1]), ['u-old','u-old2'], 'a later failure does not stop earlier removals from being attempted')
+nmFailRemove = new Set()
+nmState.connections = nmState.connections.filter(c => c.uuid !== 'u-old2')
+console.log('ok: wifiConnect keeps the new connection and reports a clear error when removing an old profile fails')
+
+nmState.connections.push({uuid:'u-work', id:'Work VPN', type:'vpn', ssid:null, state:null, iface:null})
+nmCalls = []
+await dispatch({op:'vpn', uuid:'u-work', active:true})
+assert.deepEqual(nmCalls, [['activate','u-work']])
+nmCalls = []
+await dispatch({op:'vpn', uuid:'u-work', active:false})
+assert.deepEqual(nmCalls, [['deactivate','u-work']])
+console.log('ok: vpn activates and deactivates a normal, non-Proton connection')

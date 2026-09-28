@@ -10,14 +10,14 @@ export const PROTON_MODE = "app"
 const WIFI = "802-11-wireless"
 const VPN_TYPES = new Set(["vpn", "wireguard"])
 // libnm NM80211ApFlags / NM80211ApSecurityFlags.
-const PRIVACY = 0x1, PSK = 0x100, EAP = 0x200, SAE = 0x400, OWE = 0x800
+const PRIVACY = 0x1, PSK = 0x100, EAP = 0x200, SAE = 0x400, OWE = 0x800, OWE_TM = 0x1000
 
 export function securityOf(ap) {
     const all = ap.wpaFlags | ap.rsnFlags
     if (all & PSK) return "psk"
     if (all & SAE) return "sae"
     if (all & EAP) return "unsupported"
-    if (all & OWE) return "owe"
+    if (all & (OWE | OWE_TM)) return "owe"
     // PRIVACY without WPA/RSN is WEP, which the page does not offer.
     return ap.flags & PRIVACY ? "unsupported" : "open"
 }

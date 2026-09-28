@@ -31,7 +31,7 @@ fi
 cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/settings-panel"
 mkdir -p "$cache_dir"
 exec 9>"$cache_dir/request.lock"
-flock -w 30 9 || { echo 'Settings are busy; try again.' >&2; exit 1; }
+flock -w 60 9 || { echo 'Settings are busy; try again.' >&2; exit 1; }
 # `-` means the request arrives on stdin (the panel's writes: they can carry a Wi-Fi password).
 if [[ $request_arg == - ]]; then
     exec gjs -m "$request_js" - <<<"$request_line"

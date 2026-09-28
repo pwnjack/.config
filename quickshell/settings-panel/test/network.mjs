@@ -42,6 +42,8 @@ for (const [ap, expected] of [
     [{flags: 1, wpaFlags: 0, rsnFlags: 0x600}, 'sae'],
     [{flags: 1, wpaFlags: 0x100, rsnFlags: 0}, 'psk'],
     [{flags: 1, wpaFlags: 0, rsnFlags: 0x800}, 'owe'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x1000}, 'owe'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x1800}, 'owe'],
     [{flags: 1, wpaFlags: 0, rsnFlags: 0}, 'unsupported'],
     [{flags: 0, wpaFlags: 0, rsnFlags: 0}, 'open'],
 ]) assert.equal(network.securityOf(ap), expected)
