@@ -200,7 +200,7 @@ assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override inpu
 console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
 
 result = await dispatch({op:'read',ids:['appearance.gtk-theme','appearance.icon-theme']})
-assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['A$&B','Adwaita','HighContrast','Kripton'])
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['A$&B','Adwaita','HighContrast','HighContrastInverse','Kripton'])
 assert.deepEqual(result.values['appearance.icon-theme'].choices.map(c=>c.value),['Papirus-Dark'])
 assert.equal(result.values['appearance.gtk-theme'].value,'Kripton')
 assert.equal(result.values['appearance.gtk-theme'].choices.some(c=>c.value==='Emacs'),false)
@@ -208,7 +208,7 @@ assert.equal(result.values['appearance.gtk-theme'].choices.some(c=>c.value==='Ba
 const systemThemes = dirs.get('/usr/share/themes')
 dirs.set('/usr/share/themes',[])
 result = await dispatch({op:'read',ids:['appearance.gtk-theme']})
-assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['Adwaita','HighContrast'])
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['Adwaita','HighContrast','HighContrastInverse'])
 dirs.set('/usr/share/themes',systemThemes)
 events=[]
 await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'NoGtk'}),/Unknown choice/)

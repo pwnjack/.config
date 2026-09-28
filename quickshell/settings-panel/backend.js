@@ -42,9 +42,10 @@ function themeNames(dirs, isTheme, builtins = []) {
 }
 const hasIcons = dir => { try { return /^Directories=/m.test(read(`${dir}/index.theme`)) } catch (_) { return false } }
 // Each enumerator returns what the system has now, so validation and the
-// dropdown can never disagree. GTK's built-ins have no theme directories.
+// dropdown can never disagree. GTK's built-ins have no theme directories:
+// they are libgtk-3 resources (`gresource list libgtk-3.so.0`, minus win32).
 const enumerators = {
-    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`), ["Adwaita", "HighContrast"]),
+    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`), ["Adwaita", "HighContrast", "HighContrastInverse"]),
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
 }
