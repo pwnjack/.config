@@ -1,5 +1,6 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
+import GioUnix from "gi://GioUnix"
 import { execAsync } from "./process.js"
 import { checkedHyprctl } from "./hyprctl.js"
 import * as persist from "./persist.js"
@@ -19,10 +20,17 @@ function read(path) {
     if (!ok) throw new Error(`Cannot read ${path}`)
     return new TextDecoder().decode(data)
 }
-function write(path, text) {
-    const [ok] = Gio.File.new_for_path(path).replace_contents(
-        new TextEncoder().encode(text), null, false, Gio.FileCreateFlags.NONE, null)
+function readBytes(path) {
+    const [ok, data] = Gio.File.new_for_path(path).load_contents(null)
+    if (!ok) throw new Error(`Cannot read ${path}`)
+    return data
+}
+function writeBytes(path, data) {
+    const [ok] = Gio.File.new_for_path(path).replace_contents(data, null, false, Gio.FileCreateFlags.NONE, null)
     if (!ok) throw new Error(`Cannot save ${path}`)
+}
+function write(path, text) {
+    writeBytes(path, new TextEncoder().encode(text))
 }
 const exists = path => Gio.File.new_for_path(path).query_exists(null)
 function children(path) {
@@ -52,17 +60,17 @@ const enumerators = {
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
     "kvantum-themes": () => themeNames(kvantumDirs, dir => exists(`${dir}/${dir.split("/").pop()}.kvconfig`)),
-    applications: async row => {
+    applications: async (row, knownCurrent) => {
         const apps = Gio.AppInfo.get_all_for_type(row.mimes[0]).map(app => ({ label: app.get_name(), value: app.get_id() }))
-        const current = await mimeDefault(row.mimes[0])
+        const current = knownCurrent === undefined ? await mimeDefault(row.mimes[0]) : knownCurrent
         if (current && !apps.some(app => app.value === current)) apps.push({ label: current.replace(/\.desktop$/, ""), value: current })
         return apps
     },
 }
-async function choicesFor(row) {
+async function choicesFor(row, current) {
     if (row.items) return row.items
     if (!Object.hasOwn(enumerators, row.choices)) throw new Error("This setting has no choices")
-    return enumerators[row.choices](row)
+    return enumerators[row.choices](row, current)
 }
 function readOption(key) { return read(optionPath(key)).trim() }
 function idleValues(text) {
@@ -233,7 +241,7 @@ async function snapshot(ids, includeMonitors) {
             case "mime": value = await mimeDefault(row.mimes[0]); break
             }
             if (row.default !== undefined) reset = value !== row.default
-            values[id] = row.choices ? { value, reset, choices: await choicesFor(row) } : { value, reset }
+            values[id] = row.choices ? { value, reset, choices: await choicesFor(row, value) } : { value, reset }
         } catch (error) { values[id] = { error: error.message } }
     }))
     const result = { values }
@@ -372,15 +380,21 @@ async function change(request) {
     }
     case "gtk": return setGtk(row, value)
     case "mime": {
-        const before = await Promise.all(row.mimes.map(mimeDefault))
-        const done = []
+        const app = GioUnix.DesktopAppInfo.new(value)
+        const declared = new Set(app?.get_supported_types() || [])
+        const mimes = row.mimes.filter(mime => declared.has(mime))
+        if (!mimes.length) mimes.push(row.mimes[0])
+        const path = configDir + "/mimeapps.list"
+        const hadFile = exists(path)
+        const before = hadFile ? readBytes(path) : null
         try {
-            for (const mime of row.mimes) { await execAsync(["xdg-mime", "default", value, mime]); done.push(mime) }
+            for (const mime of mimes) await execAsync(["xdg-mime", "default", value, mime])
         } catch (error) {
-            // xdg-mime cannot unset a default, so only mimes that had one are restored.
-            for (const mime of done) {
-                const previous = before[row.mimes.indexOf(mime)]
-                if (previous) await execAsync(["xdg-mime", "default", previous, mime])
+            try {
+                if (hadFile) writeBytes(path, before)
+                else if (exists(path)) Gio.File.new_for_path(path).delete(null)
+            } catch (rollback) {
+                error.message += `. Restoring mimeapps.list also failed: ${rollback.message}`
             }
             throw error
         }

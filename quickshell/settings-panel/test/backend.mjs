@@ -24,6 +24,7 @@ const files = new Map([
     [base + '/Kvantum/Carl/Carl.kvconfig', ''],
     ['/usr/share/Kvantum/KvArc/KvArc.kvconfig', ''],
     [base + '/Kvantum/kvantum.kvconfig', '[General]\ntheme=Carl\n'],
+    [base + '/mimeapps.list', '[Default Applications]\ninode/directory=kitty-open.desktop\n'],
 ])
 const dirs = new Map([
     ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
@@ -35,6 +36,7 @@ const dirs = new Map([
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
 const appsForType = {'inode/directory': [['thunar.desktop','Thunar'],['org.gnome.Nautilus.desktop','Files']], 'image/png': [['mpv.desktop','mpv']]}
+const supportedTypes = {'thunar.desktop':['inode/directory'], 'mpv.desktop':['image/png','image/jpeg']}
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
@@ -80,6 +82,11 @@ globalThis.settingsMocks = {
                 files.set(path,new TextDecoder().decode(bytes))
                 return [true,'etag']
             },
+            delete: () => {
+                events.push(['delete',path])
+                files.delete(path)
+                return true
+            },
             make_directory_with_parents: () => {
                 events.push(['mkdir',path])
                 dirs.set(path,[])
@@ -87,12 +94,17 @@ globalThis.settingsMocks = {
             },
         })},
     },
+    GioUnix: {
+        DesktopAppInfo: { new: id => supportedTypes[id] ? {get_supported_types: () => supportedTypes[id]} : null },
+    },
     execAsync: async args => {
         events.push(args)
         if (args[0] === 'xdg-mime' && args[1] === 'query') return (mimeDefaults[args[3]] || '') + '\n'
         if (args[0] === 'xdg-mime' && args[1] === 'default') {
             if (args[3] === failMime) throw new Error('xdg-mime failed')
-            mimeDefaults[args[3]] = args[2]; return ''
+            mimeDefaults[args[3]] = args[2]
+            files.set(base+'/mimeapps.list',(files.get(base+'/mimeapps.list') || '[Default Applications]\n') + `${args[3]}=${args[2]}\n`)
+            return ''
         }
         if (args[0] === 'fc-list') return 'FiraCode Nerd Font,FiraCode Nerd Font Med\nAdwaita Sans\n'
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
@@ -116,7 +128,7 @@ globalThis.settingsMocks = {
     },
 }
 registerHooks({resolve(specifier,context,next) {
-    const names = {'gi://GLib':'GLib','gi://Gio':'Gio'}
+    const names = {'gi://GLib':'GLib','gi://Gio':'Gio','gi://GioUnix':'GioUnix'}
     if (names[specifier]) return {url:'data:text/javascript,'+encodeURIComponent(`export default globalThis.settingsMocks.${names[specifier]}`),shortCircuit:true}
     if (specifier === './process.js') return {url:'data:text/javascript,export const execAsync = globalThis.settingsMocks.execAsync',shortCircuit:true}
     return next(specifier,context)
@@ -314,15 +326,34 @@ assert.equal(files.get(base+'/options/filemanager'),'nautilus\n')
 assert.ok(events.some(e=>e[1]==='reload'))
 console.log('ok: app rows must name an installed command and reload Hyprland')
 
-result = await dispatch({op:'read',ids:['mime.folders']})
+events=[]
+result = await dispatch({op:'read',ids:['mime.folders','mime.images']})
 assert.equal(result.values['mime.folders'].value,'kitty-open.desktop')
 assert.deepEqual(result.values['mime.folders'].choices.map(c=>c.value),['thunar.desktop','org.gnome.Nautilus.desktop','kitty-open.desktop'])
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='query').map(e=>e[3]).sort(),['image/png','inode/directory'])
 await assert.rejects(dispatch({op:'set',id:'mime.folders',value:'evil.desktop'}),/Unknown choice/)
 await dispatch({op:'set',id:'mime.folders',value:'thunar.desktop'})
 assert.equal(mimeDefaults['inode/directory'],'thunar.desktop')
-mimeDefaults['image/png']='old.desktop'; mimeDefaults['image/jpeg']='old.desktop'
+for (const mime of catalog.rows.find(row=>row.id==='mime.images').mimes) mimeDefaults[mime]='old.desktop'
+events=[]
+await dispatch({op:'set',id:'mime.images',value:'mpv.desktop'})
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png','image/jpeg'])
+assert.equal(mimeDefaults['image/gif'],'old.desktop')
+const exactMimeapps = '[Default Applications]\r\nimage/png=old.desktop\r\n# image/jpeg deliberately has no explicit default\r\n'
+files.set(base+'/mimeapps.list',exactMimeapps)
+mimeDefaults['image/png']='old.desktop'; mimeDefaults['image/jpeg']='inferred.desktop'
 failMime='image/jpeg'
 await assert.rejects(dispatch({op:'set',id:'mime.images',value:'mpv.desktop'}),/xdg-mime failed/)
-assert.equal(mimeDefaults['image/png'],'old.desktop')
+assert.equal(files.get(base+'/mimeapps.list'),exactMimeapps)
+failingPath=base+'/mimeapps.list'
+await assert.rejects(dispatch({op:'set',id:'mime.images',value:'mpv.desktop'}),/xdg-mime failed\. Restoring mimeapps\.list also failed: disk full/)
+failingPath=''
+files.delete(base+'/mimeapps.list')
+await assert.rejects(dispatch({op:'set',id:'mime.images',value:'mpv.desktop'}),/xdg-mime failed/)
+assert.equal(files.has(base+'/mimeapps.list'),false)
 failMime=''
-console.log('ok: file types use installed handlers and roll back partial changes')
+mimeDefaults['image/png']='legacy.desktop'
+events=[]
+await dispatch({op:'set',id:'mime.images',value:'legacy.desktop'})
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
+console.log('ok: file types query once, update only declared types, and restore mimeapps.list exactly')
