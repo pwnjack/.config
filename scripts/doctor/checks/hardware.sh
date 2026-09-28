@@ -28,6 +28,10 @@
 #   scripts/doctor/ — this file's own pattern below, and its fixtures, are made
 #   of connector names.
 #
+#   test/ directories, top-level or nested — fixtures name fake outputs on
+#   purpose (a second display to disable, an output that disappeared), and
+#   test.sh owns everything under them.
+#
 #   Tracked symlinks. Every one of them points into ~/.cache, where the content
 #   is generated — waypaper/config.ini resolves to ~/.cache/waypaper-config.ini,
 #   which is exactly where waypaper records a chosen connector. A finding there
@@ -126,7 +130,7 @@ check_hardware() {
         file="${record#*$'\t'}"
 
         case "$file" in
-            *.md|docs/*|scripts/doctor/*) continue ;;
+            *.md|docs/*|scripts/doctor/*|test/*|*/test/*) continue ;;
         esac
         [ -f "$DOCTOR_ROOT/$file" ] || continue
 

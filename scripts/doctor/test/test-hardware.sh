@@ -89,6 +89,8 @@ hw_track "$hw_fixture" "hypr/unknown.conf" "monitor=VGA-1,preferred,auto,1"
 hw_track "$hw_fixture" "README.md" "mainmonitor  # DP-9"
 hw_track "$hw_fixture" "docs/note.txt" "example uses DP-9"
 hw_track "$hw_fixture" "scripts/doctor/checks/hardware.sh" "eDP|DP|HDMI-A pattern DP-9"
+hw_track "$hw_fixture" "quickshell/panel/test/fixture.mjs" "{name:'DP-9'}"
+hw_track "$hw_fixture" "test/test-thing.sh" "fake output HDMI-A-9"
 
 # The symlink and the regular file carry the SAME stale name, so the pair
 # isolates the mode test: only the tracked-symlink case may be skipped.
@@ -113,6 +115,8 @@ assert_not_contains "$hw_out" "hypr/unknown.conf" "a connector whose node report
 assert_not_contains "$hw_out" "README.md" "markdown is skipped — docs carry example names"
 assert_not_contains "$hw_out" "docs/note.txt" "docs/ is skipped"
 assert_not_contains "$hw_out" "scripts/doctor/checks/hardware.sh" "the doctor's own tree is skipped"
+assert_not_contains "$hw_out" "quickshell/panel/test/fixture.mjs" "test fixtures are skipped — they name fake outputs"
+assert_not_contains "$hw_out" "test/test-thing.sh" "the top-level test/ is skipped too"
 
 # A tracked symlink resolves into generated cache content the user cannot
 # correct by hand, so a hint naming it would misdirect. The regular file with
