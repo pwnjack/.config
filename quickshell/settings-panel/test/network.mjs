@@ -36,12 +36,57 @@ assert.deepEqual(list.map(n => n.bars), [4, 1, 4, 3, 3, 1])
 console.log('ok: networks grouped by SSID, hidden dropped, active/known/signal order')
 
 assert.deepEqual(['Cafe', 'Home', 'Office', 'New3', 'Old'].map(ssid => list.find(n => n.ssid === ssid).security), ['open', 'psk', 'unsupported', 'sae', 'unsupported'])
-assert.equal(network.securityOf({flags: 1, wpaFlags: 0, rsnFlags: 0x800}), 'open')
-console.log('ok: security from AP flags (open, PSK, SAE, 802.1X, WEP, OWE)')
+for (const [ap, expected] of [
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x500}, 'psk'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x300}, 'psk'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x600}, 'sae'],
+    [{flags: 1, wpaFlags: 0x100, rsnFlags: 0}, 'psk'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x800}, 'owe'],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0}, 'unsupported'],
+    [{flags: 0, wpaFlags: 0, rsnFlags: 0}, 'open'],
+]) assert.equal(network.securityOf(ap), expected)
+console.log('ok: security precedence covers PSK, SAE, 802.1X, WPA1, OWE, WEP, and open')
+
+const mixed = network.wifiNetworks({...snap, connections: [], accessPoints: [
+    {ssid: 'Mixed', strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x400},
+    {ssid: 'Mixed', strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x100},
+]})[0]
+assert.equal(mixed.signal, 90)
+assert.equal(mixed.security, 'psk')
+const edgeBars = network.wifiNetworks({...snap, connections: [], accessPoints: [
+    {ssid: 'Zero', strength: 0, flags: 0, wpaFlags: 0, rsnFlags: 0},
+    {ssid: 'Full', strength: 100, flags: 0, wpaFlags: 0, rsnFlags: 0},
+]})
+assert.deepEqual(Object.fromEntries(edgeBars.map(n => [n.ssid, n.bars])), {Full: 4, Zero: 1})
+const nameOrder = network.wifiNetworks({...snap, connections: [], accessPoints: [
+    {ssid: 'Zulu', strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0},
+    {ssid: 'Alpha', strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0},
+]})
+assert.deepEqual(nameOrder.map(n => n.ssid), ['Alpha', 'Zulu'])
+const progressOrder = network.wifiNetworks({...snap, accessPoints: [
+    {ssid: 'Unknown', strength: 100, flags: 0, wpaFlags: 0, rsnFlags: 0},
+    {ssid: 'Known', strength: 90, flags: 0, wpaFlags: 0, rsnFlags: 0},
+    {ssid: 'Starting', strength: 20, flags: 0, wpaFlags: 0, rsnFlags: 0},
+    {ssid: 'Active', strength: 10, flags: 0, wpaFlags: 0, rsnFlags: 0},
+], connections: [
+    {uuid: 'u-known', id: 'Known', type: '802-11-wireless', ssid: 'Known', state: null},
+    {uuid: 'u-starting', id: 'Starting', type: '802-11-wireless', ssid: 'Starting', state: 'activating'},
+    {uuid: 'u-active', id: 'Active', type: '802-11-wireless', ssid: 'Active', state: 'activated'},
+]})
+assert.deepEqual(progressOrder.map(n => n.ssid), ['Active', 'Starting', 'Known', 'Unknown'])
+assert.equal(progressOrder[0].activating, false)
+assert.equal(progressOrder[1].activating, true)
+console.log('ok: mixed-BSS security, signal bars, name tiebreak, and connection progress order')
 
 assert.deepEqual(network.vpnConnections(snap, 'app').map(v => [v.name, v.state, v.control]),
     [['ProtonVPN IT#113', 'activated', 'app'], ['Work', 'off', 'switch']])
 assert.equal(network.vpnConnections(snap, 'nm')[0].control, 'switch')
+const vpnOrder = network.vpnConnections({...snap, connections: [
+    {uuid: 'u-off', id: 'Alpha', type: 'vpn', state: null},
+    {uuid: 'u-starting', id: 'Zulu', type: 'vpn', state: 'activating'},
+    {uuid: 'u-active', id: 'Middle', type: 'vpn', state: 'activated'},
+]})
+assert.deepEqual(vpnOrder.map(v => v.name), ['Middle', 'Zulu', 'Alpha'])
 console.log('ok: VPN list has vpn/wireguard only, Proton controlled by mode')
 
 const view = network.networkView(snap, {protonApp: true, mode: 'app'})
@@ -55,9 +100,25 @@ assert.equal(network.networkView(snap, {protonApp: false}).proton, null)
 console.log('ok: page model, including NM down and no Wi-Fi device')
 
 assert.deepEqual(network.connectPlan(snap, {ssid: 'Saved'}), {kind: 'activate', uuid: 'u-saved'})
+assert.deepEqual(network.connectPlan(snap, {ssid: 'Saved', psk: ''}), {kind: 'activate', uuid: 'u-saved'})
 assert.deepEqual(network.connectPlan(snap, {ssid: 'Cafe'}), {kind: 'add', ssid: 'Cafe', psk: null, keyMgmt: null, replace: []})
 assert.deepEqual(network.connectPlan(snap, {ssid: 'New3', psk: 'correct horse'}), {kind: 'add', ssid: 'New3', psk: 'correct horse', keyMgmt: 'sae', replace: []})
+assert.deepEqual(network.connectPlan(snap, {ssid: 'New3', psk: 'pässwörd1'}), {kind: 'add', ssid: 'New3', psk: 'pässwörd1', keyMgmt: 'sae', replace: []})
+assert.deepEqual(network.connectPlan(snap, {ssid: 'New3', psk: 'x'.repeat(70)}), {kind: 'add', ssid: 'New3', psk: 'x'.repeat(70), keyMgmt: 'sae', replace: []})
 assert.deepEqual(network.connectPlan(snap, {ssid: 'Saved', psk: 'f'.repeat(64)}), {kind: 'add', ssid: 'Saved', psk: 'f'.repeat(64), keyMgmt: 'wpa-psk', replace: ['u-saved', 'u-saved2']})
+const oweSnap = {...snap, connections: [], accessPoints: [{ssid: 'Cafe OWE', strength: 55, flags: 1, wpaFlags: 0, rsnFlags: 0x800}]}
+assert.deepEqual(network.connectPlan(oweSnap, {ssid: 'Cafe OWE'}), {kind: 'add', ssid: 'Cafe OWE', psk: null, keyMgmt: 'owe', replace: []})
+const savedOpenSnap = {...snap,
+    accessPoints: [{ssid: 'SavedOpen', strength: 15, flags: 0, wpaFlags: 0, rsnFlags: 0}],
+    connections: [{uuid: 'u-saved-open', id: 'SavedOpen', type: '802-11-wireless', ssid: 'SavedOpen', state: null}],
+}
+assert.deepEqual(network.connectPlan(savedOpenSnap, {ssid: 'SavedOpen'}), {kind: 'activate', uuid: 'u-saved-open'})
+const transitionSnap = {...snap, connections: [], accessPoints: [{ssid: 'Transition', strength: 55, flags: 1, wpaFlags: 0, rsnFlags: 0x500}]}
+assert.deepEqual(network.connectPlan(transitionSnap, {ssid: 'Transition', psk: 'transition pass'}),
+    {kind: 'add', ssid: 'Transition', psk: 'transition pass', keyMgmt: 'wpa-psk', replace: []})
+const utf8Ssid = 'é'.repeat(16)
+assert.deepEqual(network.connectPlan({...snap, connections: [], accessPoints: [{ssid: utf8Ssid, strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0}]}, {ssid: utf8Ssid}),
+    {kind: 'add', ssid: utf8Ssid, psk: null, keyMgmt: null, replace: []})
 for (const [request, message] of [
     [{ssid: 'Old'}, /not supported/],
     [{ssid: 'Office'}, /not supported/],
@@ -66,14 +127,20 @@ for (const [request, message] of [
     [{ssid: 'Home', psk: 'x'.repeat(64)}, /8–63/],
     [{ssid: 'Home', psk: 'ok but\nnewline'}, /8–63/],
     [{ssid: 'New3'}, /Enter the network password/],
+    [{ssid: 'New3', psk: ''}, /Enter the network password/],
+    [{ssid: 'New3', psk: 'bad\npassword'}, /must not be empty or contain line breaks/],
+    [{ssid: 'New3', psk: 'x'.repeat(257)}, /must not be empty or contain line breaks/],
     [{ssid: ''}, /Invalid network name/],
     [{ssid: 'x'.repeat(33)}, /Invalid network name/],
+    [{ssid: 'é'.repeat(17)}, /Invalid network name/],
     [{ssid: 42}, /Invalid network name/],
 ]) assert.throws(() => network.connectPlan(snap, request), message)
+assert.throws(() => network.connectPlan({...snap, connections: [...snap.connections, {uuid: 'u-gone', id: 'Gone', type: '802-11-wireless', ssid: 'Gone', state: null}]}, {ssid: 'Gone'}), /no longer in range/)
 console.log('ok: connect plans and every refusal')
 
 assert.deepEqual(network.forgetPlan(snap, 'Saved'), ['u-saved', 'u-saved2'])
 assert.throws(() => network.forgetPlan(snap, 'Cafe'), /not saved/)
+assert.throws(() => network.forgetPlan(snap, '\n'), /Invalid network name/)
 console.log('ok: forget removes every saved profile for the SSID')
 
 assert.deepEqual(network.vpnPlan(snap, {uuid: 'u-work', active: true}, 'app'), {uuid: 'u-work', active: true})
@@ -81,9 +148,12 @@ assert.throws(() => network.vpnPlan(snap, {uuid: 'u-proton', active: false}, 'ap
 assert.deepEqual(network.vpnPlan(snap, {uuid: 'u-proton', active: false}, 'nm'), {uuid: 'u-proton', active: false})
 assert.throws(() => network.vpnPlan(snap, {uuid: 'u-wired', active: false}, 'nm'), /not a VPN/)
 assert.throws(() => network.vpnPlan(snap, {uuid: 'nope', active: true}, 'nm'), /no longer exists/)
+assert.throws(() => network.vpnPlan(snap, {active: true}, 'nm'), /no longer exists/)
 assert.throws(() => network.vpnPlan(snap, {uuid: 'u-work', active: 'yes'}, 'nm'), /on\/off/)
 assert.equal(network.failureMessage('NO_SECRETS'), 'Wrong password')
 assert.equal(network.failureMessage('LOGIN_FAILED'), 'Wrong password')
 assert.equal(network.failureMessage('CONNECT_TIMEOUT'), 'The network did not answer in time')
 assert.equal(network.failureMessage('SOMETHING_NEW'), 'Connection failed (something new)')
+assert.equal(network.failureMessage('constructor'), 'Connection failed (constructor)')
+assert.equal(network.failureMessage(undefined), 'Connection failed')
 console.log('ok: VPN plans and readable failure reasons')
