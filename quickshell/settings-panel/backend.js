@@ -66,6 +66,9 @@ const enumerators = {
         if (current && !apps.some(app => app.value === current)) apps.push({ label: current.replace(/\.desktop$/, ""), value: current })
         return apps
     },
+    "power-profiles": async () => (await execAsync(["powerprofilesctl", "list"])).split("\n")
+        .map(line => line.match(/^\*?\s*([\w-]+):$/)).filter(Boolean)
+        .map(([, name]) => ({ label: name.replace(/(^|-)(\w)/g, (_, dash, c) => (dash ? " " : "") + c.toUpperCase()), value: name })),
 }
 async function choicesFor(row, current) {
     if (row.items) return row.items
@@ -80,9 +83,23 @@ function idleValues(text) {
         if (!timeout) continue
         if (block.includes("hyprlock")) values.lock = Number(timeout[1])
         if (/dpms/.test(block) && /off/.test(block)) values.dpms = Number(timeout[1])
+        if (/systemctl suspend/.test(block)) values.suspend = Number(timeout[1])
     }
     if (values.lock === undefined || values.dpms === undefined) throw new Error("Cannot identify idle timeout listeners")
+    values.suspend ??= 0
     return values
+}
+// The panel owns only the listener it wrote, found by its marker comment.
+const suspendBlock = /\n*# Suspend after inactivity\nlistener\s*\{[^}]*systemctl suspend[^}]*\}\n?/
+function withSuspend(text, seconds) {
+    const existing = (text.match(/listener\s*\{[^}]*\}/g) || []).find(block => block.includes("systemctl suspend"))
+    if (existing && seconds) return text.replace(existing, existing.replace(/(\btimeout\s*=\s*)\d+/, `$1${seconds}`))
+    if (existing) {
+        if (!suspendBlock.test(text)) throw new Error("hypridle.conf has a custom suspend listener; remove it by hand")
+        return text.replace(suspendBlock, "\n")
+    }
+    if (!seconds) return text
+    return text.replace(/\n*$/, "\n") + `\n# Suspend after inactivity\nlistener {\n    timeout = ${seconds}\n    on-timeout = systemctl suspend\n}\n`
 }
 function sunsetValues(text) {
     const profiles = (text.match(/profile\s*\{[^}]*\}/g) || []).map(block => {
@@ -238,6 +255,7 @@ async function snapshot(ids, includeMonitors) {
             case "sunset": value = (await once("sunset", () => sunsetValues(read(sunsetPath))))[row.key]; break
             case "swaync": value = (await once("swaync", () => JSON.parse(read(swayPath))))[row.key] ?? row.default; break
             case "kvantum": value = exists(kvantumPath) ? iniValue(read(kvantumPath), "theme", "General") : ""; break
+            case "powerprofile": value = (await execAsync(["powerprofilesctl", "get"])).trim(); break
             case "mime": value = await mimeDefault(row.mimes[0]); break
             }
             if (row.default !== undefined) reset = value !== row.default
@@ -350,6 +368,7 @@ async function change(request) {
     case "idle": {
         const before = read(idlePath)
         idleValues(before)
+        if (row.key === "suspend") return saveAndApply(idlePath, withSuspend(before, value), () => restart("hypridle"))
         const text = before.replace(/listener\s*\{[^}]*\}/g, block => {
             const match = row.key === "lock" ? block.includes("hyprlock") : /dpms/.test(block) && /off/.test(block)
             return match ? block.replace(/(\btimeout\s*=\s*)\d+/, `$1${value}`) : block
@@ -379,6 +398,7 @@ async function change(request) {
         return write(kvantumPath, updated)
     }
     case "gtk": return setGtk(row, value)
+    case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])

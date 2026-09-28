@@ -134,6 +134,8 @@ globalThis.settingsMocks = {
             if (failingGsettingsSets > 0) { failingGsettingsSets--; throw new Error('gsettings set failed') }
             gsettings[args[3]] = args[4]; return ''
         }
+        if (args[0] === 'powerprofilesctl') return args[1] === 'get' ? 'performance\n'
+            : args[1] === 'list' ? '* performance:\n    CpuDriver:\tintel_pstate\n\n  balanced:\n    CpuDriver:\tintel_pstate\n\n  power-saver:\n    CpuDriver:\tintel_pstate\n' : ''
         return 'ok'
     },
 }
@@ -213,6 +215,24 @@ assert.equal(files.get(base+'/hypr/hypridle.conf'),oldIdle.replace('305','330'))
 await dispatch({op:'set',id:'power.dpms',value:720})
 assert.equal(files.get(base+'/hypr/hypridle.conf'),oldIdle.replace('305','330').replace('600','720'))
 console.log('ok: idle timeout edits preserve custom content and Lua dispatcher arguments')
+
+result = await dispatch({op:'read',ids:['power.profile','power.suspend']})
+assert.equal(result.values['power.profile'].value,'performance')
+assert.deepEqual(result.values['power.profile'].choices.map(c=>c.value),['performance','balanced','power-saver'])
+assert.equal(result.values['power.suspend'].value,0)
+await dispatch({op:'set',id:'power.profile',value:'balanced'})
+assert.ok(events.some(e=>e[0]==='powerprofilesctl' && e[1]==='set' && e[2]==='balanced'))
+const idleBefore = files.get(base+'/hypr/hypridle.conf')
+await dispatch({op:'set',id:'power.suspend',value:1800})
+assert.match(files.get(base+'/hypr/hypridle.conf'),/# Suspend after inactivity\nlistener \{\n    timeout = 1800\n    on-timeout = systemctl suspend\n\}\n$/)
+await dispatch({op:'set',id:'power.suspend',value:3600})
+assert.match(files.get(base+'/hypr/hypridle.conf'),/timeout = 3600\n    on-timeout = systemctl suspend/)
+await dispatch({op:'set',id:'power.suspend',value:0})
+assert.equal(files.get(base+'/hypr/hypridle.conf'),idleBefore)
+files.set(base+'/hypr/hypridle.conf',idleBefore+'listener {\n timeout = 99\n on-timeout = systemctl suspend\n}\n')
+await assert.rejects(dispatch({op:'set',id:'power.suspend',value:0}),/by hand/)
+files.set(base+'/hypr/hypridle.conf',idleBefore)
+console.log('ok: power profile and suspend listener round-trip without touching custom content')
 
 result = await dispatch({op:'read',ids:['input.accel-profile']})
 assert.equal(result.values['input.accel-profile'].value,'')

@@ -891,6 +891,31 @@
     },
     {
       "category": "power",
+      "id": "power.profile",
+      "title": "Power Profile",
+      "description": "Performance, balanced or power saving",
+      "keywords": ["battery", "cpu"],
+      "source": "powerprofile",
+      "kind": "select",
+      "choices": "power-profiles"
+    },
+    {
+      "category": "power",
+      "id": "power.suspend",
+      "title": "Suspend After",
+      "description": "Sleep after this long idle; the lock screen engages first",
+      "keywords": ["sleep"],
+      "source": "idle",
+      "key": "suspend",
+      "kind": "slider",
+      "min": 0,
+      "max": 7200,
+      "step": 60,
+      "format": "duration",
+      "zeroLabel": "Never"
+    },
+    {
+      "category": "power",
       "id": "power.dpms-key",
       "title": "Wake on Key Press",
       "description": "Screens power on when a key is pressed",
