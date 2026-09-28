@@ -12,17 +12,15 @@ clear=$'\uf1f8'"  Clear history"
 yes=$'\uf058'" Yes"
 no=$'\uf52f'" No"
 
-if [ -n "${CLIPBOARD_PRINT_CLEAR:-}" ]; then
-    printf '%s\n%s\n%s\n' "$clear" "$yes" "$no"
-    exit 0
-fi
-
-chosen=$({ printf '%s\n' "$clear"; cliphist list; } | rofi -dmenu -p "Clipboard")
+chosen=$({ cliphist list; printf '%s\n' "$clear"; } | rofi -dmenu -no-custom -p "Clipboard")
 [ -n "$chosen" ] || exit 0
 
 if [ "$chosen" = "$clear" ]; then
-    answer=$(printf '%s\n' "$yes" "$no" | rofi -dmenu -p "Clear clipboard history?")
-    [ "$answer" = "$yes" ] && cliphist wipe
+    answer=$(printf '%s\n' "$no" "$yes" | rofi -dmenu -no-custom -p "Clear clipboard history?")
+    if [ "$answer" = "$yes" ] && ! cliphist wipe; then
+        command -v notify-send >/dev/null 2>&1 && \
+            notify-send "Clipboard history" "Failed to clear clipboard history"
+    fi
     exit 0
 fi
 
