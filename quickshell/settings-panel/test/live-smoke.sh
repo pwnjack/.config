@@ -9,6 +9,7 @@ if ipc status >/dev/null 2>&1; then
     exit 1
 fi
 trap 'ipc close >/dev/null 2>&1 || true' EXIT
+appearance_rows=$(jq '[.rows[] | select(.category == "appearance")] | length' "$config_dir/quickshell/settings-panel/catalog.json")
 for run in 1 2 3; do
     bash "$config_dir/scripts/hyprland/settings-panel.sh"
     ready=false
@@ -18,7 +19,7 @@ for run in 1 2 3; do
         sleep 0.05
     done
     "$ready" || { echo 'Panel never became ready' >&2; exit 1; }
-    jq -e '.error == "" and (.rowErrors | length) == 0 and .rows == 14' <<< "$status"
+    jq -e --argjson rows "$appearance_rows" '.error == "" and (.rowErrors | length) == 0 and .rows == $rows' <<< "$status"
     printf 'Run %s: %s\n' "$run" "$status"
     instances=$(qs -p "$entry" list -j)
     printf '%s\n' "$instances"

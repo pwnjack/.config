@@ -116,7 +116,7 @@ before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 `scripts/hyprland/settings-panel.sh`, used by both Super+I and Waybar. It exits
 on close after pending saves finish; failed saves reopen the panel with an
 error. There is no login autostart or wallpaper-triggered AGS restart.
-`catalog.json` declares the 56 settings in nine categories. The frame appears
+`catalog.json` is the only list of settings and categories. The frame appears
 before values arrive; a short-lived, GTK-free GJS helper reads values outside
 the UI thread. One value snapshot covers all categories; switching tabs/search
 only builds the selected rows, with no new helper or loading layout shift.
