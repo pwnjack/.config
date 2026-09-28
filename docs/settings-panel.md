@@ -131,6 +131,49 @@ Verified on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2:
   `HYPRLAND_INSTANCE_SIGNATURE`, which the guard inherits when a request has
   none. `systemctl stop` of an unloaded unit says `Unit … not loaded.`
 
+## Round 3: verified behaviour
+
+Probed 2026-09-28 on this machine (round-3 plan, Task 1).
+
+### Baseline
+Full read (every row plus monitors), five runs: 275, 275, 278, 281, 288 ms. Median **278 ms**.
+
+### D-Bus cold start
+`gdbus` `Get NTP` + `ListTimezones` (598 zones, 10.9 kB) after 40 s idle: cold **62 ms**, warm **14 ms**.
+Both figures include two `gdbus` process starts, so the in-process cost is lower.
+
+### nmcli monitor and scans
+`nmcli monitor` prints `NetworkManager is running` once at start, then **nothing** for a
+completed `nmcli device wifi rescan` (8 s watched). The list refresh after a scan therefore
+comes from the panel's follow-up read (`scanSettle`). The banner line causes one extra
+debounced read when the page opens, which is harmless.
+
+### Quickshell stdin
+A `Process` with `stdinEnabled: true` that calls `write()` in `onStarted` delivers the line:
+the probe printed `got:{"op":"read"}`.
+
+### Waybar include
+Waybar 0.15 expands `~` in `include` (`Found config file: /home/pwnjack/.local/state/...`) and
+merges key by key: with `"format": "MAIN"` in the main file, the trace says
+`Option format is already set; ignoring value "PROBE ..."`, while the include's `interval`
+was taken. A main `clock` object without `format` therefore takes the include's format.
+Decision: **include at `~/.local/state/waybar/clock.jsonc`**. The screenshot check is deferred
+to plan Task 7 (the session was locked during the probe).
+
+### Proton VPN
+**Not probed yet**: it needs the user present (it drops the tunnel). Until then the safe
+default applies. Decision: `PROTON_MODE = "app"` (provisional).
+
+### Polkit dialog versus the overlay
+**Not probed yet**: it needs the user present to cancel the dialog. Until then the safe
+default applies. Decision: `AUTH_HIDES_PANEL = true` (provisional). The cancel error text is
+still unknown; `dbus.js` matches the documented polkit/D-Bus refusal names.
+
+### Per-user locale
+The systemd user manager already has `LANG=en_US.UTF-8` and `LC_TIME=it_IT.UTF-8`, and
+`/etc/profile.d/locale.sh` reads `~/.config/locale.conf` only when `LANG` is unset.
+Decision: **formats use SetLocale** (system-wide, polkit).
+
 ## Measurements
 
 Measured September 19, 2026 with Quickshell 0.3.1 / Qt 6.11.2 on this host,
