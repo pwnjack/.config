@@ -14,7 +14,8 @@ request_arg=$1
 # never be copied into argv or the environment.
 if [[ $request_arg == - ]]; then
     request_line=
-    if IFS= read -r -t 30 request_line; then
+    # SETTINGS_STDIN_TIMEOUT exists for the test suite; the panel always sends a full line.
+    if IFS= read -r -t "${SETTINGS_STDIN_TIMEOUT:-30}" request_line; then
         :
     else
         read_status=$?

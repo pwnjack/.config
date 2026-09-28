@@ -15,6 +15,14 @@ if grep -Eq 'command[[:space:]]*=.*(JSON\.stringify\(request\)|writeRequest)' "$
     echo 'writer.command must not put request JSON in argv' >&2
     exit 1
 fi
+grep -Fq 'writer.write(root.writeRequest + "\n")' "$shell_qml" || {
+    echo 'the writer must send the request as one newline-terminated line' >&2
+    exit 1
+}
+if grep -Eq 'environment[[:space:]]*[:=].*(JSON\.stringify|writeRequest)' "$shell_qml"; then
+    echo 'the request must not reach a process environment' >&2
+    exit 1
+fi
 echo 'ok: panel writer command uses stdin'
 
 tmp=$(mktemp -d)
@@ -76,10 +84,15 @@ fi
 
 # Sample continuously for the full request lifetime. The fake gjs delay keeps
 # the job alive long enough that a zero-iteration sampler is itself a failure.
+# This is best effort: a child living a millisecond or so falls between
+# samples. The deterministic guards are the static shell.qml checks above and
+# the gjs argv capture below; secrets past request.js stay in-process (libnm).
 : > "$tmp/found-argv"
 : > "$tmp/found-environ"
 sample_count=0
+deadline=$((SECONDS + 20))
 while kill -0 "$job" 2>/dev/null; do
+    (( SECONDS < deadline )) || { kill "$job" 2>/dev/null; echo 'request never finished' >&2; exit 1; }
     sample_count=$((sample_count + 1))
     grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/cmdline >> "$tmp/found-argv" 2>/dev/null || true
     grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/environ >> "$tmp/found-environ" 2>/dev/null || true
@@ -104,3 +117,17 @@ set -e
 [[ $status == 1 ]] || { echo "empty stdin exit status: $status" >&2; exit 1; }
 [[ $reply == '{"ok":false,"error":"Expected one JSON request on stdin"}' ]] || { echo "empty stdin: $reply" >&2; exit 1; }
 echo 'ok: empty stdin is rejected'
+
+# A caller that keeps stdin open without sending a line must fail, not hang.
+# The writer end stays open for 30 s; without the read timeout this would hang
+# until `timeout` kills it (status 124).
+exec 3< <(sleep 30)
+silent_writer=$!
+set +e
+reply=$(SETTINGS_STDIN_TIMEOUT=1 timeout 10 bash "$request_sh" - <&3)
+status=$?
+set -e
+exec 3<&-
+kill "$silent_writer" 2>/dev/null || true
+[[ $status == 1 && $reply == '{"ok":false,"error":"Expected one JSON request on stdin"}' ]] || { echo "silent stdin: status=$status reply=$reply" >&2; exit 1; }
+echo 'ok: silent stdin times out'
