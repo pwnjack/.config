@@ -12,22 +12,17 @@ shell_qml="$repo_root/quickshell/settings-panel/shell.qml"
 guard_fail() { echo "shell.qml: $1" >&2; exit 1; }
 # The request lives in writeRequest, which may only be declared, filled in
 # drain(), written in the writer's onStarted, and cleared.
-mapfile -t request_uses < <(grep -n 'writeRequest' "$shell_qml" | sed 's/^[0-9]*://; s/^[[:space:]]*//')
-allowed_uses=(
-    'property string writeRequest: ""'
-    'writeRequest = JSON.stringify(request);'
-    'onStarted: { writer.write(root.writeRequest + "\n"); root.writeRequest = ""; }'
-    'root.writeRequest = "";'
-)
-for use in "${request_uses[@]}"; do
-    known=false
-    for allowed in "${allowed_uses[@]}"; do [[ $use == "$allowed" ]] && known=true; done
-    [[ $known == true ]] || guard_fail "unexpected use of writeRequest: $use"
-done
-(( ${#request_uses[@]} == 4 )) || guard_fail "expected exactly 4 writeRequest lines, found ${#request_uses[@]}"
-[[ $(grep -c 'JSON\.stringify(request)' "$shell_qml") == 1 ]] || guard_fail 'the request may only be serialised into writeRequest'
-[[ $(grep -c 'writer\.command' "$shell_qml") == 1 ]] || guard_fail 'writer.command may only be set once'
-grep -Eq '^[[:space:]]*writer\.command = \[[^]]*,[[:space:]]*"-"\];[[:space:]]*$' "$shell_qml" || guard_fail 'writer.command must end with the stdin marker "-"'
+expected_uses=$(printf '%s\n' \
+    'property string writeRequest: ""' \
+    'writeRequest = JSON.stringify(request);' \
+    'onStarted: { writer.write(root.writeRequest + "\n"); root.writeRequest = ""; }' \
+    'root.writeRequest = "";' | sort)
+actual_uses=$(grep 'writeRequest' "$shell_qml" | sed 's/^[[:space:]]*//' | sort)
+[[ $actual_uses == "$expected_uses" ]] || guard_fail "writeRequest must appear exactly on its four known lines; found:
+$actual_uses"
+[[ $(grep -c 'JSON\.stringify(request' "$shell_qml") == 1 ]] || guard_fail 'the request may only be serialised into writeRequest'
+mapfile -t command_lines < <(grep 'writer\.command' "$shell_qml" | sed 's/^[[:space:]]*//')
+[[ ${#command_lines[@]} == 1 && ${command_lines[0]} == 'writer.command = ["bash", configDir + "/scripts/settings/panel-request.sh", "-"];' ]] || guard_fail "writer.command must be exactly the stdin form; found: ${command_lines[*]}"
 # No process in the panel needs a custom environment; any would be a place to leak into.
 ! grep -q 'environment' "$shell_qml" || guard_fail 'no Process may set an environment'
 echo 'ok: panel writer command uses stdin'
