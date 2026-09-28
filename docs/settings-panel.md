@@ -9,10 +9,11 @@ clicking outside, or Super+I closes it.
 Once pending saves finish, the process exits. Failed saves keep the error visible
 by reopening the panel. Text fields require Enter or Save; sliders save on release.
 
-`catalog.json` is the only list of settings (89 rows in eleven categories on
-September 28, 2026), with search, monitor selection, per-row resets and the
-four footer actions. Things another surface already owns stay there: the
-keybind cheatsheet (Super+H), Do Not Disturb and per-app volume (SwayNC),
+`catalog.json` is the only list of settings (95 rows in twelve categories on
+September 28, 2026), with search, editable display cards, per-row resets and
+the footer actions. Things another surface already owns stay there: the
+keybind cheatsheet (Super+H), Do Not Disturb, output volume, mute and per-app
+volume (SwayNC),
 updates (Waybar), screenshot options (Rofi) and wallpapers (the carousel).
 The palette is read through `scripts/theming/palette.sh` on every launch. The
 wallpaper carousel remains a separate application with its existing lifecycle.
@@ -55,7 +56,27 @@ wallpaper carousel remains a separate application with its existing lifecycle.
   falling back to the row's first type when it declares none, and restores
   the file byte-for-byte on failure; `powerprofile` drives
   `powerprofilesctl`; the `idle` source adds, retimes and removes only the
-  suspend listener it marked, and refuses to change a hand-written one.
+  suspend listener it marked, and refuses to change a hand-written one;
+  `pulse` (`pulse.js`) serves the six Sound rows from four `pactl -f json`
+  reads (`info`, `list sinks/sources/cards`) made once per request in
+  parallel. PipeWire's pulse server reports `card: null` on every sink, so a
+  sink's card is the one whose name equals `properties["device.name"]`. Sink
+  monitors are sources too and are left out of Input Device; unplugged ports
+  and profiles without a sink (`off`, input-only) are left out of the
+  choices. With no valid default, the device selector keeps its choices so
+  the panel can recover, while ports, profile and level report the error.
+- Live refresh: rows tagged `"live": "audio"`, and the unsearched Displays
+  page, are re-read while they are on screen and nothing else is.
+  `shell.qml` runs `pactl subscribe` only while an audio row is visible and
+  counts only `sink`/`source`/`card`/`server` events (`sink-input` and
+  `client` fire for every stream and notification); Displays listens to
+  `Hyprland.rawEvent` monitor and reload events. Reads are debounced
+  (300 ms), single-flight, limited to the tagged rows, dropped while a write
+  or full read runs, and never overwrite the control being dragged or
+  opened. Waking a suspended sink is a real `change on sink`, so the first
+  sound after silence costs one or two reads while the Sound page is shown.
+  The IPC call that switches page is `page`, not `show`: qs parses `show` as
+  its own `ipc show` subcommand even inside `ipc call`.
 - `hyprctl getoption -j` names the value field after its type (`bool`, `int`,
   `float`, `str`, `css`, `custom`); `set` only says whether the config assigns the
   option and is never a value. The Lua provider rejects legacy hyphenated
@@ -63,23 +84,48 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 - AGS no longer starts at login or after wallpaper changes. Its retired source
   and AGS/Astal packages are gone; GJS remains an explicit backend dependency.
 
-## Displays: verified behaviour
+## Displays
 
-Probed on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2 on September 28,
-2026. Each probe ran under a `systemd-run --user` guard that reloaded after
-20 s.
+Per-machine display rules live outside the repo in
+`${XDG_STATE_HOME:-~/.local/state}/hypr/monitors.lua`, one `hl.monitor()` per
+output, written only by the Displays page (Edit file opens it in
+`options/editor`). The tracked `hypr/config/hardware/monitor.lua` keeps its
+host-neutral catch-all and loads that file if present, in an environment that
+can only record `hl.monitor()` calls; rules are type-checked and applied only
+once the whole file has run, so a broken file leaves the catch-all and shows a
+notification. A missing file means all automatic. A line the panel did not
+write locks that output ("edited by hand"). While Hyprland loads its config,
+`hl.monitor()` does not raise for a value it rejects (transform 9, a mode it
+cannot parse): it records a config error and skips that one rule, so such a
+hand edit shows in Hyprland's error banner instead.
 
-- `hyprctl eval 'hl.monitor({ output = "DP-1", mode = "2560x1440@120.00", ... })'`
-  replies `ok` and applies at once (143.998 → 119.998 Hz within 1 s);
-  `hyprctl reload` restores the configured rule (back to 143.998 Hz).
-- A transient timer (`--on-active=5 --collect`) running `hyprctl reload`
-  reverted an applied 120 Hz mode by itself and left no unit behind.
-- Scales, each accepted by `eval` with `ok` and no config error:
-  `1.25` → 1.25; `1.3333333333333333` → 1.3333334 (stored as a float);
-  `1.5` → **1.6, silently** — nothing in `configerrors` or the log. Hyprland
-  substitutes a nearby valid scale when the logical size is not whole, so the
-  panel offers only scales that divide the mode.
-- Full read of every row before round 2: 282 ms median (278–285 ms, five runs).
+Edits are staged on each card and one Apply sends them together. Apply arms
+`systemd-run --user --collect --unit=settings-display-revert --on-active=20
+… hyprctl reload`, then `hyprctl eval`s the new line, confirms the guard is
+still armed, and only then records the pending change in
+`$XDG_RUNTIME_DIR/settings-panel/display-pending.json`. The panel's banner
+counts down 15 s; Revert, timeout, Escape and Close reload Hyprland (the
+state file only changes on Keep, so a reload restores the last kept layout)
+before disarming the guard. Keep writes the evaluated line while the guard is
+still armed, stops it, and reloads so the live layout always equals the saved
+file. If the panel dies or its screen goes dark, the guard reverts at 20 s.
+While a change is pending every other setting, Edit file and Reload Hyprland
+wait, and the backend refuses reloads, since a reload would silently undo it.
+
+Verified on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2:
+
+- `hyprctl eval 'hl.monitor({ output = "DP-1", ... })'` applies at once
+  (143.998 → 119.998 Hz within 1 s); `hyprctl reload` restores the file's rule.
+- Apply then nothing: the panel reverts at 15 s. Apply then `kill -9` of the
+  panel: the guard reverts at about 21 s. Apply then Close: reverted in about
+  140 ms. None leaves a unit, a pending record or a panel process.
+- Scales, each accepted by `eval` with `ok` and no config error: `1.25` →
+  1.25; `1.3333333333333333` → 1.3333334; `1.5` → **1.6, silently**. Hyprland
+  substitutes a nearby scale when the logical size is not whole, so the panel
+  offers only `k/120` scales that divide the staged mode.
+- The systemd user manager of the UWSM session carries
+  `HYPRLAND_INSTANCE_SIGNATURE`, which the guard inherits when a request has
+  none. `systemctl stop` of an unloaded unit says `Unit … not loaded.`
 
 ## Measurements
 
@@ -98,7 +144,14 @@ six consecutive fresh process launches (OS caches warm):
 A full backend read of every row (`panel-request.sh` with all ids) took about
 70 ms with 56 rows and about 280 ms with 89 on September 28, 2026; most of the
 increase is the nine File Types rows forking `xdg-mime`. The frame is drawn
-before values arrive, so this delays values, not the panel.
+before values arrive, so this delays values, not the panel. With round 2's
+Sound rows and the richer display read it measured 286 ms median (279–292 ms,
+five runs) against 282 ms before, inside the +10 ms budget. With the panel
+closed there is no `pactl subscribe`, no `settings-display-*` unit and no
+panel process. On the Sound page, audio playback on an awake sink plus three
+notifications caused no live read; each default-device change caused one.
+Follow-up: the nine File Types rows fork `xdg-mime` on every full read and are
+most of the open cost.
 
 The timestamp starts after the launcher's lock, IPC probe and palette load, so
 these are not full keypress-to-display measurements. A frame swap is a render
@@ -111,6 +164,7 @@ The saving at idle comes from exiting, not from keeping a Qt runtime hidden.
 
 ```bash
 bash quickshell/settings-panel/test/run-tests.sh
+node quickshell/settings-panel/test/displays.mjs
 bash quickshell/settings-panel/test/live-smoke.sh # opens/closes on the desktop
 bash scripts/hyprland/test-wallpaper.sh
 /usr/lib/qt6/bin/qmllint -I /usr/lib/qt6/qml quickshell/settings-panel/*.qml
@@ -124,12 +178,13 @@ no writes while building controls, slider release and explicit text saves,
 backend validation (XKB, fonts, commands, choices), GTK/Kvantum ini
 round-trips, File Types subtype handling and rollback, suspend listener
 round-trips, animation preservation, notification rollback, main-monitor
-write failure, and the shared apply/save/reset transactions. The desktop smoke
+write failure, the shared apply/save/reset transactions, Sound choices and
+writes, interaction locking, display staging, the pending banner, and every
+Apply/Keep/Revert ordering and failure path against a mocked systemd guard. The desktop smoke
 check reads every catalog setting without changing them, captures
 `/tmp/settings-panel-live.png`, measures opening, and verifies process exit.
-Qt's linter reports the same three Quickshell metadata warnings as the carousel
-(PanelWindow creatability and two Process exit-status handlers); live loading
-succeeds. Multiple physical monitors and fractional scaling have not been tested.
+Qt's linter reports four Quickshell metadata warnings (PanelWindow
+creatability and three Process exit-status handlers); live loading succeeds. Multiple physical monitors and fractional scaling have not been tested.
 
 Logs and launch/request locks live in `~/.cache/settings-panel/`. Quickshell's
 own session logs can be read with:
