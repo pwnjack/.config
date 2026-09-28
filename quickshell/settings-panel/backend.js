@@ -80,6 +80,16 @@ async function saveAndApply(path, text, apply) {
     }
 }
 
+// hyprctl getoption names the value field after the option's type. `set` only
+// says whether the config assigns the option, so it is never a value.
+function keywordValue(data) {
+    for (const field of ["bool", "int", "float", "str", "css", "custom"]) {
+        if (data[field] === undefined) continue
+        return field === "str" && data[field] === "[[EMPTY]]" ? "" : data[field]
+    }
+    throw new Error("Hyprland did not return a value")
+}
+
 async function snapshot(ids, includeMonitors) {
     // Share category reads, including one animation tree per request.
     const cached = new Map()
@@ -96,8 +106,7 @@ async function snapshot(ids, includeMonitors) {
             switch (row.source) {
             case "keyword": {
                 const data = JSON.parse(await execAsync(["hyprctl", "getoption", row.key, "-j"]))
-                value = data.int ?? data.float ?? data.str ?? data.custom ?? data.set
-                if (value === undefined) throw new Error("Hyprland did not return a value")
+                value = keywordValue(data)
                 if (row.kind === "toggle") value = value === true || value === 1
                 else if (row.kind === "slider") value = Number(String(value).trim().split(/\s+/)[0])
                 else value = String(value)

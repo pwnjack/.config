@@ -14,6 +14,14 @@ const files = new Map([
 ])
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 let events = [], failingPath = '', failReload = false
+// Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
+// is named after its type, and `set` is only whether the config assigns it.
+const hyprOptions = {
+    'decoration:blur:enabled': {bool:true,set:true},
+    'decoration:shadow:enabled': {bool:false,set:true},
+    'general:gaps_in': {css:'4 4 4 4',set:true},
+    'input:accel_profile': {str:'[[EMPTY]]',set:false},
+}
 const running = new Set()
 const encoder = new TextEncoder()
 globalThis.settingsMocks = {
@@ -43,7 +51,7 @@ globalThis.settingsMocks = {
         events.push(args)
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
         if (args[0] === 'pgrep') { if (!running.has(args[2])) throw new Error('not running'); return '123'; }
-        if (args[1] === 'getoption') return JSON.stringify({int:1})
+        if (args[1] === 'getoption') return JSON.stringify(hyprOptions[args[2]] ?? {int:1,set:true})
         if (args[1] === 'animations') return JSON.stringify([[{name:'windows',enabled:true,speed:6,bezier:'ease',style:'popin 80%'}],[]])
         if (args[1] === 'monitors') return JSON.stringify([{name:'DP-1',width:2560,height:1440}])
         if (args[1] === 'configerrors') return '[]'
@@ -64,6 +72,11 @@ assert.equal(result.values['power.nightlight-temp'].value,4000)
 assert.equal(result.monitors[0].name,'DP-1')
 assert.equal(events.some(e => e[0] === 'write' || e[0] === 'spawn'),false)
 console.log('ok: settings and monitor reads have no writes or daemon starts')
+
+result = await dispatch({op:'read',ids:['appearance.shadows','appearance.gaps-in']})
+assert.equal(result.values['appearance.shadows'].value,false)
+assert.equal(result.values['appearance.gaps-in'].value,4)
+console.log('ok: keyword reads use the typed value field, never `set`')
 
 events=[]
 for (const request of [

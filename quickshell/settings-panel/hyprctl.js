@@ -1,16 +1,4 @@
 import { execAsync } from "./process.js"
-import GLib from "gi://GLib"
-
-function execSync(cmd) {
-    try {
-        const [ok, stdout, _stderr, _status] = GLib.spawn_command_line_sync(cmd)
-        if (!ok) return ""
-        return stdout ? new TextDecoder().decode(stdout).trim() : ""
-    } catch (e) {
-        console.error(`exec error: ${e}`)
-        return ""
-    }
-}
 
 export function luaValue(value) {
     if (typeof value === "boolean") return value ? "true" : "false"
@@ -41,43 +29,6 @@ export async function setKeyword(keyword, value) {
     }
 
     await checkedHyprctl(["eval", expression])
-}
-
-export function getOption(name) {
-    const output = execSync(`hyprctl getoption ${name} -j`)
-    if (!output) return ""
-    try {
-        const json = JSON.parse(output)
-        if (json.int !== undefined) return String(json.int)
-        if (json.float !== undefined) return String(json.float)
-        if (json.str !== undefined) return json.str
-        if (json.custom !== undefined) return String(json.custom).trim().split(/\s+/)[0] // custom values like gaps are "N N N N"; first token is the canonical value
-        if (json.set !== undefined) return String(json.set)
-        return ""
-    } catch {
-        return ""
-    }
-}
-
-export function getOptionBool(name) {
-    const output = execSync(`hyprctl getoption ${name} -j`)
-    if (!output) return false
-    try {
-        const json = JSON.parse(output)
-        return json.int === 1 || json.set === true
-    } catch {
-        return false
-    }
-}
-
-export function getOptionInt(name) {
-    const val = getOption(name)
-    return parseInt(val) || 0
-}
-
-export function getOptionFloat(name) {
-    const val = getOption(name)
-    return parseFloat(val) || 0
 }
 
 /** hyprctl can report a Lua error in stdout even when the process exits zero. */
