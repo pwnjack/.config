@@ -382,9 +382,9 @@ async function change(request) {
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])
-        const mimes = row.mimes.filter(mime => declared.has(mime))
+        const mimes = row.mimes.filter(mime => declared.has(mime) || [...declared].some(type => Gio.content_type_is_a(mime, type)))
         if (!mimes.length) mimes.push(row.mimes[0])
-        const path = configDir + "/mimeapps.list"
+        const path = GLib.get_user_config_dir() + "/mimeapps.list"
         const hadFile = exists(path)
         const before = hadFile ? readBytes(path) : null
         try {

@@ -35,8 +35,17 @@ const dirs = new Map([
     ['/usr/share/Kvantum', ['KvArc']],
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
-const appsForType = {'inode/directory': [['thunar.desktop','Thunar'],['org.gnome.Nautilus.desktop','Files']], 'image/png': [['mpv.desktop','mpv']]}
-const supportedTypes = {'thunar.desktop':['inode/directory'], 'mpv.desktop':['image/png','image/jpeg']}
+const appsForType = {
+    'inode/directory': [['thunar.desktop','Thunar'],['org.gnome.Nautilus.desktop','Files']],
+    'image/png': [['mpv.desktop','mpv'],['image-viewer.desktop','Image Viewer']],
+    'text/plain': [['nvim.desktop','Neovim']],
+}
+const supportedTypes = {
+    'thunar.desktop':['inode/directory'],
+    'mpv.desktop':['image/png','image/jpeg'],
+    'image-viewer.desktop':['image/png'],
+    'nvim.desktop':['text/plain'],
+}
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
@@ -55,7 +64,7 @@ const running = new Set()
 const encoder = new TextEncoder()
 globalThis.settingsMocks = {
     GLib: {
-        get_home_dir: () => '/fixture', Error: class extends Error {},
+        get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
         find_program_in_path: name => name === 'missing-app' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
         spawn_async: (...args) => { events.push(['spawn',args[1]]); running.add(args[1][0]); },
@@ -63,6 +72,7 @@ globalThis.settingsMocks = {
     },
     Gio: {
         AppInfo: { get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
+        content_type_is_a: (mime, parent) => mime === parent || (mime === 'text/markdown' && parent === 'text/plain'),
         FileCreateFlags:{NONE:0},
         FileQueryInfoFlags:{NONE:0},
         File:{new_for_path: path => ({
@@ -339,6 +349,13 @@ events=[]
 await dispatch({op:'set',id:'mime.images',value:'mpv.desktop'})
 assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png','image/jpeg'])
 assert.equal(mimeDefaults['image/gif'],'old.desktop')
+events=[]
+await dispatch({op:'set',id:'mime.text',value:'nvim.desktop'})
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['text/plain','text/markdown'])
+events=[]
+await dispatch({op:'set',id:'mime.images',value:'image-viewer.desktop'})
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
+assert.notEqual(mimeDefaults['image/svg+xml'],'image-viewer.desktop')
 const exactMimeapps = '[Default Applications]\r\nimage/png=old.desktop\r\n# image/jpeg deliberately has no explicit default\r\n'
 files.set(base+'/mimeapps.list',exactMimeapps)
 mimeDefaults['image/png']='old.desktop'; mimeDefaults['image/jpeg']='inferred.desktop'
@@ -356,4 +373,4 @@ mimeDefaults['image/png']='legacy.desktop'
 events=[]
 await dispatch({op:'set',id:'mime.images',value:'legacy.desktop'})
 assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
-console.log('ok: file types query once, update only declared types, and restore mimeapps.list exactly')
+console.log('ok: file types query once, update declared MIME subclasses only, and restore mimeapps.list exactly')
