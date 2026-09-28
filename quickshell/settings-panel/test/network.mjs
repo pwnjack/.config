@@ -49,12 +49,23 @@ for (const [ap, expected] of [
 ]) assert.equal(network.securityOf(ap), expected)
 console.log('ok: security precedence covers PSK, SAE, 802.1X, WPA1, OWE, WEP, and open')
 
+// The group's security is the best rank across BSSs (psk beats sae here), but
+// the strongest BSS overall (90, sae-only) does not offer that security — the
+// weaker BSS (20) that actually offers psk must be the one reported/connected to.
 const mixed = network.wifiNetworks({...snap, connections: [], accessPoints: [
     {ssid: 'Mixed', strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x400},
     {ssid: 'Mixed', strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x100},
 ]})[0]
-assert.equal(mixed.signal, 90)
 assert.equal(mixed.security, 'psk')
+assert.equal(mixed.signal, 20)
+assert.equal(mixed.bars, 1)
+// When the strongest BSS does offer the group's chosen security, it still wins.
+const mixedCompatible = network.wifiNetworks({...snap, connections: [], accessPoints: [
+    {ssid: 'MixedOk', strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x100},
+    {ssid: 'MixedOk', strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x400},
+]})[0]
+assert.equal(mixedCompatible.security, 'psk')
+assert.equal(mixedCompatible.signal, 90)
 const edgeBars = network.wifiNetworks({...snap, connections: [], accessPoints: [
     {ssid: 'Zero', strength: 0, flags: 0, wpaFlags: 0, rsnFlags: 0},
     {ssid: 'Full', strength: 100, flags: 0, wpaFlags: 0, rsnFlags: 0},
@@ -110,6 +121,10 @@ assert.deepEqual(network.connectPlan(snap, {ssid: 'New3', psk: 'x'.repeat(70)}),
 assert.deepEqual(network.connectPlan(snap, {ssid: 'Saved', psk: 'f'.repeat(64)}), {kind: 'add', ssid: 'Saved', psk: 'f'.repeat(64), keyMgmt: 'wpa-psk', replace: ['u-saved', 'u-saved2']})
 const oweSnap = {...snap, connections: [], accessPoints: [{ssid: 'Cafe OWE', strength: 55, flags: 1, wpaFlags: 0, rsnFlags: 0x800}]}
 assert.deepEqual(network.connectPlan(oweSnap, {ssid: 'Cafe OWE'}), {kind: 'add', ssid: 'Cafe OWE', psk: null, keyMgmt: 'owe', replace: []})
+// A password supplied for an open/OWE network must be refused, not silently
+// dropped into an unauthenticated connection that then deletes the old saved profiles.
+assert.throws(() => network.connectPlan(snap, {ssid: 'Cafe', psk: 'somepassword'}), /does not use a password/)
+assert.throws(() => network.connectPlan(oweSnap, {ssid: 'Cafe OWE', psk: 'somepassword'}), /does not use a password/)
 const savedOpenSnap = {...snap,
     accessPoints: [{ssid: 'SavedOpen', strength: 15, flags: 0, wpaFlags: 0, rsnFlags: 0}],
     connections: [{uuid: 'u-saved-open', id: 'SavedOpen', type: '802-11-wireless', ssid: 'SavedOpen', state: null}],

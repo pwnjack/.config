@@ -106,7 +106,7 @@ const nmState = {
         {uuid:'u-proton',id:'ProtonVPN IT#113',type:'wireguard',ssid:null,state:'activated',iface:'proton0'},
         {uuid:'u-kill',id:'pvpn-killswitch-ipv6',type:'dummy',ssid:null,state:'activated',iface:'ipv6leakintrf0'}],
 }
-let nmCalls = [], nmFailAdd = '', nmFailRemove = new Set()
+let nmCalls = [], nmFailAdd = '', nmFailRemove = new Set(), nmMissingRemove = new Set()
 const nmMock = {
     nmSnapshot: () => structuredClone(nmState),
     setWifiEnabled: async on => { nmCalls.push(['wifi', on]); nmState.wifiEnabled = on },
@@ -116,7 +116,11 @@ const nmMock = {
     deactivate: async uuid => { nmCalls.push(['deactivate', uuid]) },
     removeConnections: async uuids => {
         nmCalls.push(['remove', ...uuids])
-        for (const uuid of uuids) if (nmFailRemove.has(uuid)) throw new Error(`Cannot remove ${uuid}`)
+        for (const uuid of uuids) {
+            // Matches nm.js's own wording for an already-gone connection.
+            if (nmMissingRemove.has(uuid)) throw new Error('That connection no longer exists')
+            if (nmFailRemove.has(uuid)) throw new Error(`Cannot remove ${uuid}`)
+        }
     },
 }
 globalThis.settingsMocks = {
@@ -803,7 +807,7 @@ assert.deepEqual(nmCalls, [['add','Dimensione-E92F','bad password','wpa-psk']])
 nmFailAdd = ''; nmCalls = []
 await dispatch({op:'wifiConnect',ssid:'Cafe'})
 assert.deepEqual(nmCalls, [['add','Cafe',null,null]])
-await assert.rejects(dispatch({op:'wifiConnect',ssid:'Cafe',psk:'short'}), /8–63/)
+await assert.rejects(dispatch({op:'wifiConnect',ssid:'Cafe',psk:'short'}), /does not use a password/)
 console.log('ok: network connect activates saved, adds new, replaces old only after success')
 
 nmCalls = []
@@ -818,7 +822,7 @@ assert.deepEqual(events.filter(e => e[0] === 'spawn').map(e => e[1][0]), ['proto
 console.log('ok: network forget, VPN refusal in app mode, and the two launch actions')
 
 nmState.running = false
-for (const request of [{op:'networkScan'},{op:'wifiConnect',ssid:'Cafe'},{op:'wifiForget',ssid:'Dimensione-E92F'},{op:'vpn',uuid:'u-work',active:true}])
+for (const request of [{op:'networkScan'},{op:'wifiConnect',ssid:'Cafe'},{op:'wifiForget',ssid:'Dimensione-E92F'},{op:'vpn',uuid:'u-work',active:true},{op:'set',id:'network.wifi',value:false}])
     await assert.rejects(dispatch(request), /NetworkManager is not running/, JSON.stringify(request))
 nmState.running = true
 console.log('ok: network write ops fail loudly when NetworkManager is not running')
@@ -835,6 +839,21 @@ assert.deepEqual(nmCalls.filter(c => c[0] === 'remove').map(c => c[1]), ['u-old'
 nmFailRemove = new Set()
 nmState.connections = nmState.connections.filter(c => c.uuid !== 'u-old2')
 console.log('ok: wifiConnect keeps the new connection and reports a clear error when removing an old profile fails')
+
+nmState.connections.push({uuid:'u-old3', id:'Dimensione-E92F', type:'802-11-wireless', ssid:'Dimensione-E92F', state:null, iface:null})
+nmCalls = []; nmMissingRemove = new Set(['u-old3'])
+await dispatch({op:'wifiConnect', ssid:'Dimensione-E92F', psk:'new password'})
+assert.deepEqual(nmCalls.filter(c => c[0] === 'remove').map(c => c[1]), ['u-old', 'u-old3'])
+nmMissingRemove = new Set()
+nmState.connections = nmState.connections.filter(c => c.uuid !== 'u-old3')
+console.log('ok: wifiConnect treats an already-missing old profile as removed, not a failure')
+
+nmState.connections.push({uuid:'u-old4', id:'Dimensione-E92F', type:'802-11-wireless', ssid:'Dimensione-E92F', state:null, iface:null})
+nmCalls = []; nmMissingRemove = new Set(['u-old']); nmFailRemove = new Set(['u-old4'])
+await assert.rejects(dispatch({op:'wifiConnect', ssid:'Dimensione-E92F', psk:'new password'}), /old saved profile.*could not be removed: Cannot remove u-old4/)
+nmMissingRemove = new Set(); nmFailRemove = new Set()
+nmState.connections = nmState.connections.filter(c => c.uuid !== 'u-old4')
+console.log('ok: wifiConnect reports the first real removal error\'s message, ignoring an already-missing profile among the same batch')
 
 nmState.connections.push({uuid:'u-work', id:'Work VPN', type:'vpn', ssid:null, state:null, iface:null})
 nmCalls = []

@@ -50,11 +50,14 @@ function fakeWifiDevice(iface, accessPoints = []) {
     device.request_scan_async = async () => {}
     return device
 }
-function fakeAp(ssid, strength, path) {
+function fakeAp(ssid, strength, path, { flags = 0, wpaFlags = 0, rsnFlags = 0 } = {}) {
     const ap = Object.create(NM.AccessPoint.prototype)
     ap.get_ssid = () => new GLib.Bytes(new TextEncoder().encode(ssid))
     ap.get_strength = () => strength
     ap.get_path = () => path
+    ap.get_flags = () => flags
+    ap.get_wpa_flags = () => wpaFlags
+    ap.get_rsn_flags = () => rsnFlags
     return ap
 }
 function fakeConnection(uuid, { deleteImpl = async () => {} } = {}) {
@@ -170,7 +173,7 @@ console.log("ok: addAndActivate rejects when there is no Wi-Fi device or the net
 
 // --- addAndActivate: cleanup on a failed activation ---------------------
 {
-    client.devices = [fakeWifiDevice("wlan0", [fakeAp("Home", 80, "/ap/1")])]
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("Home", 80, "/ap/1", { rsnFlags: 0x100 })])]
     client.connections = new Map()
     let addedUuid = null, deletedUuid = null
     client.addAndActivateImpl = async connection => {
@@ -214,6 +217,54 @@ console.log("ok: a delete failure surfaces both the activation and delete errors
 }
 console.log("ok: a missing saved profile (get_connection_by_uuid misses) still surfaces the original failure")
 
+{
+    // NM can save the profile as part of handling add_and_activate_connection_async
+    // even when that call's own promise rejects (never reaching settled()); the
+    // generated uuid must still be cleaned up in that case.
+    client.connections = new Map()
+    let addedUuid = null, deletedUuid = null
+    client.addAndActivateImpl = async connection => {
+        addedUuid = connection.get_uuid()
+        client.connections.set(addedUuid, fakeConnection(addedUuid, { deleteImpl: async () => { deletedUuid = addedUuid } }))
+        throw new Error("D-Bus call failed")
+    }
+    await assertRejects(nm.addAndActivate({ ssid: "Home", psk: "hunter2222", keyMgmt: "wpa-psk" }), /D-Bus call failed/)
+    assert(addedUuid && deletedUuid === addedUuid, "a rejection from add_and_activate_connection_async itself must still delete the generated uuid")
+}
+console.log("ok: a rejection from add_and_activate_connection_async itself still cleans up the generated uuid")
+
+// --- addAndActivate: AP compatibility with the requested security --------
+{
+    const strongIncompatible = fakeAp("Mix", 90, "/ap/strong-sae", { rsnFlags: 0x400 })
+    const weakCompatible = fakeAp("Mix", 20, "/ap/weak-psk", { rsnFlags: 0x100 })
+    client.devices = [fakeWifiDevice("wlan0", [strongIncompatible, weakCompatible])]
+    client.connections = new Map()
+    let chosenPath = null
+    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "Mix", psk: "hunter2222", keyMgmt: "wpa-psk" })
+    assertEqual(chosenPath, "/ap/weak-psk", "must skip the incompatible stronger AP and pick the weaker compatible one")
+}
+console.log("ok: addAndActivate picks the strongest AP that is compatible with the requested security, not the strongest overall")
+
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("SaeOnly", 90, "/ap/sae", { rsnFlags: 0x400 })])]
+    client.connections = new Map()
+    await assertRejects(nm.addAndActivate({ ssid: "SaeOnly", psk: "hunter2222", keyMgmt: "wpa-psk" }), /no longer in range/)
+}
+console.log("ok: addAndActivate rejects when no AP for the SSID is compatible with the requested security")
+
+{
+    // A transition-mode AP sets both the PSK bit (securityOf ranks it "psk")
+    // and the SAE bit; it must still be treated as SAE-compatible.
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("Transition", 90, "/ap/trans", { rsnFlags: 0x500 })])]
+    client.connections = new Map()
+    let chosenPath = null
+    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "Transition", psk: "hunter2222", keyMgmt: "sae" })
+    assertEqual(chosenPath, "/ap/trans", "a PSK+SAE transition-mode AP must be accepted for an sae request")
+}
+console.log("ok: addAndActivate treats a PSK+SAE transition-mode AP as SAE-compatible")
+
 // --- addAndActivate: device routing and ssid bytes -----------------------
 {
     const weak = fakeAp("Roam", 30, "/ap/weak")
@@ -234,36 +285,52 @@ console.log("ok: a missing saved profile (get_connection_by_uuid misses) still s
 console.log("ok: addAndActivate routes through the device that sees the strongest AP for the SSID")
 
 {
-    const ssidBytes = new GLib.Bytes(new TextEncoder().encode("Café"))
+    // Latin-1 "Café" (0x43 0x61 0x66 0xe9) is not valid UTF-8. Its display form
+    // (from NM.utils_ssid_to_utf8, the same conversion nm.js uses to match a
+    // request's ssid against an AP) is a lossy/escaped string that does not
+    // re-encode back to these exact bytes — so using it here, instead of a
+    // plain UTF-8 string like "Café", catches the AP's own bytes being
+    // discarded in favor of a re-encoding of the display string.
+    const rawBytes = new Uint8Array([0x43, 0x61, 0x66, 0xe9])
+    const ssidBytes = new GLib.Bytes(rawBytes)
+    const displaySsid = NM.utils_ssid_to_utf8(rawBytes)
+    assert(!ssidBytes.equal(new GLib.Bytes(new TextEncoder().encode(displaySsid))),
+        "the display form of a non-UTF-8 SSID must not round-trip back to the same bytes (test fixture is not exercising what it claims to)")
     const ap = Object.create(NM.AccessPoint.prototype)
     ap.get_ssid = () => ssidBytes
     ap.get_strength = () => 50
     ap.get_path = () => "/ap/cafe"
+    ap.get_flags = () => 0; ap.get_wpa_flags = () => 0; ap.get_rsn_flags = () => 0
     client.devices = [fakeWifiDevice("wlan0", [ap])]
     client.connections = new Map()
     let capturedConnection = null
     client.addAndActivateImpl = async connection => { capturedConnection = connection; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
-    await nm.addAndActivate({ ssid: "Café", psk: null, keyMgmt: null })
+    await nm.addAndActivate({ ssid: displaySsid, psk: null, keyMgmt: null })
     assert(capturedConnection.get_setting_wireless().get_ssid().equal(ssidBytes), "SettingWireless ssid must be the AP's own bytes, not a re-encoding")
 }
-console.log("ok: addAndActivate builds SettingWireless ssid from the access point's own bytes")
+console.log("ok: addAndActivate builds SettingWireless ssid from the access point's own bytes, even when they are not valid UTF-8")
 
 // --- requestScan ----------------------------------------------------------
 {
+    // The message deliberately contains none of "not allowed"/"already"/"too":
+    // tolerance must come from the error's type (NM.DeviceError, NOTALLOWED),
+    // not from matching words in its message.
     const device = fakeWifiDevice("wlan0", [])
-    device.request_scan_async = async () => { throw new GLib.Error(NM.DeviceError, NM.DeviceError.NOTALLOWED, "too soon") }
+    device.request_scan_async = async () => { throw new GLib.Error(NM.DeviceError, NM.DeviceError.NOTALLOWED, "scan request declined") }
     client.devices = [device]
     await nm.requestScan()
 }
-console.log("ok: requestScan tolerates NM's not-allowed/too-frequent scan error")
+console.log("ok: requestScan tolerates NM's not-allowed/too-frequent scan error, judged by error type, not by its message")
 
 {
+    // The message deliberately mimics the tolerated wording: rethrowing must
+    // still happen because this is a plain Error, not an NM.DeviceError NOTALLOWED.
     const device = fakeWifiDevice("wlan0", [])
-    device.request_scan_async = async () => { throw new Error("dbus down") }
+    device.request_scan_async = async () => { throw new Error("not allowed right now, already scanning, too soon") }
     client.devices = [device]
-    await assertRejects(nm.requestScan(), /dbus down/)
+    await assertRejects(nm.requestScan(), /not allowed right now/)
 }
-console.log("ok: requestScan rethrows any other error")
+console.log("ok: requestScan rethrows a same-wording error that is not actually a NM.DeviceError NOTALLOWED")
 
 // --- activate/deactivate reach the client ---------------------------------
 {
@@ -289,6 +356,12 @@ console.log("ok: deactivate reaches the client with the matching active connecti
     let captured = null
     client.dbusSetImpl = async (...args) => { captured = args }
     await nm.setWifiEnabled(false)
+    assertEqual(captured[0], NM.DBUS_PATH, "must target the NM D-Bus object path")
+    assertEqual(captured[1], NM.DBUS_INTERFACE, "must target the NM D-Bus interface")
     assertEqual(captured[2], "WirelessEnabled", "setWifiEnabled must set the WirelessEnabled dbus property")
+    assert(captured[3] instanceof GLib.Variant, "the value must be a GLib.Variant")
+    assertEqual(captured[3].get_boolean(), false, "the variant must carry the requested boolean")
+    assertEqual(captured[4], -1, "must pass the default timeout")
+    assertEqual(captured[5], null, "must pass no cancellable")
 }
-console.log("ok: setWifiEnabled reaches the client's dbus property setter")
+console.log("ok: setWifiEnabled reaches the client's dbus property setter with every argument correct")

@@ -32,18 +32,26 @@ export function wifiNetworks(snap) {
     const grouped = new Map()
     for (const ap of snap.accessPoints) {
         if (!ap.ssid) continue
-        const security = securityOf(ap)
-        const prev = grouped.get(ap.ssid)
-        if (!prev) grouped.set(ap.ssid, {best: ap, security})
-        else {
-            if (ap.strength > prev.best.strength) prev.best = ap
-            if (securityRank[security] > securityRank[prev.security]) prev.security = security
-        }
+        if (!grouped.has(ap.ssid)) grouped.set(ap.ssid, [])
+        grouped.get(ap.ssid).push(ap)
     }
-    return [...grouped.values()].map(({best, security}) => ({
-        ssid: best.ssid, signal: best.strength, bars: Math.max(1, Math.min(4, Math.ceil(best.strength / 25))),
-        security, known: known.has(best.ssid), active: active.has(best.ssid), activating: activating.has(best.ssid),
-    })).sort((a, b) => b.active - a.active || b.activating - a.activating || b.known - a.known || b.signal - a.signal || a.ssid.localeCompare(b.ssid))
+    return [...grouped.entries()].map(([ssid, bsses]) => {
+        // Group security is the best rank seen for this SSID across every BSS,
+        // but signal/bars come from the strongest BSS that actually offers that
+        // security — the strongest BSS overall can be a weaker-security sighting
+        // (e.g. an SAE-only AP next to a stronger open one), which would be the
+        // wrong one to connect to.
+        let security = securityOf(bsses[0])
+        for (const ap of bsses) {
+            const s = securityOf(ap)
+            if (securityRank[s] > securityRank[security]) security = s
+        }
+        const best = bsses.filter(ap => securityOf(ap) === security).reduce((a, b) => b.strength > a.strength ? b : a)
+        return {
+            ssid, signal: best.strength, bars: Math.max(1, Math.min(4, Math.ceil(best.strength / 25))),
+            security, known: known.has(ssid), active: active.has(ssid), activating: activating.has(ssid),
+        }
+    }).sort((a, b) => b.active - a.active || b.activating - a.activating || b.known - a.known || b.signal - a.signal || a.ssid.localeCompare(b.ssid))
 }
 
 export const isProton = connection => connection.id.startsWith("ProtonVPN ")
@@ -103,9 +111,11 @@ export function connectPlan(snap, request) {
     if (current && supplied === null) return { kind: "activate", uuid: current.uuid }
     if (net.security === "unsupported") throw new Error("Enterprise and WEP networks are not supported here; use Advanced…")
     if (net.security === "open" || net.security === "owe") {
-        // Open/OWE take no user password, but a supplied one is still checked
-        // rather than silently discarded — it is more likely a mistake than intent.
-        if (supplied !== null) validPsk(supplied)
+        // Open/OWE take no password. A supplied one is refused rather than
+        // silently dropped: connecting anyway would be an unauthenticated
+        // downgrade from whatever the user thought they were typing a password
+        // for, and it would delete the old, still-trusted saved profiles.
+        if (supplied !== null) throw new Error("This network does not use a password")
         return { kind: "add", ssid, psk: null, keyMgmt: net.security === "owe" ? "owe" : null, replace: saved }
     }
     if (supplied === null) throw new Error("Enter the network password")

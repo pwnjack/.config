@@ -447,7 +447,7 @@ async function change(request) {
     case "gtk": return setGtk(row, value)
     case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
     case "pulse": return setPulse(row.key, value, await once("pulse", pulseState))
-    case "network": return setWifiEnabled(value)
+    case "network": requiredSnapshot(); return setWifiEnabled(value)
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])
@@ -608,12 +608,18 @@ export async function dispatch(request) {
             await addAndActivate(plan)
             // Only once the new profile works are the old ones for this SSID removed,
             // each best-effort: a removal failure must not read back as a failed connect.
+            // One of them being already gone (a race with something else removing it)
+            // is not a failure at all.
             if (plan.replace.length) {
-                const failures = []
+                let firstError = null
                 for (const uuid of plan.replace) {
-                    try { await removeConnections([uuid]) } catch (_) { failures.push(uuid) }
+                    try { await removeConnections([uuid]) }
+                    catch (error) {
+                        if (error.message === "That connection no longer exists") continue
+                        firstError ??= error
+                    }
                 }
-                if (failures.length) throw new Error("Connected, but an old saved profile for this network could not be removed")
+                if (firstError) throw new Error(`Connected, but an old saved profile for this network could not be removed: ${firstError.message}`)
             }
         }
         return {}

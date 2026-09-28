@@ -1,7 +1,7 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import NM from "gi://NM"
-import { failureMessage } from "./network.mjs"
+import { failureMessage, securityOf } from "./network.mjs"
 
 // The only libnm user. It returns plain objects so everything else is testable
 // without NetworkManager, and it waits for real activation, not just the D-Bus reply.
@@ -61,8 +61,10 @@ export function nmSnapshot() {
 
 const reasonName = reason => Object.keys(NM.ActiveConnectionStateReason).find(key => NM.ActiveConnectionStateReason[key] === reason) || "UNKNOWN"
 // Resolves once the connection is really up; rejects with a readable reason.
-// 45s: longer than panel-request.sh's 60s flock wait (a slow connect must not
-// starve every other request) and longer than NM's own DHCP timeout.
+// 45s: shorter than panel-request.sh's 60s flock wait (the add/delete calls
+// around this add to that same lock hold time, so a slow connect must not push
+// the total past it and starve every other request) and longer than NM's own
+// DHCP timeout.
 export function settled(active, timeoutMs = 45000) {
     return new Promise((resolve, reject) => {
         let stateHandler = 0, removedHandler = 0, timer = 0, sawActivating = false
@@ -108,13 +110,27 @@ export async function activate(uuid) {
     try { await settled(active) }
     catch (error) { await deactivate(uuid).catch(() => {}); throw error }
 }
+// libnm NM80211ApSecurityFlags.SAE; a transition-mode AP sets this alongside
+// its PSK bit, so securityOf alone (which ranks PSK above SAE) is not enough
+// to tell whether an AP will accept an SAE connection.
+const AP_SAE_FLAG = 0x400
+function apCompatible(ap, keyMgmt) {
+    const wpaFlags = ap.get_wpa_flags(), rsnFlags = ap.get_rsn_flags()
+    const security = securityOf({ flags: ap.get_flags(), wpaFlags, rsnFlags })
+    if (keyMgmt === "wpa-psk") return security === "psk"
+    if (keyMgmt === "sae") return security === "sae" || (security === "psk" && Boolean((wpaFlags | rsnFlags) & AP_SAE_FLAG))
+    if (keyMgmt === "owe") return security === "owe"
+    return security === "open"
+}
 export async function addAndActivate({ ssid, psk, keyMgmt }) {
     const devices = wifiDevices()
     if (!devices.length) throw new Error("No Wi-Fi device")
     // The same SSID can be seen by more than one Wi-Fi device (or as more than
-    // one BSS); pick the strongest sighting across all of them.
+    // one BSS); pick the strongest sighting that can actually take this
+    // connection's security — the strongest sighting overall can be a
+    // different, incompatible security (e.g. SAE-only next to a weaker PSK one).
     const candidates = devices.flatMap(device => device.get_access_points()
-        .filter(a => ssidText(a.get_ssid()) === ssid).map(ap => ({ device, ap })))
+        .filter(a => ssidText(a.get_ssid()) === ssid && apCompatible(a, keyMgmt)).map(ap => ({ device, ap })))
     if (!candidates.length) throw new Error("That network is no longer in range")
     const { device, ap } = candidates.sort((a, b) => b.ap.get_strength() - a.ap.get_strength())[0]
     const uuid = NM.utils_uuid_generate()
@@ -125,12 +141,12 @@ export async function addAndActivate({ ssid, psk, keyMgmt }) {
     connection.add_setting(new NM.SettingWireless({ ssid: ap.get_ssid(), mode: "infrastructure" }))
     // keyMgmt is "wpa-psk", "sae" or "owe" (network.mjs); a truly open network has none.
     if (keyMgmt) connection.add_setting(new NM.SettingWirelessSecurity(psk !== null ? { key_mgmt: keyMgmt, psk } : { key_mgmt: keyMgmt }))
-    const active = await nm().add_and_activate_connection_async(connection, device, ap.get_path(), null)
-    try { await settled(active) }
-    catch (error) {
-        // A wrong password must not leave a "Saved" network behind. Go by the
-        // uuid we generated, not active.get_connection() — NM can unexport the
-        // ActiveConnection before this runs, which makes that getter return null.
+    // A wrong password, or a rejection of the add-and-activate call itself,
+    // must not leave a "Saved" network behind — NM can persist the profile
+    // before activation even fails. Go by the uuid we generated, not
+    // active.get_connection(): NM can unexport the ActiveConnection before this
+    // runs, which makes that getter return null.
+    async function cleanupAfterFailure(error) {
         try {
             const saved = nm().get_connection_by_uuid(uuid)
             if (saved) await saved.delete_async(null)
@@ -139,6 +155,11 @@ export async function addAndActivate({ ssid, psk, keyMgmt }) {
         }
         throw error
     }
+    let active
+    try { active = await nm().add_and_activate_connection_async(connection, device, ap.get_path(), null) }
+    catch (error) { await cleanupAfterFailure(error) }
+    try { await settled(active) }
+    catch (error) { await cleanupAfterFailure(error) }
 }
 export async function deactivate(uuid) {
     const active = nm().get_active_connections().find(a => a.get_uuid() === uuid)
