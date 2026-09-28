@@ -94,9 +94,10 @@ tested in Node:
 | `region.js` | reads and writes for time and locale | files and `dbus.js` |
 | `autostart.mjs` | pure: desktop-entry parse, effective-set rules, override text, unit names | nothing |
 
-`backend.js` gains two row sources (`network`, `region`) and the view ops
-`network`, `networkScan`, `wifiConnect`, `wifiForget`, `vpn`, `startup` and
-`autostart`. It keeps round 2's rule that a pending display change blocks
+`backend.js` gains two row sources (`network`, `region`), two `read` flags
+(`network: true`, `startup: true`) that add a page's view data to a read, and
+the ops `networkScan`, `wifiConnect`, `wifiForget`, `vpn`, `autostart` and
+`autostartAdd`. It keeps round 2's rule that a pending display change blocks
 every other op.
 
 ### 2. Network page (category `network`, placed after Sound)
@@ -110,13 +111,13 @@ sections:
 - The radio toggle is the catalog row `network.wifi`, source `network`, key
   `wifi`, kind `toggle`, live `network`. It writes `WirelessEnabled` through
   `dbus_set_property`.
-- The list comes from one `op:"network"` read. Networks are **grouped by SSID**
+- The list comes from one read with `network: true`. Networks are **grouped by SSID**
   with the strongest access point kept. Hidden (empty) SSIDs are dropped.
   Sort order: active first, then known, then signal, highest first.
 - Each entry shows the SSID, a four-step signal glyph, a lock when secured, and
   "Connected" / "Saved" / nothing.
-- Security comes from the AP flags: `open`, `psk` (WPA/RSN PSK or SAE), or
-  `unsupported` (802.1X). An `unsupported` network gets a hint to use
+- Security comes from the AP flags: `open` (including OWE), `psk` (WPA/RSN PSK),
+  `sae` (WPA3-only), or `unsupported` (802.1X or WEP). An `unsupported` network gets a hint to use
   `nm-connection-editor` and no Connect button.
 - **Connect:**
   - A known network activates its saved connection.
@@ -151,13 +152,13 @@ starts with `ProtonVPN ` is Proton's.
   Proton VPN**, which launches `protonvpn-app` (single-instance, so it raises
   the running window). The state stays read-only.
 
-`network.mjs` exports `PROTON_MODE`, which Task 4 sets to `"nm"` or `"app"`
+`network.mjs` exports `PROTON_MODE`, which plan Task 5 sets to `"nm"` or `"app"`
 from the recorded result.
 
 **Live:** the Wi-Fi radio row and the view carry the live tag `network`.
 While the tag is on screen, `shell.qml` runs `nmcli monitor`. Any line from it
 marks `network` dirty, and the debounced live read re-reads the radio row and
-the `op:"network"` state together. The 20 s rescan `Timer` runs only while the
+the `network: true` view data together. The 20 s rescan `Timer` runs only while the
 view is visible. Leaving the page or closing the panel stops both.
 
 **Waybar:** the `network` module's `on-click` becomes
@@ -202,7 +203,7 @@ These are ordinary rows with source `region`:
 **12/24 h clock.** `options/clock` holds `24h` (the tracked default) or `12h`.
 Its consumers:
 - **Waybar:** the tracked `config.jsonc` drops the clock's `format` key and
-  gains `"include": ["~/.cache/waybar/clock.jsonc"]`.
+  gains `"include": ["~/.local/state/waybar/clock.jsonc"]`.
   `scripts/waybar/clock-format.sh` renders that include from the option:
   `{"clock": {"format": "{:%H:%M}"}}` or `{"clock": {"format": "{:%I:%M %p}"}}`.
   It always writes the file, falling back to 24 h, and signals Waybar
@@ -238,7 +239,7 @@ Its consumers:
 6. **If Task 1 shows the agent dialog renders under the Overlay layer** even
    with focus released, `authPending` also hides the overlay
    (`visible: false`) until the reply arrives. The process stays alive, so
-   nothing is lost. Task 1 records which, and Task 5 implements it.
+   nothing is lost. Task 1 records which, and plan Task 6 implements it.
 
 ### 4. Startup (category `startup`, same place)
 
@@ -282,8 +283,11 @@ Writes (`op:"autostart"`), each atomic (temporary file, then rename):
   generator treats that as masking the system file.
 - **Enable a system entry:** if the user file is exactly that minimal
   override, delete it. An override with anything more was written by hand or
-  by another tool. It is never deleted; instead its `Hidden` key is set to
-  `false`, and every other line is kept.
+  by another tool. It is never deleted. If it has its own `Exec`, only its `Hidden` line (and
+  any `X-GNOME-Autostart-enabled=false`) is removed and every other line is
+  kept. If it has no `Exec`, enabling is refused with a message naming the
+  file, because removing `Hidden` would mask the system entry with nothing to
+  run.
 - **Disable or enable a user-only entry:** set or remove `Hidden=true` in
   place, keeping every other line.
 - **Add…:** a searchable picker over the installed applications
@@ -335,10 +339,10 @@ tiny stub-able functions) and comes with `test-autostart.sh`.
 |---|---|
 | Panel closed | No new process, timer or file watch. `pgrep -f 'nmcli monitor'` prints nothing |
 | Panel open on a page other than Network | No `nmcli monitor`, no rescan timer |
-| Network page visible | One `nmcli monitor`, one helper call per debounced change, and one rescan per 20 s |
+| Network page visible | One `nmcli monitor`, one helper call per debounced change, and per 20 s one rescan plus one follow-up read 5 s later |
 | Full read (every row, on each open) | Within **+20 ms** of the Task 1 baseline median (five runs) |
-| `op:"network"` read | ≤ 30 ms median |
-| `op:"startup"` read | ≤ 40 ms median |
+| `network: true` read, over an empty read | ≤ 30 ms median |
+| `startup: true` read, over an empty read | ≤ 40 ms median |
 
 ### 8. Testing
 
@@ -354,8 +358,10 @@ tiny stub-able functions) and comes with `test-autostart.sh`.
   reads.
 - `test/tst_Settings.qml`:
   - `authPending` releases keyboard focus and disables controls.
-  - The `network` tag starts `nmcli monitor` only on the Network page, and the
-    rescan timer stops when leaving it.
+  - The Network view's connect, password, forget, VPN and Proton controls
+    submit the right requests. (`nmcli monitor` starting and stopping with the
+    page lives in `shell.qml`, which the harness mocks, so `live-smoke.sh`
+    asserts it instead.)
   - Search filtering in `PanelCombo` works.
 - `scripts/doctor/test/test-autostart.sh`.
 - `test/live-smoke.sh`:
