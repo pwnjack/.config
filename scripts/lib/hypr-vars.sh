@@ -21,8 +21,8 @@
 # would be a second source of truth.
 hypr_var_origin() {
     case "$1" in
-        terminal|browser|editor|codeeditor) printf 'options' ;;
-        *)                                  printf 'apptype' ;;
+        terminal|browser|editor|codeeditor|filemanager) printf 'options' ;;
+        *)                                              printf 'apptype' ;;
     esac
 }
 
@@ -31,9 +31,9 @@ hypr_var_origin() {
 # `name` is the bare variable name, without the leading `$`. Two sources, in
 # the order the config itself establishes them:
 #
-#   terminal, browser,  apptype.lua reads options/<name> at parse time, so the
-#   editor, codeeditor  option file is the value.
-#   everything else     hypr/config/apptype.lua, `name = "value"`.
+#   terminal, browser, editor,  apptype.lua reads options/<name> at parse
+#   codeeditor, filemanager     time, so the option file is the value.
+#   everything else             hypr/config/apptype.lua, `name = "value"`.
 #
 # Comments are stripped at the first `#`, which is Hyprland's own rule.
 hypr_resolve_var() {

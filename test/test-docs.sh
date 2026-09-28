@@ -116,7 +116,7 @@ while IFS= read -r name; do
     if grep -qi "(\`\?$value\`\?)" "$DOC"; then
         frozen+=("$name: the document names '$value' instead of options/$name")
     fi
-done < <(printf '%s\n' terminal browser editor codeeditor)
+done < <(printf '%s\n' terminal browser editor codeeditor filemanager)
 
 if [ "${#frozen[@]}" -eq 0 ]; then
     pass "options-backed values are named by file, not by this machine's answer"

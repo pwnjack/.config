@@ -4,7 +4,7 @@
 return function(apps)
     -- ## Applications
     hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(apps.terminal)) -- Terminal ($terminal)
-    hl.bind("SUPER + E", hl.dsp.exec_cmd(apps.fileManager)) -- File manager ($fileManager)
+    hl.bind("SUPER + E", hl.dsp.exec_cmd(apps.filemanager)) -- File manager ($filemanager)
     hl.bind("SUPER + N", hl.dsp.exec_cmd(apps.terminal .. " -e " .. apps.editor)) -- Text editor ($editor)
     hl.bind("SUPER + T", hl.dsp.exec_cmd("kwrite")) -- Text editor (KWrite)
     hl.bind("SUPER + B", hl.dsp.exec_cmd(apps.browser)) -- Web browser ($browser)

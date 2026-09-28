@@ -996,7 +996,9 @@
       "description": "Launched with Super+B",
       "source": "option",
       "key": "browser",
-      "kind": "text"
+      "kind": "text",
+      "check": "command",
+      "reload": true
     },
     {
       "category": "apps",
@@ -1005,7 +1007,9 @@
       "description": "Launched with Super+Return",
       "source": "option",
       "key": "terminal",
-      "kind": "text"
+      "kind": "text",
+      "check": "command",
+      "reload": true
     },
     {
       "category": "apps",
@@ -1014,7 +1018,9 @@
       "description": "Used by Super+N and the monitor setup tool",
       "source": "option",
       "key": "editor",
-      "kind": "text"
+      "kind": "text",
+      "check": "command",
+      "reload": true
     },
     {
       "category": "apps",
@@ -1023,7 +1029,31 @@
       "description": "GUI editor launched with Super+G",
       "source": "option",
       "key": "codeeditor",
-      "kind": "text"
+      "kind": "text",
+      "check": "command",
+      "reload": true
+    },
+    {
+      "category": "apps",
+      "id": "apps.filemanager",
+      "title": "File Manager",
+      "description": "Launched with Super+E",
+      "source": "option",
+      "key": "filemanager",
+      "kind": "text",
+      "check": "command",
+      "reload": true
+    },
+    {
+      "category": "apps",
+      "id": "apps.aurhelper",
+      "title": "Update Command",
+      "description": "Run by Update system, e.g. paru -Syu",
+      "keywords": ["paru", "yay", "pacman"],
+      "source": "option",
+      "key": "aurhelper",
+      "kind": "text",
+      "check": "command"
     },
     {
       "category": "apps",

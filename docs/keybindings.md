@@ -24,7 +24,7 @@ checkout.
 | Key | Action |
 |-----|--------|
 | `Super + Enter` | Terminal (`options/terminal`) |
-| `Super + E` | File manager (thunar) |
+| `Super + E` | File manager (`options/filemanager`) |
 | `Super + N` | Text editor (`options/editor`) |
 | `Super + T` | Text editor (KWrite) |
 | `Super + B` | Web browser (`options/browser`) |

@@ -34,7 +34,7 @@ const dirs = new Map([
     ['/usr/share/Kvantum', ['KvArc']],
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
-for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
+for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
@@ -51,7 +51,7 @@ const encoder = new TextEncoder()
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', Error: class extends Error {},
-        find_program_in_path: name => name,
+        find_program_in_path: name => name === 'missing-app' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
         spawn_async: (...args) => { events.push(['spawn',args[1]]); running.add(args[1][0]); },
         timeout_add: (_priority,_ms,fn) => { setImmediate(fn); },
@@ -296,3 +296,11 @@ await dispatch({op:'set',id:'appearance.cursor-theme',value:'Bibata-Modern-Class
 assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-cursor-theme-name=Bibata-Modern-Classic$/m)
 assert.match(files.get(base+'/gtk-4.0/settings.ini'),/^gtk-cursor-theme-size=24$/m)
 console.log('ok: fonts must be installed and the cursor theme reaches settings.ini')
+
+events=[]
+await assert.rejects(dispatch({op:'set',id:'apps.filemanager',value:'missing-app --flag'}),/missing-app is not installed/)
+assert.equal(events.length,0)
+await dispatch({op:'set',id:'apps.filemanager',value:'nautilus'})
+assert.equal(files.get(base+'/options/filemanager'),'nautilus\n')
+assert.ok(events.some(e=>e[1]==='reload'))
+console.log('ok: app rows must name an installed command and reload Hyprland')

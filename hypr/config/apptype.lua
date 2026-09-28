@@ -22,7 +22,7 @@ return {
     editor = read_option("editor", "nvim"), -- TUI editor, opened in the terminal
     codeeditor = read_option("codeeditor", "zeditor"), -- GUI code editor
     cursorTheme = read_option("cursortheme", "Bibata-Modern-Classic"),
-    fileManager = "thunar", -- GUI file manager (yazi for CLI)
+    filemanager = read_option("filemanager", "thunar"), -- GUI file manager (yazi for CLI)
 
     -- The package ships this systemd user unit rather than a PATH executable.
     polkitAgent = "hyprpolkitagent.service",

@@ -273,6 +273,10 @@ const checks = {
         const families = (await execAsync(["fc-list", ":", "family"])).split("\n").flatMap(line => line.split(",")).map(name => name.trim())
         if (!families.includes(value)) throw new Error(`No installed font is named ${value}`)
     },
+    command: value => {
+        const program = value.split(/\s+/)[0]
+        if (!GLib.find_program_in_path(program)) throw new Error(`${program} is not installed`)
+    },
 }
 async function validate(row, value) {
     if (row.kind === "toggle" && typeof value !== "boolean") throw new Error("Expected an on/off value")
@@ -317,7 +321,7 @@ async function change(request) {
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
             // hypr/config/apptype.lua reads these at parse time.
-            if (["terminal", "browser", "editor", "codeeditor"].includes(row.key)) await persistReload()
+            if (row.reload) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])))
         })
     }
