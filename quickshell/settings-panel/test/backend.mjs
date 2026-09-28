@@ -50,7 +50,7 @@ const supportedTypes = {
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
-let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0
+let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
 const hyprOptions = {
@@ -68,7 +68,11 @@ globalThis.settingsMocks = {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
         find_program_in_path: name => name === 'missing-app' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
-        spawn_async: (...args) => { events.push(['spawn',args[1]]); running.add(args[1][0]); },
+        spawn_async: (...args) => {
+            events.push(['spawn',args[1]])
+            if (failNextSpawn && args[1][0] === failNextSpawn) { failNextSpawn = ''; return }
+            running.add(args[1][0])
+        },
         timeout_add: (_priority,_ms,fn) => { setImmediate(fn); },
     },
     Gio: {
@@ -224,16 +228,46 @@ assert.equal(result.values['power.suspend'].value,0)
 await dispatch({op:'set',id:'power.profile',value:'balanced'})
 assert.ok(events.some(e=>e[0]==='powerprofilesctl' && e[1]==='set' && e[2]==='balanced'))
 const idleBefore = files.get(base+'/hypr/hypridle.conf')
-await dispatch({op:'set',id:'power.suspend',value:1800})
-assert.match(files.get(base+'/hypr/hypridle.conf'),/# Suspend after inactivity\nlistener \{\n    timeout = 1800\n    on-timeout = systemctl suspend\n\}\n$/)
-await dispatch({op:'set',id:'power.suspend',value:3600})
-assert.match(files.get(base+'/hypr/hypridle.conf'),/timeout = 3600\n    on-timeout = systemctl suspend/)
-await dispatch({op:'set',id:'power.suspend',value:0})
-assert.equal(files.get(base+'/hypr/hypridle.conf'),idleBefore)
+const idleNoNewline = idleBefore.replace(/\n$/,'')
+const suspendAt = seconds => `# Suspend after inactivity\nlistener {\n    timeout = ${seconds}\n    on-timeout = systemctl suspend\n}\n`
+
+// The round trip (set N, retime, set 0) must restore the file byte-for-byte
+// regardless of how many trailing newlines it had before the suspend block
+// ever existed - a file ending in 0, 1 or 2+ newlines are three distinct cases.
+for (const [label,original] of [['no trailing newline',idleNoNewline],['one trailing newline',idleBefore],['two trailing newlines',idleBefore+'\n']]) {
+    files.set(base+'/hypr/hypridle.conf',original)
+
+    events=[]
+    await dispatch({op:'set',id:'power.suspend',value:1800})
+    assert.ok(events.some(e=>e[0]==='pkill' && e[2]==='hypridle'),`add restarts hypridle (${label})`)
+    assert.ok(events.some(e=>e[0]==='spawn' && e[1][0]==='hypridle'),`add spawns hypridle (${label})`)
+    assert.equal(files.get(base+'/hypr/hypridle.conf'),original+'\n\n'+suspendAt(1800),`add is byte-exact (${label})`)
+
+    events=[]
+    await dispatch({op:'set',id:'power.suspend',value:3600})
+    assert.ok(events.some(e=>e[0]==='pkill' && e[2]==='hypridle'),`retime restarts hypridle (${label})`)
+    assert.ok(events.some(e=>e[0]==='spawn' && e[1][0]==='hypridle'),`retime spawns hypridle (${label})`)
+    assert.equal(files.get(base+'/hypr/hypridle.conf'),original+'\n\n'+suspendAt(3600),`retime keeps everything else identical (${label})`)
+
+    events=[]
+    await dispatch({op:'set',id:'power.suspend',value:0})
+    assert.ok(events.some(e=>e[0]==='pkill' && e[2]==='hypridle'),`remove restarts hypridle (${label})`)
+    assert.ok(events.some(e=>e[0]==='spawn' && e[1][0]==='hypridle'),`remove spawns hypridle (${label})`)
+    assert.equal(files.get(base+'/hypr/hypridle.conf'),original,`removal restores the file byte-for-byte (${label})`)
+}
+files.set(base+'/hypr/hypridle.conf',idleBefore)
+
 files.set(base+'/hypr/hypridle.conf',idleBefore+'listener {\n timeout = 99\n on-timeout = systemctl suspend\n}\n')
 await assert.rejects(dispatch({op:'set',id:'power.suspend',value:0}),/by hand/)
 files.set(base+'/hypr/hypridle.conf',idleBefore)
 console.log('ok: power profile and suspend listener round-trip without touching custom content')
+
+const idleForFailure = files.get(base+'/hypr/hypridle.conf')
+failNextSpawn = 'hypridle'
+await assert.rejects(dispatch({op:'set',id:'power.suspend',value:1800}),/Previous settings restored/)
+assert.equal(files.get(base+'/hypr/hypridle.conf'),idleForFailure)
+assert.equal(failNextSpawn,'')
+console.log('ok: a suspend change that fails to restart hypridle restores hypridle.conf exactly')
 
 result = await dispatch({op:'read',ids:['input.accel-profile']})
 assert.equal(result.values['input.accel-profile'].value,'')

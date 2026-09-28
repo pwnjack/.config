@@ -90,16 +90,21 @@ function idleValues(text) {
     return values
 }
 // The panel owns only the listener it wrote, found by its marker comment.
-const suspendBlock = /\n*# Suspend after inactivity\nlistener\s*\{[^}]*systemctl suspend[^}]*\}\n?/
+// It always appends that block as a fixed "\n\n" + marker suffix (never
+// collapsing whatever newlines the file already ended with), so removal can
+// strip exactly that fixed suffix and restore the original bytes regardless
+// of how many trailing newlines the file had before the block existed.
+const suspendMarker = seconds => `# Suspend after inactivity\nlistener {\n    timeout = ${seconds}\n    on-timeout = systemctl suspend\n}\n`
+const suspendBlock = /\n\n# Suspend after inactivity\nlistener\s*\{[^}]*systemctl suspend[^}]*\}\n$/
 function withSuspend(text, seconds) {
     const existing = (text.match(/listener\s*\{[^}]*\}/g) || []).find(block => block.includes("systemctl suspend"))
     if (existing && seconds) return text.replace(existing, existing.replace(/(\btimeout\s*=\s*)\d+/, `$1${seconds}`))
     if (existing) {
         if (!suspendBlock.test(text)) throw new Error("hypridle.conf has a custom suspend listener; remove it by hand")
-        return text.replace(suspendBlock, "\n")
+        return text.replace(suspendBlock, "")
     }
     if (!seconds) return text
-    return text.replace(/\n*$/, "\n") + `\n# Suspend after inactivity\nlistener {\n    timeout = ${seconds}\n    on-timeout = systemctl suspend\n}\n`
+    return text + "\n\n" + suspendMarker(seconds)
 }
 function sunsetValues(text) {
     const profiles = (text.match(/profile\s*\{[^}]*\}/g) || []).map(block => {
