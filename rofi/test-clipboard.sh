@@ -89,10 +89,14 @@ no_entry=$no
 assert_contains "$script_source" '\uf1f8' "the Clear glyph uses a Unicode escape"
 assert_contains "$script_source" '\uf058' "the Yes glyph uses a Unicode escape"
 assert_contains "$script_source" '\uf52f' "the No glyph uses a Unicode escape"
-if printf '%s\n' "$script_source" | grep -Pq '[\x{E000}-\x{F8FF}]'; then
-    fail "the script contains no raw Private Use Area glyphs"
-else
+# U+E000-U+F8FF as UTF-8 bytes, so the check does not depend on the locale;
+# grep's status 2 (a broken pattern) must fail rather than pass vacuously.
+pua_status=0
+printf '%s\n' "$script_source" | LC_ALL=C grep -qP '\xEE[\x80-\xBF]|\xEF[\x80-\xA3]' || pua_status=$?
+if [ "$pua_status" -eq 1 ]; then
     pass "the script contains no raw Private Use Area glyphs"
+else
+    fail "the script contains no raw Private Use Area glyphs"
 fi
 assert_not_contains "$script_source" "CLIPBOARD_PRINT_CLEAR" \
     "the production script has no test-only menu branch"
@@ -102,7 +106,8 @@ run_case() {
     rm -f -- "$CLIPBOARD_TEST_COUNT"
     rm -f -- "$CLIPBOARD_TEST_ROFI_STDIN.1" "$CLIPBOARD_TEST_ROFI_STDIN.2"
     printf '%s' "$1" > "$CLIPBOARD_TEST_ANSWERS"
-    bash "$TEST_DIR/clipboard.sh"
+    # The stubs read stdin; never let them inherit the caller's terminal.
+    bash "$TEST_DIR/clipboard.sh" </dev/null
 }
 
 history_line=$'1\thello'
