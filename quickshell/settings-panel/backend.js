@@ -11,6 +11,8 @@ const optionPath = key => `${configDir}/options/${key}`
 const idlePath = configDir + "/hypr/hypridle.conf"
 const sunsetPath = configDir + "/hypr/hyprsunset.conf"
 const swayPath = configDir + "/swaync/config.json"
+const kvantumPath = configDir + "/Kvantum/kvantum.kvconfig"
+const kvantumDirs = [configDir + "/Kvantum", "/usr/share/Kvantum"]
 
 function read(path) {
     const [ok, data] = Gio.File.new_for_path(path).load_contents(null)
@@ -48,6 +50,7 @@ const enumerators = {
     "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`), ["Adwaita", "HighContrast", "HighContrastInverse"]),
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
+    "kvantum-themes": () => themeNames(kvantumDirs, dir => exists(`${dir}/${dir.split("/").pop()}.kvconfig`)),
 }
 async function choicesFor(row) {
     if (row.items) return row.items
@@ -204,6 +207,7 @@ async function snapshot(ids, includeMonitors) {
             case "idle": value = (await once("idle", () => idleValues(read(idlePath))))[row.key]; break
             case "sunset": value = (await once("sunset", () => sunsetValues(read(sunsetPath))))[row.key]; break
             case "swaync": value = (await once("swaync", () => JSON.parse(read(swayPath))))[row.key] ?? row.default; break
+            case "kvantum": value = exists(kvantumPath) ? (read(kvantumPath).match(/^theme=(.*)$/m) || [, ""])[1] : ""; break
             }
             if (row.default !== undefined) reset = value !== row.default
             values[id] = row.choices ? { value, reset, choices: await choicesFor(row) } : { value, reset }
@@ -332,6 +336,13 @@ async function change(request) {
         const config = JSON.parse(read(swayPath))
         config[row.key] = value
         return saveAndApply(swayPath, JSON.stringify(config, null, 2) + "\n", () => execAsync(["swaync-client", "-rs"]))
+    }
+    case "kvantum": {
+        const text = exists(kvantumPath) ? read(kvantumPath) : "[General]\n"
+        if (!/^\[General\]$/m.test(text)) throw new Error("kvantum.kvconfig has no [General] section")
+        return write(kvantumPath, /^theme=.*$/m.test(text)
+            ? text.replace(/^theme=.*$/m, `theme=${value}`)
+            : text.replace(/^\[General\]\n/m, `[General]\ntheme=${value}\n`))
     }
     case "gtk": return setGtk(row, value)
     }

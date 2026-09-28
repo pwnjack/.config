@@ -249,6 +249,16 @@
     },
     {
       "category": "appearance",
+      "id": "appearance.kvantum",
+      "title": "Qt Theme (Kvantum)",
+      "description": "Qt apps pick it up when they restart",
+      "keywords": ["qt", "kde"],
+      "source": "kvantum",
+      "kind": "select",
+      "choices": "kvantum-themes"
+    },
+    {
+      "category": "appearance",
       "id": "appearance.cursor-theme",
       "title": "Cursor Theme",
       "description": "Cursor theme name; fully applies after restart",

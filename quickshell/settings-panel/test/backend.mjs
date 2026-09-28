@@ -21,12 +21,17 @@ const files = new Map([
     ['/usr/share/themes/Emacs/gtk-3.0/gtk-keys.css', ''],
     [base + '/gtk-3.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\ngtk-font-name=Sans 11\n'],
     [base + '/gtk-4.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\n'],
+    [base + '/Kvantum/Carl/Carl.kvconfig', ''],
+    ['/usr/share/Kvantum/KvArc/KvArc.kvconfig', ''],
+    [base + '/Kvantum/kvantum.kvconfig', '[General]\ntheme=Carl\n'],
 ])
 const dirs = new Map([
     ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
     ['/usr/share/themes/Emacs/gtk-3.0', []],
     ['/usr/share/icons', ['Papirus-Dark','Bibata-Modern-Classic']],
     ['/usr/share/icons/Bibata-Modern-Classic/cursors', []],
+    [base + '/Kvantum', ['Carl','kvantum.kvconfig']],
+    ['/usr/share/Kvantum', ['KvArc']],
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
@@ -249,6 +254,19 @@ assert.deepEqual(events.find(e=>e[0]==='gsettings' && e[1]==='set'),['gsettings'
 await dispatch({op:'set',id:'appearance.color-scheme',value:'prefer-light'})
 assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-application-prefer-dark-theme=false$/m)
 console.log('ok: GTK appearance filters themes, preserves literal INI values and line endings, and rolls back failures')
+
+result = await dispatch({op:'read',ids:['appearance.kvantum']})
+assert.equal(result.values['appearance.kvantum'].value,'Carl')
+assert.deepEqual(result.values['appearance.kvantum'].choices.map(c=>c.value),['Carl','KvArc'])
+await dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'})
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\ntheme=KvArc\n')
+files.delete(base+'/Kvantum/kvantum.kvconfig')
+await dispatch({op:'set',id:'appearance.kvantum',value:'Carl'})
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[General]\ntheme=Carl\n')
+files.set(base+'/Kvantum/kvantum.kvconfig','[Other]\ntheme=Carl\n')
+await assert.rejects(dispatch({op:'set',id:'appearance.kvantum',value:'KvArc'}),/has no \[General\] section/)
+assert.equal(files.get(base+'/Kvantum/kvantum.kvconfig'),'[Other]\ntheme=Carl\n')
+console.log('ok: Kvantum theme is chosen from installed themes')
 
 events=[]
 await assert.rejects(dispatch({op:'set',id:'appearance.font',value:'No Such Font'}),/No installed font/)
