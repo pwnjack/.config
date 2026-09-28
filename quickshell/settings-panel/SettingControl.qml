@@ -181,10 +181,10 @@ Rectangle {
                 selectByMouse: true
                 color: control.theme.foreground
                 Accessible.name: control.row.title
-                onAccepted: { if (text.trim() && text !== String(control.settingState.value)) control.controller.change(control.row.id, text); }
+                onAccepted: { if ((text.trim() || control.row.optional) && text !== String(control.settingState.value)) control.controller.change(control.row.id, text); }
                 background: Rectangle { color: control.theme.background; radius: 8; border.width: entry.activeFocus ? 2 : 1; border.color: entry.activeFocus ? control.theme.accent : Qt.rgba(control.theme.foreground.r, control.theme.foreground.g, control.theme.foreground.b, 0.25) }
             }
-            PanelButton { theme: control.theme; text: "Save"; enabled: entry.text.trim() !== "" && entry.text !== String(control.settingState.value); onClicked: control.controller.change(control.row.id, entry.text) }
+            PanelButton { theme: control.theme; text: "Save"; enabled: (entry.text.trim() !== "" || !!control.row.optional) && entry.text !== String(control.settingState.value); onClicked: control.controller.change(control.row.id, entry.text) }
         }
     }
 }

@@ -194,7 +194,10 @@ async function change(request) {
     const row = byId.get(request.id)
     if (!row) throw new Error("Unknown setting")
     if (request.op === "reset") {
-        if (row.source === "keyword") return persist.resetSetting(row.key)
+        if (row.source === "keyword") {
+            if (row.check === "xkb-layout" && persist.hasOverride("input:kb_variant")) throw new Error("Reset Layout Variant first; it may not exist for the default layout")
+            return persist.resetSetting(row.key)
+        }
         if (row.source === "animation") return persist.resetAnimation(row.key)
         if (row.default === undefined) throw new Error("This setting has no reset")
     }

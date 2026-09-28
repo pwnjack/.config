@@ -159,3 +159,13 @@ await dispatch({op:'set',id:'input.kb-layout',value:'us,it'})
 assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_variant = ""/)
 assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_layout = "us,it"/)
 console.log('ok: keyboard layout, variant and options are checked against XKB before applying')
+
+await dispatch({op:'set',id:'input.kb-variant',value:'intl'})
+events=[]
+await assert.rejects(dispatch({op:'reset',id:'input.kb-layout'}),/Reset Layout Variant first/)
+assert.equal(events.some(e => e[1] === 'reload'),false)
+assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_layout = "us,it"/)
+await dispatch({op:'reset',id:'input.kb-variant'})
+await dispatch({op:'reset',id:'input.kb-layout'})
+assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override input:kb_layout /)
+console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
