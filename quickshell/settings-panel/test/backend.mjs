@@ -4,6 +4,7 @@ import { registerHooks } from 'node:module'
 
 const base = '/fixture/.config'
 const catalog = JSON.parse(fs.readFileSync(new URL('../catalog.json', import.meta.url)))
+catalog.rows.push({id:'test.gtk-raw',source:'gtk',key:'gtk-theme',ini:{key:'gtk-theme-name'}})
 const files = new Map([
     [base + '/quickshell/settings-panel/catalog.json', JSON.stringify(catalog)],
     [base + '/hypr/config/overrides.lua', ''],
@@ -23,6 +24,7 @@ const files = new Map([
 ])
 const dirs = new Map([
     ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
+    ['/usr/share/themes/Emacs/gtk-3.0', []],
     ['/usr/share/icons', ['Papirus-Dark','Bibata-Modern-Classic']],
     ['/usr/share/icons/Bibata-Modern-Classic/cursors', []],
 ])
@@ -198,10 +200,16 @@ assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override inpu
 console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
 
 result = await dispatch({op:'read',ids:['appearance.gtk-theme','appearance.icon-theme']})
-assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['A$&B','Adwaita','Bad\nTheme','Kripton'])
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['A$&B','Adwaita','HighContrast','Kripton'])
 assert.deepEqual(result.values['appearance.icon-theme'].choices.map(c=>c.value),['Papirus-Dark'])
 assert.equal(result.values['appearance.gtk-theme'].value,'Kripton')
 assert.equal(result.values['appearance.gtk-theme'].choices.some(c=>c.value==='Emacs'),false)
+assert.equal(result.values['appearance.gtk-theme'].choices.some(c=>c.value==='Bad\nTheme'),false)
+const systemThemes = dirs.get('/usr/share/themes')
+dirs.set('/usr/share/themes',[])
+result = await dispatch({op:'read',ids:['appearance.gtk-theme']})
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['Adwaita','HighContrast'])
+dirs.set('/usr/share/themes',systemThemes)
 events=[]
 await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'NoGtk'}),/Unknown choice/)
 assert.equal(events.some(e=>e[0]==='gsettings'),false)
@@ -214,7 +222,10 @@ files.set(base+'/gtk-4.0/settings.ini','[Settings]\r\ngtk-font-name=Sans 11\r\n'
 await dispatch({op:'set',id:'appearance.gtk-theme',value:'A$&B'})
 assert.equal(files.get(base+'/gtk-3.0/settings.ini'),'[Settings]\ngtk-theme-name=A$&B\n')
 assert.equal(files.get(base+'/gtk-4.0/settings.ini'),'[Settings]\r\ngtk-theme-name=A$&B\r\ngtk-font-name=Sans 11\r\n')
-await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'Bad\nTheme'}),/multiline/)
+await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'Bad\nTheme'}),/Unknown choice/)
+events=[]
+await assert.rejects(dispatch({op:'set',id:'test.gtk-raw',value:'Bad\nTheme'}),/multiline/)
+assert.equal(events.some(e=>e[0]==='write' || e[0]==='gsettings'),false)
 
 const gtk3BeforeFailure = files.get(base+'/gtk-3.0/settings.ini')
 const gtk4BeforeFailure = files.get(base+'/gtk-4.0/settings.ini')

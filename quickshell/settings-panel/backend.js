@@ -34,16 +34,17 @@ function children(path) {
 }
 const home = GLib.get_home_dir()
 const themeDirs = kind => [`${home}/.local/share/${kind}`, `${home}/.${kind}`, `/usr/share/${kind}`]
-function themeNames(dirs, isTheme) {
-    const names = new Set()
-    for (const dir of dirs) for (const name of children(dir)) if (isTheme(`${dir}/${name}`)) names.add(name)
+function themeNames(dirs, isTheme, builtins = []) {
+    const names = new Set(builtins)
+    for (const dir of dirs) for (const name of children(dir))
+        if (!/[\r\n]/.test(name) && isTheme(`${dir}/${name}`)) names.add(name)
     return [...names].sort((a, b) => a.localeCompare(b)).map(name => ({ label: name, value: name }))
 }
 const hasIcons = dir => { try { return /^Directories=/m.test(read(`${dir}/index.theme`)) } catch (_) { return false } }
 // Each enumerator returns what the system has now, so validation and the
-// dropdown can never disagree and no list of names is kept in the repo.
+// dropdown can never disagree. GTK's built-ins have no theme directories.
 const enumerators = {
-    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`)),
+    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`), ["Adwaita", "HighContrast"]),
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
 }
@@ -150,6 +151,7 @@ function writeGtkIni(entries) {
     }
 }
 async function setGtk(row, value) {
+    if (/[\r\n]/.test(String(value))) throw new Error("Cannot write a multiline GTK value")
     const before = gvariantValue(await execAsync(["gsettings", "get", ...gsettingsArgs(row.key)]))
     const saved = gtkIniPaths.filter(exists).map(path => [path, read(path)])
     try {
