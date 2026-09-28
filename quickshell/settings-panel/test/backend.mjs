@@ -92,7 +92,7 @@ const pulse = {
 // Shape from `hyprctl monitors all -j` on Hyprland 0.56 (trimmed).
 const monitorsFixture = [{name:'DP-1',make:'Ancor Communications Inc',model:'ROG PG279Q',width:2560,height:1440,refreshRate:143.998,scale:1,transform:0,disabled:false,
     availableModes:['2560x1440@59.95Hz','2560x1440@144.00Hz','2560x1440@120.00Hz','2560x1440@99.95Hz','2560x1440@84.98Hz','2560x1440@23.97Hz','1024x768@60.00Hz','800x600@60.32Hz','640x480@59.94Hz']}]
-let guardArmed = false, failEval = false, failHyprReload = false, stopFails = false, fireOnStop = false
+let guardArmed = false, failEval = false, failHyprReload = false, stopFails = false, fireOnStop = false, expireOnEval = false
 const mockEnv = {XDG_STATE_HOME:'/fixture/.local/state',HYPRLAND_INSTANCE_SIGNATURE:'sig'}
 const running = new Set()
 const encoder = new TextEncoder()
@@ -163,6 +163,7 @@ globalThis.settingsMocks = {
         if (args[1] === 'animations') return JSON.stringify([[{name:'windows',enabled:true,speed:6,bezier:'ease',style:'popin 80%'}],[]])
         if (args[1] === 'monitors') return JSON.stringify(monitorsFixture)
         if (args[1] === 'eval' && failEval) return 'error: bad monitor'
+        if (args[1] === 'eval' && expireOnEval) guardArmed = false
         if (args[1] === 'reload' && failHyprReload) return 'error: reload failed'
         if (args[0] === 'systemd-run') {
             if (guardArmed) throw new Error('Unit settings-display-revert.timer was already loaded')
@@ -692,3 +693,27 @@ await dispatch({op:'displayRevert'})
 await assert.rejects(dispatch({op:'displayApply',output:'DP-1',automatic:true,disabled:true}),/not both/)
 assert.equal(guardArmed,false)
 console.log('ok: the guard inherits the session signature when none is set; contradictory requests are refused')
+// Second review round: only an evaluated, still-guarded change can be kept.
+events=[]
+await dispatch(apply)
+assert.ok(events.findIndex(e=>e[1]==='eval') < events.findIndex(e=>e[0]==='write' && e[1]===pendingPath),'the pending record follows a successful eval')
+await dispatch({op:'displayRevert'})
+failEval=true
+await assert.rejects(dispatch(apply),/bad monitor/)
+failEval=false
+assert.equal(files.has(pendingPath),false)
+expireOnEval=true
+await assert.rejects(dispatch(apply),/took too long/)
+expireOnEval=false
+assert.equal(files.has(pendingPath),false)
+assert.ok(events.filter(e=>e[1]==='reload').length > 0)
+events=[]
+await dispatch(apply)
+await dispatch({op:'displayKeep'})
+assert.equal(events.filter(e=>e[1]==='reload').length,1,'Keep always ends with a reload of the kept file')
+await dispatch({op:'displayApply',output:'DP-1',automatic:true}); await dispatch({op:'displayKeep'})
+files.set(pendingPath,JSON.stringify({output:'DP-1',line:'stale',remove:false,deadline:0}))
+await assert.rejects(dispatch({op:'displayApply',output:'DP-1',automatic:true,disabled:true}),/not both/)
+assert.equal(files.has(pendingPath),true,'a contradictory request changes nothing, not even stale state')
+files.delete(pendingPath)
+console.log('ok: pending follows eval, an expired guard reverts, Keep reloads, contradictions touch nothing')

@@ -475,7 +475,6 @@ async function displaysSnapshot() {
 function displayConfig(request, monitors) {
     const monitor = monitors.find(m => m.name === request.output)
     if (!monitor) throw new Error("Display is no longer connected")
-    if (request.automatic === true && request.disabled === true) throw new Error("Choose Automatic or Off, not both")
     if (request.automatic === true) return { ...displays.AUTOMATIC }
     if (request.disabled === true) {
         if (!monitors.some(m => m.name !== monitor.name && !m.disabled)) throw new Error("At least one display must stay on")
@@ -509,6 +508,7 @@ async function displayRevert() {
     return { pending: null }
 }
 async function displayApply(request) {
+    if (request.automatic === true && request.disabled === true) throw new Error("Choose Automatic or Off, not both")
     if (exists(pendingPath)) {
         if (await guardArmed()) throw new Error("A display change is waiting for Keep or Revert")
         remove(pendingPath) // The guard fired while no panel was watching.
@@ -522,16 +522,19 @@ async function displayApply(request) {
     const signature = GLib.getenv("HYPRLAND_INSTANCE_SIGNATURE")
     await execAsync(["systemd-run", "--user", "--collect", `--unit=${guardUnit}`, "--on-active=20", "--timer-property=AccuracySec=100ms",
         ...(signature ? [`--setenv=HYPRLAND_INSTANCE_SIGNATURE=${signature}`] : []), GLib.find_program_in_path("hyprctl"), "reload"])
-    const pending = { output: request.output, line, remove: request.automatic === true, deadline: Date.now() + 15000 }
     try {
+        await checkedHyprctl(["eval", line])
+        // The one-shot guard must outlive the change it protects.
+        if (!(await guardArmed())) throw new Error("The display change took too long and was reverted")
+        // Recorded only now: Keep can only ever persist a line that was applied.
+        const pending = { output: request.output, line, remove: request.automatic === true, deadline: Date.now() + 15000 }
         makeParent(pendingPath)
         write(pendingPath, JSON.stringify(pending) + "\n")
-        await checkedHyprctl(["eval", line])
+        return { pending }
     } catch (error) {
         await displayRevert()
         throw error
     }
-    return { pending }
 }
 async function displayKeep() {
     if (!exists(pendingPath)) throw new Error("No display change is waiting")
@@ -546,9 +549,10 @@ async function displayKeep() {
         throw new Error(`${error.message}. The display will revert.`)
     }
     remove(pendingPath)
-    // The guard fired between the check and the stop; its reload may have read
-    // the old file, so load the kept one.
-    if (!(await stopGuard())) await checkedHyprctl(["reload"])
+    await stopGuard()
+    // A timer that already fired can still be reloading from the old file, and
+    // stop cannot tell; reloading the kept file makes live and saved agree.
+    await checkedHyprctl(["reload"])
     return { pending: null }
 }
 
