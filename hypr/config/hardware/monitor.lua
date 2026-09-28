@@ -43,6 +43,11 @@ if file then
         end
         if not ok then break end
     end
+    -- Accepted limitation: a well-typed rule with a value Hyprland rejects
+    -- (transform 9, a mode string it cannot parse) does not raise here while
+    -- the config loads; Hyprland skips that one rule and shows it in its
+    -- config-error banner, as for any hand-edited config. The panel only ever
+    -- writes values it validated, so this needs a hand edit.
     if ok then ok, err = pcall(function() for _, spec in ipairs(specs) do hl.monitor(spec) end end) end
     if not ok then monitors_failed(err) end
 elseif errno ~= 2 then -- ENOENT: no file simply means all automatic.
