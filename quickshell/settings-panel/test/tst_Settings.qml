@@ -248,6 +248,27 @@ Item {
             verify(!findChild(view,"applyDisplay-DP-1").enabled);
             verify(findChild(view,"handEdited-DP-1").visible);
         }
+        function test_staged_mode_resets_an_invalid_scale() {
+            const monitor = pg279q({availableModes:["2560x1440@144.00Hz","2560x1440@120.00Hz","1024x768@60.00Hz"]});
+            monitor.choices.modes = monitor.choices.modes.concat([{label:"1024 × 768 · 60 Hz",value:"1024x768@60.00"}]);
+            controller.monitors = [monitor]; controller.select("monitors"); wait(20);
+            pick("select-DP-1-scale", 2);  // 125 % divides 2560×1440
+            pick("select-DP-1-mode", 3);   // 1024×768: 125 % does not divide it
+            const scale = findChild(view,"select-DP-1-scale");
+            verify(!scale.choices.some(c => c.value === 1.25));
+            compare(scale.value,1);
+            mouseClick(findChild(view,"applyDisplay-DP-1"));
+            compare(controller.calls[0].mode,"1024x768@60.00");
+            compare(controller.calls[0].scale,1);
+        }
+        function test_everything_else_waits_while_a_display_change_is_pending() {
+            controller.pendingDisplay = {output:"DP-1",deadline:Date.now() + 60000}; wait(20);
+            verify(!findChild(view,"toggle-blur").enabled);
+            verify(!findChild(view,"reloadHyprland").enabled);
+            controller.pendingDisplay = null; wait(20);
+            verify(findChild(view,"toggle-blur").enabled);
+            verify(findChild(view,"reloadHyprland").enabled);
+        }
         function test_pending_banner_keep_and_timeout() {
             controller.pendingDisplay = {output:"DP-1",deadline:Date.now() + 60000}; wait(20);
             verify(findChild(view,"displayPending").visible);

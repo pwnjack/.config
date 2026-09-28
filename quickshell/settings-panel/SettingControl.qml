@@ -39,7 +39,7 @@ Rectangle {
                 theme: control.theme
                 visible: !!control.settingState.reset
                 text: "Reset"
-                enabled: control.ready && !control.controller.busy
+                enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
                 Accessible.name: "Reset " + control.row.title
                 onClicked: control.controller.reset(control.row.id)
             }
@@ -47,7 +47,7 @@ Rectangle {
                 id: toggle
                 objectName: "toggle-" + control.row.id
                 visible: control.row.kind === "toggle"
-                enabled: control.ready && !control.controller.busy
+                enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
                 checked: control.settingState.value === true
                 Accessible.name: control.row.title
                 onToggled: control.controller.change(control.row.id, checked)
@@ -64,7 +64,7 @@ Rectangle {
         Loader {
             Layout.fillWidth: true
             active: control.row.kind !== "toggle"
-            enabled: control.ready && !control.controller.busy
+            enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
             sourceComponent: control.row.kind === "slider" ? sliderComponent : control.row.kind === "select" ? selectComponent : textComponent
         }
     }

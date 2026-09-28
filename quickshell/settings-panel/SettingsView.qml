@@ -158,8 +158,8 @@ FocusScope {
                         Flow {
                             visible: view.controller.category === "monitors" && !view.controller.query.trim()
                             Layout.fillWidth: true; spacing: 8
-                            PanelButton { theme: view; text: "Edit file"; onClicked: view.controller.action("displays-file") }
-                            PanelButton { theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
+                            PanelButton { theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
+                            PanelButton { theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
                         }
                         Label { visible: !view.controller.visibleRows.length && !view.controller.loading; text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24 }
                         Repeater {
@@ -178,7 +178,8 @@ FocusScope {
                 Flow {
                     Layout.fillWidth: true
                     spacing: 8
-                    PanelButton { theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy; onClicked: view.controller.action("reload") }
+                    // A reload would undo a display change still awaiting Keep or Revert.
+                    PanelButton { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.action("reload") }
                     PanelButton { theme: view; text: "Restart Waybar"; onClicked: view.controller.action("waybar") }
                     PanelButton { theme: view; text: "Update system"; onClicked: view.controller.action("update") }
                 }

@@ -725,3 +725,8 @@ assert.ok(events.some(e=>e[1]==='reload'),'a failed pending write reverts the ev
 assert.equal(files.has(pendingPath),false)
 assert.equal(guardArmed,false)
 console.log('ok: pending follows eval, an expired guard reverts, Keep reloads, contradictions touch nothing')
+await dispatch(apply)
+await assert.rejects(dispatch({op:'action',id:'reload'}),/Keep or Revert/)
+await dispatch({op:'displayRevert'})
+await dispatch({op:'action',id:'reload'})
+console.log('ok: nothing reloads Hyprland under a display change awaiting Keep or Revert')

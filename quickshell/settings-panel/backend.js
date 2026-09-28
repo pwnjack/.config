@@ -592,6 +592,8 @@ export async function dispatch(request) {
     throw new Error("Unknown operation")
 }
 async function persistReload() {
+    // A reload would silently undo a display change still awaiting Keep or Revert.
+    if (exists(pendingPath) && await guardArmed()) throw new Error("Keep or Revert the display change first")
     await checkedHyprctl(["reload"])
     const errors = JSON.parse(await execAsync(["hyprctl", "configerrors", "-j"]))
     if (!Array.isArray(errors) || errors.some(error => String(error).trim())) throw new Error("Hyprland reports configuration errors")

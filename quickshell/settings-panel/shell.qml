@@ -177,6 +177,9 @@ ShellRoot {
                 const result = JSON.parse(root.writeReply);
                 if (code !== 0 || !result.ok) throw new Error(result.error || "Settings helper failed");
                 if (result.pending !== undefined) root.pendingDisplay = result.pending;
+                // Closed while this Apply was in flight: close() saw no pending change
+                // yet, and submit() ignores requests once closing, so queue it directly.
+                if (root.closing && result.pending) { root.pendingDisplay = null; root.queue = root.queue.concat([{op: "displayRevert"}]); }
             } catch (error) {
                 root.problem = String(error);
                 if (!root.writeReply.trim()) root.problem = root.writeError.trim() || "The settings helper stopped before confirming the change.";
