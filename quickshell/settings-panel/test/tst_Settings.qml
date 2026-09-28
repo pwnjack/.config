@@ -205,5 +205,14 @@ Item {
             keyClick(Qt.Key_Escape);
             tryCompare(controller,"interacting","");
         }
+        function test_destroyed_control_releases_interaction() {
+            const combo = findChild(view,"select-theme");
+            mouseClick(combo);
+            tryCompare(combo.popup,"visible",true);
+            compare(controller.interacting,"theme");
+            // Switching page destroys the row while its popup is still open.
+            controller.select("input"); wait(50);
+            compare(controller.interacting,"");
+        }
     }
 }

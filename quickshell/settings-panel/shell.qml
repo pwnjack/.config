@@ -62,6 +62,9 @@ ShellRoot {
         loading = true;
         reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true})];
         reader.running = true;
+        // A full read supersedes any live read still waiting on its debounce.
+        liveDirty = ({});
+        liveTimer.stop();
     }
     function markLive(tag) {
         // A write refreshes everything afterwards, so its own echoes are not news.
