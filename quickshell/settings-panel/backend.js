@@ -402,7 +402,9 @@ async function change(request) {
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])
-        const mimes = row.mimes.filter(mime => declared.has(mime) || [...declared].some(type => Gio.content_type_is_a(mime, type)))
+        // Every type is_a application/octet-stream, so that parent would claim the whole row.
+        const parents = [...declared].filter(type => type !== "application/octet-stream")
+        const mimes = row.mimes.filter(mime => declared.has(mime) || parents.some(type => Gio.content_type_is_a(mime, type)))
         if (!mimes.length) mimes.push(row.mimes[0])
         const path = GLib.get_user_config_dir() + "/mimeapps.list"
         const hadFile = exists(path)

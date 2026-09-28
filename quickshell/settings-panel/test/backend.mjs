@@ -37,13 +37,14 @@ const dirs = new Map([
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
 const appsForType = {
     'inode/directory': [['thunar.desktop','Thunar'],['org.gnome.Nautilus.desktop','Files']],
-    'image/png': [['mpv.desktop','mpv'],['image-viewer.desktop','Image Viewer']],
+    'image/png': [['mpv.desktop','mpv'],['image-viewer.desktop','Image Viewer'],['hexed.desktop','Hex Editor']],
     'text/plain': [['nvim.desktop','Neovim']],
 }
 const supportedTypes = {
     'thunar.desktop':['inode/directory'],
     'mpv.desktop':['image/png','image/jpeg'],
     'image-viewer.desktop':['image/png'],
+    'hexed.desktop':['image/png','application/octet-stream'],
     'nvim.desktop':['text/plain'],
 }
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
@@ -72,7 +73,7 @@ globalThis.settingsMocks = {
     },
     Gio: {
         AppInfo: { get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
-        content_type_is_a: (mime, parent) => mime === parent || (mime === 'text/markdown' && parent === 'text/plain'),
+        content_type_is_a: (mime, parent) => mime === parent || (mime === 'text/markdown' && parent === 'text/plain') || (parent === 'application/octet-stream' && !mime.startsWith('inode/')),
         FileCreateFlags:{NONE:0},
         FileQueryInfoFlags:{NONE:0},
         File:{new_for_path: path => ({
@@ -375,7 +376,9 @@ assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>
 events=[]
 await dispatch({op:'set',id:'mime.images',value:'image-viewer.desktop'})
 assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
-assert.notEqual(mimeDefaults['image/svg+xml'],'image-viewer.desktop')
+events=[]
+await dispatch({op:'set',id:'mime.images',value:'hexed.desktop'})
+assert.deepEqual(events.filter(e=>e[0]==='xdg-mime' && e[1]==='default').map(e=>e[3]),['image/png'])
 const exactMimeapps = '[Default Applications]\r\nimage/png=old.desktop\r\n# image/jpeg deliberately has no explicit default\r\n'
 files.set(base+'/mimeapps.list',exactMimeapps)
 mimeDefaults['image/png']='old.desktop'; mimeDefaults['image/jpeg']='inferred.desktop'
