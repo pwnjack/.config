@@ -68,13 +68,24 @@ FocusScope {
                     Accessible.name: "Search settings"
                     background: Rectangle { color: view.plate; radius: 10; border.color: search.activeFocus ? view.accent : "transparent"; border.width: 2 }
                 }
-                Repeater {
+                // Scrolls within the space left over, so a longer catalog never
+                // pushes Close and the footer out of the panel.
+                ListView {
+                    id: categoryList
+                    objectName: "categoryList"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    clip: true
+                    spacing: 8
+                    boundsBehavior: Flickable.StopAtBounds
+                    // Always shown while the list overflows, so hidden categories are discoverable.
+                    ScrollBar.vertical: ScrollBar { policy: categoryList.contentHeight > categoryList.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff }
                     model: view.controller.catalog.categories
                     delegate: Button {
                         id: nav
                         required property var modelData
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 44
+                        width: ListView.view.width
+                        height: 44
                         text: modelData.title
                         readonly property bool selected: view.controller.category === modelData.id && !view.controller.query.trim()
                         onClicked: view.controller.select(modelData.id)
@@ -82,7 +93,6 @@ FocusScope {
                         background: Rectangle { radius: 10; color: nav.selected ? view.accent : nav.hovered ? view.plate : "transparent"; border.color: nav.activeFocus ? view.foreground : "transparent"; border.width: 2 }
                     }
                 }
-                Item { Layout.fillHeight: true }
                 Label { text: view.controller.busy ? "Saving changes…" : view.controller.loading ? "Reading settings…" : "Text fields: Enter or Save"; color: view.foreground; opacity: 0.75; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 PanelButton { objectName: "closeSettings"; text: "Close"; theme: view; Layout.fillWidth: true; onClicked: view.controller.close() }
             }

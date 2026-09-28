@@ -260,5 +260,18 @@ Item {
             wait(600);
             compare(controller.calls.length,1);
         }
+        function test_many_categories_stay_inside_the_panel() {
+            const saved = controller.catalog;
+            const categories = [];
+            for (let index = 0; index < 20; ++index) categories.push({id:"c" + index,title:"Category " + index,description:""});
+            controller.catalog = ({categories: categories, rows: saved.rows});
+            wait(50);
+            const panel = findChild(view,"settingsPanel");
+            const close = findChild(view,"closeSettings");
+            const bottom = close.mapToItem(panel,0,close.height).y;
+            verify(bottom <= panel.height, "Close ends at " + bottom + " inside a " + panel.height + " px panel");
+            controller.catalog = saved;
+            wait(20);
+        }
     }
 }
