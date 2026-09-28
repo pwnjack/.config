@@ -15,7 +15,9 @@ request_arg=$1
 if [[ $request_arg == - ]]; then
     request_line=
     # SETTINGS_STDIN_TIMEOUT exists for the test suite; the panel always sends a full line.
-    if IFS= read -r -t "${SETTINGS_STDIN_TIMEOUT:-30}" request_line; then
+    stdin_timeout=${SETTINGS_STDIN_TIMEOUT:-30}
+    [[ $stdin_timeout =~ ^[1-9][0-9]*$ ]] || stdin_timeout=30
+    if IFS= read -r -t "$stdin_timeout" request_line; then
         :
     else
         read_status=$?

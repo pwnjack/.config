@@ -7,22 +7,29 @@ request_sh="$repo_root/scripts/settings/panel-request.sh"
 request_js="$repo_root/quickshell/settings-panel/request.js"
 shell_qml="$repo_root/quickshell/settings-panel/shell.qml"
 
-grep -Eq '^[[:space:]]*writer\.command = \[[^]]*,[[:space:]]*"-"\];[[:space:]]*$' "$shell_qml" || {
-    echo 'writer.command must end with the stdin marker "-"' >&2
-    exit 1
-}
-if grep -Eq 'command[[:space:]]*=.*(JSON\.stringify\(request\)|writeRequest)' "$shell_qml"; then
-    echo 'writer.command must not put request JSON in argv' >&2
-    exit 1
-fi
-grep -Fq 'writer.write(root.writeRequest + "\n")' "$shell_qml" || {
-    echo 'the writer must send the request as one newline-terminated line' >&2
-    exit 1
-}
-if grep -Eq 'environment[[:space:]]*[:=].*(JSON\.stringify|writeRequest)' "$shell_qml"; then
-    echo 'the request must not reach a process environment' >&2
-    exit 1
-fi
+# Structural guards: the dynamic checks below never run shell.qml, so the QML
+# side is pinned by allowlists rather than by patterns a rewrite could dodge.
+guard_fail() { echo "shell.qml: $1" >&2; exit 1; }
+# The request lives in writeRequest, which may only be declared, filled in
+# drain(), written in the writer's onStarted, and cleared.
+mapfile -t request_uses < <(grep -n 'writeRequest' "$shell_qml" | sed 's/^[0-9]*://; s/^[[:space:]]*//')
+allowed_uses=(
+    'property string writeRequest: ""'
+    'writeRequest = JSON.stringify(request);'
+    'onStarted: { writer.write(root.writeRequest + "\n"); root.writeRequest = ""; }'
+    'root.writeRequest = "";'
+)
+for use in "${request_uses[@]}"; do
+    known=false
+    for allowed in "${allowed_uses[@]}"; do [[ $use == "$allowed" ]] && known=true; done
+    [[ $known == true ]] || guard_fail "unexpected use of writeRequest: $use"
+done
+(( ${#request_uses[@]} == 4 )) || guard_fail "expected exactly 4 writeRequest lines, found ${#request_uses[@]}"
+[[ $(grep -c 'JSON\.stringify(request)' "$shell_qml") == 1 ]] || guard_fail 'the request may only be serialised into writeRequest'
+[[ $(grep -c 'writer\.command' "$shell_qml") == 1 ]] || guard_fail 'writer.command may only be set once'
+grep -Eq '^[[:space:]]*writer\.command = \[[^]]*,[[:space:]]*"-"\];[[:space:]]*$' "$shell_qml" || guard_fail 'writer.command must end with the stdin marker "-"'
+# No process in the panel needs a custom environment; any would be a place to leak into.
+! grep -q 'environment' "$shell_qml" || guard_fail 'no Process may set an environment'
 echo 'ok: panel writer command uses stdin'
 
 tmp=$(mktemp -d)
@@ -92,7 +99,7 @@ fi
 sample_count=0
 deadline=$((SECONDS + 20))
 while kill -0 "$job" 2>/dev/null; do
-    (( SECONDS < deadline )) || { kill "$job" 2>/dev/null; echo 'request never finished' >&2; exit 1; }
+    (( SECONDS < deadline )) || { pkill -P "$job" 2>/dev/null; kill "$job" 2>/dev/null; echo 'request never finished' >&2; exit 1; }
     sample_count=$((sample_count + 1))
     grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/cmdline >> "$tmp/found-argv" 2>/dev/null || true
     grep -l -a -F -f "$tmp/pattern" /proc/[0-9]*/environ >> "$tmp/found-environ" 2>/dev/null || true
