@@ -92,13 +92,14 @@ const pulse = {
 // Shape from `hyprctl monitors all -j` on Hyprland 0.56 (trimmed).
 const monitorsFixture = [{name:'DP-1',make:'Ancor Communications Inc',model:'ROG PG279Q',width:2560,height:1440,refreshRate:143.998,scale:1,transform:0,disabled:false,
     availableModes:['2560x1440@59.95Hz','2560x1440@144.00Hz','2560x1440@120.00Hz','2560x1440@99.95Hz','2560x1440@84.98Hz','2560x1440@23.97Hz','1024x768@60.00Hz','800x600@60.32Hz','640x480@59.94Hz']}]
-let guardArmed = false, failEval = false
+let guardArmed = false, failEval = false, failHyprReload = false, stopFails = false, fireOnStop = false
+const mockEnv = {XDG_STATE_HOME:'/fixture/.local/state',HYPRLAND_INSTANCE_SIGNATURE:'sig'}
 const running = new Set()
 const encoder = new TextEncoder()
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
-        getenv: name => ({XDG_STATE_HOME:'/fixture/.local/state',HYPRLAND_INSTANCE_SIGNATURE:'sig'})[name] ?? null,
+        getenv: name => mockEnv[name] ?? null,
         get_user_runtime_dir: () => '/run/user/1000',
         find_program_in_path: name => name === 'missing-app' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
@@ -162,12 +163,17 @@ globalThis.settingsMocks = {
         if (args[1] === 'animations') return JSON.stringify([[{name:'windows',enabled:true,speed:6,bezier:'ease',style:'popin 80%'}],[]])
         if (args[1] === 'monitors') return JSON.stringify(monitorsFixture)
         if (args[1] === 'eval' && failEval) return 'error: bad monitor'
+        if (args[1] === 'reload' && failHyprReload) return 'error: reload failed'
         if (args[0] === 'systemd-run') {
             if (guardArmed) throw new Error('Unit settings-display-revert.timer was already loaded')
             guardArmed = true; return ''
         }
         if (args[0] === 'systemctl' && args.includes('is-active')) { if (!guardArmed) throw new Error('inactive'); return '' }
-        if (args[0] === 'systemctl' && args.includes('stop')) { if (!guardArmed) throw new Error('Unit settings-display-revert.timer not loaded.'); guardArmed = false; return '' }
+        if (args[0] === 'systemctl' && args.includes('stop')) {
+            if (stopFails) throw new Error('Failed to connect to bus')
+            // The timer fires between Keep's check and its stop.
+            if (fireOnStop) { guardArmed = false; events.push(['hyprctl','reload','(guard)']); throw new Error('Unit settings-display-revert.timer not loaded.') }
+            if (!guardArmed) throw new Error('Unit settings-display-revert.timer not loaded.'); guardArmed = false; return '' }
         if (args[1] === 'configerrors') return '[]'
         if (args[0] === 'swaync-client' && failReload) { failReload=false; throw new Error('reload failed') }
         if (args[0] === 'localectl') return {
@@ -634,3 +640,55 @@ await dispatch({op:'action',id:'displays-file'})
 assert.equal(files.get(statePath),displays.STATE_HEADER)
 assert.deepEqual(events.find(e=>e[0]==='spawn')[1],['ghostty','-e','nvim',statePath])
 console.log('ok: a second display can be disabled, hand-edited outputs are refused, Edit file opens the state file')
+// Review round: the guard is disarmed only once the display is known safe.
+const stops = () => events.filter(e=>e[0]==='systemctl' && e.includes('stop'))
+events=[]
+await dispatch(apply)
+await dispatch({op:'displayRevert'})
+assert.ok(events.findIndex(e=>e[1]==='reload') < events.indexOf(stops()[0]),'Revert reloads while the guard is armed')
+await dispatch(apply)
+failHyprReload=true
+await assert.rejects(dispatch({op:'displayRevert'}),/reload failed/)
+failHyprReload=false
+assert.equal(guardArmed,true)
+assert.equal(files.has(pendingPath),true)
+await dispatch({op:'displayRevert'})
+await dispatch(apply)
+stopFails=true
+await assert.rejects(dispatch({op:'displayRevert'}),/Failed to connect/)
+stopFails=false
+assert.equal(files.has(pendingPath),true)
+await dispatch({op:'displayRevert'})
+assert.equal(guardArmed,false)
+console.log('ok: Revert reloads before disarming and surfaces a guard it could not stop')
+
+files.set(statePath,displays.STATE_HEADER)
+events=[]
+await dispatch(apply)
+await dispatch({op:'displayKeep'})
+assert.ok(events.findIndex(e=>e[0]==='write' && e[1]===statePath) < events.indexOf(stops()[0]),'Keep writes before disarming')
+await dispatch({op:'displayApply',output:'DP-1',automatic:true}); await dispatch({op:'displayKeep'})
+await dispatch(apply)
+failingPath=statePath
+await assert.rejects(dispatch({op:'displayKeep'}),/disk full\. The display will revert/)
+failingPath=''
+assert.equal(guardArmed,true)
+await dispatch({op:'displayRevert'})
+await dispatch(apply)
+fireOnStop=true; events=[]
+await dispatch({op:'displayKeep'})
+fireOnStop=false
+assert.equal(files.get(statePath),displays.STATE_HEADER+line+'\n')
+assert.equal(events.filter(e=>e[1]==='reload' && e[2]!=='(guard)').length,1,'a guard that fired mid-Keep is followed by a reload of the kept file')
+await dispatch({op:'displayApply',output:'DP-1',automatic:true}); await dispatch({op:'displayKeep'})
+console.log('ok: Keep writes while the guard is armed and re-syncs if the guard fired meanwhile')
+
+delete mockEnv.HYPRLAND_INSTANCE_SIGNATURE
+events=[]
+await dispatch(apply)
+assert.equal(events.find(e=>e[0]==='systemd-run').some(a=>String(a).startsWith('--setenv')),false)
+mockEnv.HYPRLAND_INSTANCE_SIGNATURE='sig'
+await dispatch({op:'displayRevert'})
+await assert.rejects(dispatch({op:'displayApply',output:'DP-1',automatic:true,disabled:true}),/not both/)
+assert.equal(guardArmed,false)
+console.log('ok: the guard inherits the session signature when none is set; contradictory requests are refused')

@@ -475,6 +475,7 @@ async function displaysSnapshot() {
 function displayConfig(request, monitors) {
     const monitor = monitors.find(m => m.name === request.output)
     if (!monitor) throw new Error("Display is no longer connected")
+    if (request.automatic === true && request.disabled === true) throw new Error("Choose Automatic or Off, not both")
     if (request.automatic === true) return { ...displays.AUTOMATIC }
     if (request.disabled === true) {
         if (!monitors.some(m => m.name !== monitor.name && !m.disabled)) throw new Error("At least one display must stay on")
@@ -488,11 +489,23 @@ function displayConfig(request, monitors) {
         throw new Error("This scale does not divide the mode evenly")
     return config
 }
-// Nothing reaches monitors.lua before Keep, so reloading is always a correct revert.
+// True if this call disarmed the guard; false if it had already fired or was
+// never armed. Any other failure is real and is raised.
+async function stopGuard() {
+    try { await execAsync(["systemctl", "--user", "stop", `${guardUnit}.timer`]); return true }
+    catch (error) {
+        if (/not loaded/.test(error.message)) return false
+        throw error
+    }
+}
+// Nothing reaches monitors.lua before Keep, so reloading is always a correct
+// revert. It reloads while the guard is still armed, so a failed reload or a
+// dying process still leaves the guard to revert. Unrelated config errors must
+// not block a revert, hence a plain reload rather than persistReload().
 async function displayRevert() {
-    try { await execAsync(["systemctl", "--user", "stop", `${guardUnit}.timer`]) } catch (_) { /* Already fired, or never armed. */ }
+    await checkedHyprctl(["reload"])
+    await stopGuard()
     if (exists(pendingPath)) remove(pendingPath)
-    await persistReload()
     return { pending: null }
 }
 async function displayApply(request) {
@@ -504,9 +517,11 @@ async function displayApply(request) {
     if (state.handEdited.has(request.output) || state.handEdited.has("*"))
         throw new Error(`${displayStatePath} was edited by hand; change ${request.output} there`)
     const line = displays.monitorLine(request.output, displayConfig(request, await readMonitors()))
-    // The guard reverts even if the panel dies or its screen goes dark.
+    // The guard reverts even if the panel dies or its screen goes dark. Without a
+    // signature here, the session's own one in the systemd manager is used.
+    const signature = GLib.getenv("HYPRLAND_INSTANCE_SIGNATURE")
     await execAsync(["systemd-run", "--user", "--collect", `--unit=${guardUnit}`, "--on-active=20", "--timer-property=AccuracySec=100ms",
-        `--setenv=HYPRLAND_INSTANCE_SIGNATURE=${GLib.getenv("HYPRLAND_INSTANCE_SIGNATURE") || ""}`, GLib.find_program_in_path("hyprctl"), "reload"])
+        ...(signature ? [`--setenv=HYPRLAND_INSTANCE_SIGNATURE=${signature}`] : []), GLib.find_program_in_path("hyprctl"), "reload"])
     const pending = { output: request.output, line, remove: request.automatic === true, deadline: Date.now() + 15000 }
     try {
         makeParent(pendingPath)
@@ -522,15 +537,18 @@ async function displayKeep() {
     if (!exists(pendingPath)) throw new Error("No display change is waiting")
     const pending = JSON.parse(read(pendingPath))
     if (!(await guardArmed())) { remove(pendingPath); throw new Error("The change was already reverted") }
-    await execAsync(["systemctl", "--user", "stop", `${guardUnit}.timer`])
+    // Written while the guard is still armed: whatever fails from here on, the
+    // guard's reload reads this file, which is the layout being kept.
     try {
         makeParent(displayStatePath)
         write(displayStatePath, displays.stateFileWith(exists(displayStatePath) ? read(displayStatePath) : "", pending.output, pending.remove ? null : pending.line))
     } catch (error) {
-        await displayRevert()
-        throw new Error(`${error.message}. The display was reverted.`)
+        throw new Error(`${error.message}. The display will revert.`)
     }
     remove(pendingPath)
+    // The guard fired between the check and the stop; its reload may have read
+    // the old file, so load the kept one.
+    if (!(await stopGuard())) await checkedHyprctl(["reload"])
     return { pending: null }
 }
 
