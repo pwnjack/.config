@@ -63,6 +63,24 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 - AGS no longer starts at login or after wallpaper changes. Its retired source
   and AGS/Astal packages are gone; GJS remains an explicit backend dependency.
 
+## Displays: verified behaviour
+
+Probed on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2 on September 28,
+2026. Each probe ran under a `systemd-run --user` guard that reloaded after
+20 s.
+
+- `hyprctl eval 'hl.monitor({ output = "DP-1", mode = "2560x1440@120.00", ... })'`
+  replies `ok` and applies at once (143.998 → 119.998 Hz within 1 s);
+  `hyprctl reload` restores the configured rule (back to 143.998 Hz).
+- A transient timer (`--on-active=5 --collect`) running `hyprctl reload`
+  reverted an applied 120 Hz mode by itself and left no unit behind.
+- Scales, each accepted by `eval` with `ok` and no config error:
+  `1.25` → 1.25; `1.3333333333333333` → 1.3333334 (stored as a float);
+  `1.5` → **1.6, silently** — nothing in `configerrors` or the log. Hyprland
+  substitutes a nearby valid scale when the logical size is not whole, so the
+  panel offers only scales that divide the mode.
+- Full read of every row before round 2: 282 ms median (278–285 ms, five runs).
+
 ## Measurements
 
 Measured September 19, 2026 with Quickshell 0.3.1 / Qt 6.11.2 on this host,
