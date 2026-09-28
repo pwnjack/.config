@@ -916,7 +916,8 @@ export async function addAndActivate({ ssid, psk, keyMgmt }) {
     const connection = NM.SimpleConnection.new()
     connection.add_setting(new NM.SettingConnection({ id: ssid, uuid: NM.utils_uuid_generate(), type: "802-11-wireless", autoconnect: true }))
     connection.add_setting(new NM.SettingWireless({ ssid: new GLib.Bytes(new TextEncoder().encode(ssid)), mode: "infrastructure" }))
-    if (psk !== null) connection.add_setting(new NM.SettingWirelessSecurity({ key_mgmt: keyMgmt, psk }))
+    // keyMgmt is "wpa-psk", "sae" or "owe" (network.mjs); a truly open network has none.
+    if (keyMgmt) connection.add_setting(new NM.SettingWirelessSecurity(psk !== null ? { key_mgmt: keyMgmt, psk } : { key_mgmt: keyMgmt }))
     const active = await nm().add_and_activate_connection_async(connection, device, ap.get_path(), null)
     try { await settled(active) }
     catch (error) {
@@ -1204,7 +1205,7 @@ ColumnLayout {
             border.color: modelData.active ? page.theme.accent : "transparent"
             MouseArea {
                 anchors.fill: parent
-                enabled: !page.controller.busy && entry.modelData.security !== "unsupported"
+                enabled: !page.controller.busy && entry.modelData.security !== "unsupported" && !entry.modelData.activating
                 onClicked: {
                     if (entry.modelData.known || !entry.secured) {
                         page.expanded = "";
@@ -1218,8 +1219,8 @@ ColumnLayout {
                 RowLayout {
                     Label { text: page.bars[entry.modelData.bars]; color: page.theme.foreground; font.pixelSize: 18 }
                     Label { text: entry.modelData.ssid; color: page.theme.foreground; font.bold: entry.modelData.active; elide: Text.ElideRight; Layout.fillWidth: true }
-                    Label { visible: entry.modelData.security !== "open"; text: page.lock; color: page.theme.foreground; opacity: 0.75 }
-                    Label { text: entry.modelData.active ? "Connected" : entry.modelData.known ? "Saved" : ""; color: page.theme.foreground; opacity: 0.75 }
+                    Label { visible: entry.modelData.security !== "open" && entry.modelData.security !== "owe"; text: page.lock; color: page.theme.foreground; opacity: 0.75 }
+                    Label { text: entry.modelData.active ? "Connected" : entry.modelData.activating ? "Connecting…" : entry.modelData.known ? "Saved" : ""; color: page.theme.foreground; opacity: 0.75 }
                     Loader {
                         active: entry.modelData.known
                         sourceComponent: PanelButton {
@@ -1254,7 +1255,8 @@ ColumnLayout {
                         id: connectButton
                         objectName: "connect-" + entry.modelData.ssid
                         theme: page.theme; text: "Connect"
-                        enabled: psk.text.length >= 8 && !page.controller.busy
+                        // WPA2 needs 8–63 characters; WPA3-SAE accepts any non-empty password (network.mjs validates both).
+                        enabled: (entry.modelData.security === "sae" ? psk.text.length > 0 : psk.text.length >= 8) && !page.controller.busy
                         onClicked: {
                             page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid, psk: psk.text});
                             psk.text = "";
