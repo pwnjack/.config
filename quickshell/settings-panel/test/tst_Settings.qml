@@ -46,6 +46,7 @@ Item {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
             controller.calls = []; controller.busy = false;
             controller.loaded = true; controller.loading = false;
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -162,6 +163,26 @@ Item {
             keyClick(Qt.Key_Up); keyClick(Qt.Key_Return);
             tryCompare(combo.popup,"visible",false);
             compare(controller.calls[0].value,"A");
+        }
+        function test_unknown_select_value_is_displayed() {
+            controller.values = Object.assign({},controller.values,{theme:{value:"Custom",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]}});
+            wait(20);
+            const combo = findChild(view,"select-theme");
+            compare(combo.currentIndex,-1);
+            compare(combo.displayText,"Custom");
+        }
+        function test_long_select_popup_height_is_capped() {
+            const choices = [];
+            for (let index = 0; index < 40; ++index)
+                choices.push({label:"Theme " + index,value:"theme-" + index});
+            controller.values = Object.assign({},controller.values,{theme:{value:"theme-0",choices:choices}});
+            wait(20);
+            const combo = findChild(view,"select-theme");
+            mouseClick(combo);
+            tryCompare(combo.popup,"visible",true);
+            verify(combo.popup.height <= 320);
+            keyClick(Qt.Key_Escape);
+            tryCompare(combo.popup,"visible",false);
         }
     }
 }

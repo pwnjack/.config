@@ -13,19 +13,22 @@ const files = new Map([
     [base + '/hypr/config/hardware/primary.conf', '$monitor =\n'],
     ['/usr/share/icons/Papirus-Dark/index.theme', '[Icon Theme]\nDirectories=16x16/apps\n'],
     ['/usr/share/icons/Bibata-Modern-Classic/index.theme', '[Icon Theme]\nName=Bibata\n'],
+    ['/usr/share/themes/Kripton/gtk-3.0/gtk.css', ''],
+    ['/usr/share/themes/Adwaita/gtk-3.0/gtk.css', ''],
+    ['/usr/share/themes/A$&B/gtk-3.0/gtk.css', ''],
+    ['/usr/share/themes/Bad\nTheme/gtk-3.0/gtk.css', ''],
+    ['/usr/share/themes/Emacs/gtk-3.0/gtk-keys.css', ''],
     [base + '/gtk-3.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\ngtk-font-name=Sans 11\n'],
     [base + '/gtk-4.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\n'],
 ])
 const dirs = new Map([
-    ['/usr/share/themes', ['Kripton','Adwaita','NoGtk']],
-    ['/usr/share/themes/Kripton/gtk-3.0', []],
-    ['/usr/share/themes/Adwaita/gtk-3.0', []],
+    ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
     ['/usr/share/icons', ['Papirus-Dark','Bibata-Modern-Classic']],
     ['/usr/share/icons/Bibata-Modern-Classic/cursors', []],
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
-let events = [], failingPath = '', failReload = false
+let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
 const hyprOptions = {
@@ -83,7 +86,10 @@ globalThis.settingsMocks = {
             'list-x11-keymap-variants': args[2] === 'us' ? 'intl\ncolemak\n' : 'nodeadkeys\n',
         }[args[1]]
         if (args[0] === 'gsettings' && args[1] === 'get') return gsettings[args[3]]
-        if (args[0] === 'gsettings' && args[1] === 'set') { gsettings[args[3]] = args[4]; return '' }
+        if (args[0] === 'gsettings' && args[1] === 'set') {
+            if (failingGsettingsSets > 0) { failingGsettingsSets--; throw new Error('gsettings set failed') }
+            gsettings[args[3]] = args[4]; return ''
+        }
         return 'ok'
     },
 }
@@ -192,9 +198,10 @@ assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override inpu
 console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
 
 result = await dispatch({op:'read',ids:['appearance.gtk-theme','appearance.icon-theme']})
-assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['Adwaita','Kripton'])
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['A$&B','Adwaita','Bad\nTheme','Kripton'])
 assert.deepEqual(result.values['appearance.icon-theme'].choices.map(c=>c.value),['Papirus-Dark'])
 assert.equal(result.values['appearance.gtk-theme'].value,'Kripton')
+assert.equal(result.values['appearance.gtk-theme'].choices.some(c=>c.value==='Emacs'),false)
 events=[]
 await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'NoGtk'}),/Unknown choice/)
 assert.equal(events.some(e=>e[0]==='gsettings'),false)
@@ -202,6 +209,31 @@ await dispatch({op:'set',id:'appearance.gtk-theme',value:'Adwaita'})
 assert.equal(gsettings['gtk-theme'],"'Adwaita'")
 assert.equal(files.get(base+'/gtk-3.0/settings.ini'),'[Settings]\ngtk-theme-name=Adwaita\ngtk-font-name=Sans 11\n')
 assert.equal(files.get(base+'/gtk-4.0/settings.ini'),'[Settings]\ngtk-theme-name=Adwaita\n')
+files.set(base+'/gtk-3.0/settings.ini','[Settings]')
+files.set(base+'/gtk-4.0/settings.ini','[Settings]\r\ngtk-font-name=Sans 11\r\n')
+await dispatch({op:'set',id:'appearance.gtk-theme',value:'A$&B'})
+assert.equal(files.get(base+'/gtk-3.0/settings.ini'),'[Settings]\ngtk-theme-name=A$&B\n')
+assert.equal(files.get(base+'/gtk-4.0/settings.ini'),'[Settings]\r\ngtk-theme-name=A$&B\r\ngtk-font-name=Sans 11\r\n')
+await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'Bad\nTheme'}),/multiline/)
+
+const gtk3BeforeFailure = files.get(base+'/gtk-3.0/settings.ini')
+const gtk4BeforeFailure = files.get(base+'/gtk-4.0/settings.ini')
+events=[]
+failingGsettingsSets=1
+await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'Adwaita'}),/gsettings set failed\. Previous settings restored\./)
+assert.equal(files.get(base+'/gtk-3.0/settings.ini'),gtk3BeforeFailure)
+assert.equal(files.get(base+'/gtk-4.0/settings.ini'),gtk4BeforeFailure)
+assert.deepEqual(events.filter(e=>e[0]==='gsettings' && e[1]==='set').at(-1),['gsettings','set','org.gnome.desktop.interface','gtk-theme',"'A$&B'"])
+failingGsettingsSets=2
+await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'Adwaita'}),/gsettings set failed\. Restoring the previous gsettings value also failed: gsettings set failed/)
+assert.equal(files.get(base+'/gtk-3.0/settings.ini'),gtk3BeforeFailure)
+assert.equal(files.get(base+'/gtk-4.0/settings.ini'),gtk4BeforeFailure)
+
+events=[]
+await dispatch({op:'set',id:'appearance.color-scheme',value:'prefer-dark'})
+assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-application-prefer-dark-theme=true$/m)
+assert.match(files.get(base+'/gtk-4.0/settings.ini'),/^gtk-application-prefer-dark-theme=true$/m)
+assert.deepEqual(events.find(e=>e[0]==='gsettings' && e[1]==='set'),['gsettings','set','org.gnome.desktop.interface','color-scheme',"'prefer-dark'"])
 await dispatch({op:'set',id:'appearance.color-scheme',value:'prefer-light'})
 assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-application-prefer-dark-theme=false$/m)
-console.log('ok: GTK appearance writes gsettings and both settings.ini files, only to listed themes')
+console.log('ok: GTK appearance filters themes, preserves literal INI values and line endings, and rolls back failures')

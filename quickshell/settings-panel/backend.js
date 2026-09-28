@@ -43,7 +43,7 @@ const hasIcons = dir => { try { return /^Directories=/m.test(read(`${dir}/index.
 // Each enumerator returns what the system has now, so validation and the
 // dropdown can never disagree and no list of names is kept in the repo.
 const enumerators = {
-    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0`)),
+    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0/gtk.css`)),
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
 }
@@ -128,10 +128,16 @@ function gvariantValue(text) {
 }
 const gvariantLiteral = value => typeof value === "number" ? String(value) : `'${String(value).replace(/[\\']/g, "\\$&")}'`
 function iniSet(path, text, key, value) {
-    if (!/^\[Settings\]$/m.test(text)) throw new Error(`${path} has no [Settings] section`)
+    if (/[\r\n]/.test(value)) throw new Error(`Cannot write a multiline value to ${path}`)
+    const section = /^(\[Settings\])(\r\n|\n|\r|$)/m
+    if (!section.test(text)) throw new Error(`${path} has no [Settings] section`)
     const line = `${key}=${value}`
-    const pattern = new RegExp(`^${key}=.*$`, "m")
-    return pattern.test(text) ? text.replace(pattern, line) : text.replace(/^\[Settings\]\n/m, `[Settings]\n${line}\n`)
+    const pattern = new RegExp(`^${key}=[^\\r\\n]*(?=\\r?$)`, "m")
+    return pattern.test(text)
+        ? text.replace(pattern, () => line)
+        : text.replace(section, (_match, header, ending) => ending
+            ? `${header}${ending}${line}${ending}`
+            : `${header}\n${line}\n`)
 }
 // GTK 3 on Wayland reads some keys from gsettings and others from settings.ini,
 // so both are written; the ini files are tracked and keep every other line.
@@ -151,8 +157,9 @@ async function setGtk(row, value) {
         await execAsync(["gsettings", "set", ...gsettingsArgs(row.key), gvariantLiteral(value)])
     } catch (error) {
         for (const [path, text] of saved) write(path, text)
-        await execAsync(["gsettings", "set", ...gsettingsArgs(row.key), gvariantLiteral(before)])
-        throw error
+        try { await execAsync(["gsettings", "set", ...gsettingsArgs(row.key), gvariantLiteral(before)]) }
+        catch (rollback) { throw new Error(`${error.message}. Restoring the previous gsettings value also failed: ${rollback.message}`) }
+        throw new Error(`${error.message}. Previous settings restored.`)
     }
 }
 
