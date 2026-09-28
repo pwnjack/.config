@@ -717,4 +717,11 @@ files.set(pendingPath,JSON.stringify({output:'DP-1',line:'stale',remove:false,de
 await assert.rejects(dispatch({op:'displayApply',output:'DP-1',automatic:true,disabled:true}),/not both/)
 assert.equal(files.has(pendingPath),true,'a contradictory request changes nothing, not even stale state')
 files.delete(pendingPath)
+failingPath=pendingPath
+events=[]
+await assert.rejects(dispatch(apply),/disk full/)
+failingPath=''
+assert.ok(events.some(e=>e[1]==='reload'),'a failed pending write reverts the evaluated change')
+assert.equal(files.has(pendingPath),false)
+assert.equal(guardArmed,false)
 console.log('ok: pending follows eval, an expired guard reverts, Keep reloads, contradictions touch nothing')
