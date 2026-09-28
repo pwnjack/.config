@@ -9,4 +9,5 @@ cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/settings-panel"
 mkdir -p "$cache_dir"
 exec 9>"$cache_dir/request.lock"
 flock -w 30 9 || { echo 'Settings are busy; try again.' >&2; exit 1; }
-gjs -m "$HOME/.config/quickshell/settings-panel/request.js" "$1"
+# `-` means the request arrives on stdin (the panel's writes: they can carry a Wi-Fi password).
+exec gjs -m "$HOME/.config/quickshell/settings-panel/request.js" "$1"

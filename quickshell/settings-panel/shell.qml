@@ -41,6 +41,7 @@ ShellRoot {
     property var queue: []
     property string readReply: ""
     property string writeReply: ""
+    property string writeRequest: ""
     property string readError: ""
     property string writeError: ""
     readonly property double startedAt: Number(Quickshell.env("SETTINGS_STARTED_MS")) || Date.now()
@@ -121,7 +122,8 @@ ShellRoot {
         queue = queue.slice(1);
         writeReply = "";
         writeError = "";
-        writer.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify(request)];
+        writeRequest = JSON.stringify(request);
+        writer.command = ["bash", configDir + "/scripts/settings/panel-request.sh", "-"];
         writer.running = true;
     }
     function close() {
@@ -180,6 +182,9 @@ ShellRoot {
     }
     Process {
         id: writer
+        stdinEnabled: true
+        // The request travels on stdin, never argv: it may carry a Wi-Fi password.
+        onStarted: { writer.write(root.writeRequest + "\n"); root.writeRequest = ""; }
         stdout: StdioCollector { onStreamFinished: root.writeReply = text }
         stderr: StdioCollector { onStreamFinished: root.writeError = text }
         onExited: code => {
