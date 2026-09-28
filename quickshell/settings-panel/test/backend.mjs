@@ -259,6 +259,9 @@ files.set(base+'/hypr/hypridle.conf',idleBefore)
 
 files.set(base+'/hypr/hypridle.conf',idleBefore+'listener {\n timeout = 99\n on-timeout = systemctl suspend\n}\n')
 await assert.rejects(dispatch({op:'set',id:'power.suspend',value:0}),/by hand/)
+const customIdle = files.get(base+'/hypr/hypridle.conf')
+await assert.rejects(dispatch({op:'set',id:'power.suspend',value:1800}),/by hand/)
+assert.equal(files.get(base+'/hypr/hypridle.conf'),customIdle,'a custom suspend listener is never retimed')
 files.set(base+'/hypr/hypridle.conf',idleBefore)
 console.log('ok: power profile and suspend listener round-trip without touching custom content')
 

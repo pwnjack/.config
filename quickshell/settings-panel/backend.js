@@ -97,10 +97,13 @@ function idleValues(text) {
 const suspendMarker = seconds => `# Suspend after inactivity\nlistener {\n    timeout = ${seconds}\n    on-timeout = systemctl suspend\n}\n`
 const suspendBlock = /\n\n# Suspend after inactivity\nlistener\s*\{[^}]*systemctl suspend[^}]*\}\n$/
 function withSuspend(text, seconds) {
-    const existing = (text.match(/listener\s*\{[^}]*\}/g) || []).find(block => block.includes("systemctl suspend"))
-    if (existing && seconds) return text.replace(existing, existing.replace(/(\btimeout\s*=\s*)\d+/, `$1${seconds}`))
-    if (existing) {
-        if (!suspendBlock.test(text)) throw new Error("hypridle.conf has a custom suspend listener; remove it by hand")
+    const marked = (text.match(/# Suspend after inactivity\nlistener\s*\{[^}]*systemctl suspend[^}]*\}/) || [])[0]
+    const suspends = (text.match(/listener\s*\{[^}]*\}/g) || []).filter(block => block.includes("systemctl suspend"))
+    // A hand-written suspend listener is never retimed or removed.
+    if (suspends.length > (marked ? 1 : 0)) throw new Error("hypridle.conf has a custom suspend listener; change it by hand")
+    if (marked && seconds) return text.replace(marked, () => marked.replace(/(\btimeout\s*=\s*)\d+/, `$1${seconds}`))
+    if (marked) {
+        if (!suspendBlock.test(text)) throw new Error("The panel's suspend listener was moved; remove it by hand")
         return text.replace(suspendBlock, "")
     }
     if (!seconds) return text

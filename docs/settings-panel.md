@@ -46,14 +46,16 @@ wallpaper carousel remains a separate application with its existing lifecycle.
   `command` (on `PATH`). `optional` rows accept an empty value; app rows with
   `reload` reload Hyprland, which reads `options/` at parse time. A layout
   reset is refused while a variant override exists.
-- Sources: `gtk` writes gsettings **and** both tracked `settings.ini` files
-  (GTK 3 on Wayland reads some keys from each); `kvantum` edits `theme=` under
+- Sources: `gtk` writes gsettings, and for rows that declare an `ini` key also
+  both tracked `settings.ini` files (GTK 3 on Wayland reads some keys from
+  each; Text Size is gsettings-only); `kvantum` edits `theme=` under
   `[General]`; `mime` writes `xdg-mime default` into the tracked
-  `mimeapps.list`, only for the row's types the chosen app declares or is a
-  parent of (never via `application/octet-stream`, which everything is), and
-  restores the file byte-for-byte on failure; `powerprofile` drives
+  `mimeapps.list`, only for the row's types the chosen app declares or declares a
+  parent of (never via `application/octet-stream`, which everything is),
+  falling back to the row's first type when it declares none, and restores
+  the file byte-for-byte on failure; `powerprofile` drives
   `powerprofilesctl`; the `idle` source adds, retimes and removes only the
-  suspend listener it marked.
+  suspend listener it marked, and refuses to change a hand-written one.
 - `hyprctl getoption -j` names the value field after its type (`bool`, `int`,
   `float`, `str`, `css`); `set` only says whether the config assigns the
   option and is never a value. The Lua provider rejects legacy hyphenated
