@@ -5,6 +5,7 @@ import { execAsync } from "./process.js"
 import { checkedHyprctl } from "./hyprctl.js"
 import * as persist from "./persist.js"
 import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
+import * as displays from "./displays.mjs"
 
 const configDir = GLib.get_home_dir() + "/.config"
 const catalog = JSON.parse(read(configDir + "/quickshell/settings-panel/catalog.json"))
@@ -15,6 +16,10 @@ const sunsetPath = configDir + "/hypr/hyprsunset.conf"
 const swayPath = configDir + "/swaync/config.json"
 const kvantumPath = configDir + "/Kvantum/kvantum.kvconfig"
 const kvantumDirs = [configDir + "/Kvantum", "/usr/share/Kvantum"]
+const stateHome = GLib.getenv("XDG_STATE_HOME") || `${GLib.get_home_dir()}/.local/state`
+const displayStatePath = `${stateHome}/hypr/monitors.lua`
+const pendingPath = `${GLib.get_user_runtime_dir()}/settings-panel/display-pending.json`
+const guardUnit = "settings-display-revert"
 
 function read(path) {
     const [ok, data] = Gio.File.new_for_path(path).load_contents(null)
@@ -33,6 +38,11 @@ function writeBytes(path, data) {
 function write(path, text) {
     writeBytes(path, new TextEncoder().encode(text))
 }
+function makeParent(path) {
+    const dir = path.slice(0, path.lastIndexOf("/"))
+    if (!exists(dir)) Gio.File.new_for_path(dir).make_directory_with_parents(null)
+}
+const remove = path => Gio.File.new_for_path(path).delete(null)
 const exists = path => Gio.File.new_for_path(path).query_exists(null)
 function children(path) {
     let enumerator
@@ -278,8 +288,9 @@ async function snapshot(ids, includeMonitors) {
     }))
     const result = { values }
     if (includeMonitors) {
-        result.monitors = JSON.parse(await execAsync(["hyprctl", "monitors", "-j"]))
+        result.monitors = await displaysSnapshot()
         result.mainMonitor = readOption("mainmonitor")
+        result.displayPending = exists(pendingPath) && await guardArmed() ? JSON.parse(read(pendingPath)) : null
     }
     return result
 }
@@ -446,6 +457,83 @@ async function change(request) {
     }
 }
 
+const readMonitors = async () => JSON.parse(await execAsync(["hyprctl", "monitors", "all", "-j"]))
+const displayState = () => displays.parseStateFile(exists(displayStatePath) ? read(displayStatePath) : "")
+async function guardArmed() {
+    try { await execAsync(["systemctl", "--user", "is-active", "--quiet", `${guardUnit}.timer`]); return true }
+    catch (_) { return false }
+}
+async function displaysSnapshot() {
+    const state = displayState()
+    return (await readMonitors()).map(monitor => ({
+        ...monitor,
+        saved: state.outputs[monitor.name] ?? null,
+        handEdited: state.handEdited.has(monitor.name) || state.handEdited.has("*"),
+        choices: { modes: displays.modeChoices(monitor), positions: displays.positions, transforms: displays.transforms },
+    }))
+}
+function displayConfig(request, monitors) {
+    const monitor = monitors.find(m => m.name === request.output)
+    if (!monitor) throw new Error("Display is no longer connected")
+    if (request.automatic === true) return { ...displays.AUTOMATIC }
+    if (request.disabled === true) {
+        if (!monitors.some(m => m.name !== monitor.name && !m.disabled)) throw new Error("At least one display must stay on")
+        return { disabled: true }
+    }
+    const config = { mode: request.mode, position: request.position, scale: request.scale, transform: request.transform }
+    if (!displays.modeChoices(monitor).some(c => c.value === config.mode)) throw new Error("Unknown mode")
+    if (!displays.positions.some(c => c.value === config.position)) throw new Error("Unknown position")
+    if (!displays.transforms.some(c => c.value === config.transform)) throw new Error("Unknown rotation")
+    if (!displays.scaleChoices(...displays.modeSize(config.mode, monitor)).some(c => c.value === config.scale))
+        throw new Error("This scale does not divide the mode evenly")
+    return config
+}
+// Nothing reaches monitors.lua before Keep, so reloading is always a correct revert.
+async function displayRevert() {
+    try { await execAsync(["systemctl", "--user", "stop", `${guardUnit}.timer`]) } catch (_) { /* Already fired, or never armed. */ }
+    if (exists(pendingPath)) remove(pendingPath)
+    await persistReload()
+    return { pending: null }
+}
+async function displayApply(request) {
+    if (exists(pendingPath)) {
+        if (await guardArmed()) throw new Error("A display change is waiting for Keep or Revert")
+        remove(pendingPath) // The guard fired while no panel was watching.
+    }
+    const state = displayState()
+    if (state.handEdited.has(request.output) || state.handEdited.has("*"))
+        throw new Error(`${displayStatePath} was edited by hand; change ${request.output} there`)
+    const line = displays.monitorLine(request.output, displayConfig(request, await readMonitors()))
+    // The guard reverts even if the panel dies or its screen goes dark.
+    await execAsync(["systemd-run", "--user", "--collect", `--unit=${guardUnit}`, "--on-active=20", "--timer-property=AccuracySec=100ms",
+        `--setenv=HYPRLAND_INSTANCE_SIGNATURE=${GLib.getenv("HYPRLAND_INSTANCE_SIGNATURE") || ""}`, GLib.find_program_in_path("hyprctl"), "reload"])
+    const pending = { output: request.output, line, remove: request.automatic === true, deadline: Date.now() + 15000 }
+    try {
+        makeParent(pendingPath)
+        write(pendingPath, JSON.stringify(pending) + "\n")
+        await checkedHyprctl(["eval", line])
+    } catch (error) {
+        await displayRevert()
+        throw error
+    }
+    return { pending }
+}
+async function displayKeep() {
+    if (!exists(pendingPath)) throw new Error("No display change is waiting")
+    const pending = JSON.parse(read(pendingPath))
+    if (!(await guardArmed())) { remove(pendingPath); throw new Error("The change was already reverted") }
+    await execAsync(["systemctl", "--user", "stop", `${guardUnit}.timer`])
+    try {
+        makeParent(displayStatePath)
+        write(displayStatePath, displays.stateFileWith(exists(displayStatePath) ? read(displayStatePath) : "", pending.output, pending.remove ? null : pending.line))
+    } catch (error) {
+        await displayRevert()
+        throw new Error(`${error.message}. The display was reverted.`)
+    }
+    remove(pendingPath)
+    return { pending: null }
+}
+
 export async function dispatch(request) {
     if (request.op === "read") {
         if (!Array.isArray(request.ids) || request.ids.length > catalog.rows.length) throw new Error("Invalid settings request")
@@ -463,8 +551,16 @@ export async function dispatch(request) {
         catch (error) { write(optionPath("mainmonitor"), before); throw error }
         return {}
     }
+    if (request.op === "displayApply") return displayApply(request)
+    if (request.op === "displayKeep") return displayKeep()
+    if (request.op === "displayRevert") return displayRevert()
     if (request.op === "action") {
         if (request.id === "reload") { await persistReload(); return {} }
+        if (request.id === "displays-file") {
+            if (!exists(displayStatePath)) { makeParent(displayStatePath); write(displayStatePath, displays.STATE_HEADER) }
+            detached([readOption("terminal") || "ghostty", "-e", ...(readOption("editor") || "nvim").split(/\s+/), displayStatePath])
+            return {}
+        }
         const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh", monitors: "/scripts/settings/advanced/monitor.sh" }
         if (!Object.hasOwn(scripts, request.id)) throw new Error("Unknown action")
         const path = configDir + scripts[request.id]

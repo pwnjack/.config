@@ -89,11 +89,17 @@ const pulse = {
         {name:'alsa_card.hdmi',active_profile:'output:hdmi-stereo',profiles:{'output:hdmi-stereo':{description:'Digital Stereo (HDMI) Output',available:true,sinks:1}}},
     ],
 }
+// Shape from `hyprctl monitors all -j` on Hyprland 0.56 (trimmed).
+const monitorsFixture = [{name:'DP-1',make:'Ancor Communications Inc',model:'ROG PG279Q',width:2560,height:1440,refreshRate:143.998,scale:1,transform:0,disabled:false,
+    availableModes:['2560x1440@59.95Hz','2560x1440@144.00Hz','2560x1440@120.00Hz','2560x1440@99.95Hz','2560x1440@84.98Hz','2560x1440@23.97Hz','1024x768@60.00Hz','800x600@60.32Hz','640x480@59.94Hz']}]
+let guardArmed = false, failEval = false
 const running = new Set()
 const encoder = new TextEncoder()
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
+        getenv: name => ({XDG_STATE_HOME:'/fixture/.local/state',HYPRLAND_INSTANCE_SIGNATURE:'sig'})[name] ?? null,
+        get_user_runtime_dir: () => '/run/user/1000',
         find_program_in_path: name => name === 'missing-app' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
         spawn_async: (...args) => {
@@ -154,7 +160,14 @@ globalThis.settingsMocks = {
         if (args[0] === 'pgrep') { if (!running.has(args[2])) throw new Error('not running'); return '123'; }
         if (args[1] === 'getoption') return JSON.stringify(hyprOptions[args[2]] ?? {int:1,set:true})
         if (args[1] === 'animations') return JSON.stringify([[{name:'windows',enabled:true,speed:6,bezier:'ease',style:'popin 80%'}],[]])
-        if (args[1] === 'monitors') return JSON.stringify([{name:'DP-1',width:2560,height:1440}])
+        if (args[1] === 'monitors') return JSON.stringify(monitorsFixture)
+        if (args[1] === 'eval' && failEval) return 'error: bad monitor'
+        if (args[0] === 'systemd-run') {
+            if (guardArmed) throw new Error('Unit settings-display-revert.timer was already loaded')
+            guardArmed = true; return ''
+        }
+        if (args[0] === 'systemctl' && args.includes('is-active')) { if (!guardArmed) throw new Error('inactive'); return '' }
+        if (args[0] === 'systemctl' && args.includes('stop')) { if (!guardArmed) throw new Error('Unit settings-display-revert.timer not loaded.'); guardArmed = false; return '' }
         if (args[1] === 'configerrors') return '[]'
         if (args[0] === 'swaync-client' && failReload) { failReload=false; throw new Error('reload failed') }
         if (args[0] === 'localectl') return {
@@ -184,6 +197,7 @@ registerHooks({resolve(specifier,context,next) {
     return next(specifier,context)
 }})
 const {dispatch} = await import('../backend.js')
+const displays = await import('../displays.mjs')
 let result = await dispatch({op:'read',ids:['appearance.blur','power.lock','power.nightlight-temp','notif.timeout','apps.browser'],monitors:true})
 assert.equal(result.values['appearance.blur'].value,true)
 assert.equal(result.values['power.nightlight-temp'].value,4000)
@@ -531,3 +545,92 @@ result = await dispatch({op:'read',ids:['sound.mic-level']})
 assert.match(result.values['sound.mic-level'].error,/no volume/)
 pulse.sources[1].volume = savedVolume
 console.log('ok: sound rows share four pactl reads, offer only usable choices and follow the default device')
+
+const statePath = '/fixture/.local/state/hypr/monitors.lua'
+const pendingPath = '/run/user/1000/settings-panel/display-pending.json'
+events=[]
+result = await dispatch({op:'read',ids:[],monitors:true})
+assert.equal(result.monitors[0].saved,null)
+assert.equal(result.monitors[0].handEdited,false)
+assert.equal(result.monitors[0].choices.modes[0].value,'highres@highrr')
+assert.equal(result.displayPending,null)
+assert.ok(events.some(e=>e[0]==='hyprctl' && e[1]==='monitors' && e[2]==='all'))
+events=[]
+for (const [request, message] of [
+    [{op:'displayApply',output:'DP-9',mode:'highres@highrr',position:'auto',scale:1,transform:0},/no longer connected/],
+    [{op:'displayApply',output:'DP-1',mode:'9999x9999@1.00',position:'auto',scale:1,transform:0},/Unknown mode/],
+    [{op:'displayApply',output:'DP-1',mode:'2560x1440@120.00',position:'0x0',scale:1,transform:0},/Unknown position/],
+    [{op:'displayApply',output:'DP-1',mode:'2560x1440@120.00',position:'auto',scale:1,transform:9},/Unknown rotation/],
+    [{op:'displayApply',output:'DP-1',mode:'2560x1440@120.00',position:'auto',scale:1.5,transform:0},/does not divide/],
+    [{op:'displayApply',output:'DP-1',disabled:true},/must stay on/],
+]) await assert.rejects(dispatch(request),message)
+assert.equal(events.some(e=>e[0]==='systemd-run' || e[1]==='eval' || e[0]==='write'),false)
+console.log('ok: display changes are validated before any guard, eval or write')
+
+const apply = {op:'displayApply',output:'DP-1',mode:'2560x1440@120.00',position:'auto-left',scale:1.25,transform:0}
+const line = 'hl.monitor({ output = "DP-1", mode = "2560x1440@120.00", position = "auto-left", scale = 1.25, transform = 0 })'
+events=[]
+const applied = await dispatch(apply)
+const guard = events.find(e=>e[0]==='systemd-run')
+for (const flag of ['--user','--collect','--unit=settings-display-revert','--on-active=20','--setenv=HYPRLAND_INSTANCE_SIGNATURE=sig']) assert.ok(guard.includes(flag),flag)
+assert.deepEqual(guard.slice(-2),['hyprctl','reload'])
+assert.ok(events.indexOf(guard) < events.findIndex(e=>e[1]==='eval'))
+assert.deepEqual(events.find(e=>e[1]==='eval'),['hyprctl','eval',line])
+assert.equal(applied.pending.output,'DP-1')
+assert.equal(files.has(statePath),false)
+await assert.rejects(dispatch(apply),/waiting for Keep or Revert/)
+result = await dispatch({op:'read',ids:[],monitors:true})
+assert.equal(result.displayPending.output,'DP-1')
+assert.deepEqual(await dispatch({op:'displayKeep'}),{pending:null})
+assert.equal(files.get(statePath),displays.STATE_HEADER+line+'\n')
+assert.equal(files.has(pendingPath),false)
+assert.equal(guardArmed,false)
+result = await dispatch({op:'read',ids:[],monitors:true})
+assert.deepEqual(result.monitors[0].saved,{mode:'2560x1440@120.00',position:'auto-left',scale:1.25,transform:0})
+console.log('ok: Apply arms the guard before eval; Keep writes exactly the evaluated line')
+
+await dispatch({op:'displayApply',output:'DP-1',automatic:true})
+assert.deepEqual(events.filter(e=>e[1]==='eval').at(-1),['hyprctl','eval','hl.monitor({ output = "DP-1", mode = "highres@highrr", position = "auto", scale = 1, transform = 0 })'])
+await dispatch({op:'displayKeep'})
+assert.equal(files.get(statePath),displays.STATE_HEADER)
+events=[]
+await dispatch(apply)
+await dispatch({op:'displayRevert'})
+assert.ok(events.some(e=>e[1]==='reload'))
+assert.equal(files.get(statePath),displays.STATE_HEADER)
+assert.equal(files.has(pendingPath),false)
+assert.equal(guardArmed,false)
+console.log('ok: Automatic removes the line on Keep; Revert reloads and writes nothing')
+
+await dispatch(apply)
+guardArmed=false
+await assert.rejects(dispatch({op:'displayKeep'}),/already reverted/)
+assert.equal(files.get(statePath),displays.STATE_HEADER)
+assert.equal(files.has(pendingPath),false)
+await dispatch(apply); guardArmed=false
+await dispatch(apply)
+assert.equal(guardArmed,true)
+await dispatch({op:'displayRevert'})
+failEval=true
+await assert.rejects(dispatch(apply),/error: bad monitor/)
+failEval=false
+assert.equal(guardArmed,false)
+assert.equal(files.has(pendingPath),false)
+console.log('ok: a fired guard wins over Keep, stale pending files expire, failed evals disarm')
+
+monitorsFixture.push({name:'HDMI-A-1',disabled:false,width:1920,height:1080,availableModes:['1920x1080@60.00Hz']})
+await dispatch({op:'displayApply',output:'HDMI-A-1',disabled:true})
+assert.deepEqual(events.filter(e=>e[1]==='eval').at(-1),['hyprctl','eval','hl.monitor({ output = "HDMI-A-1", disabled = true })'])
+await dispatch({op:'displayRevert'})
+monitorsFixture.pop()
+files.set(statePath,displays.STATE_HEADER+'hl.monitor({ output = "DP-1", mode = "preferred", position = "0x0", scale = 1, bitdepth = 10 })\n')
+await assert.rejects(dispatch(apply),/edited by hand/)
+result = await dispatch({op:'read',ids:[],monitors:true})
+assert.equal(result.monitors[0].handEdited,true)
+files.delete(statePath)
+files.set(base+'/options/terminal','ghostty\n'); files.set(base+'/options/editor','nvim\n')
+events=[]
+await dispatch({op:'action',id:'displays-file'})
+assert.equal(files.get(statePath),displays.STATE_HEADER)
+assert.deepEqual(events.find(e=>e[0]==='spawn')[1],['ghostty','-e','nvim',statePath])
+console.log('ok: a second display can be disabled, hand-edited outputs are refused, Edit file opens the state file')
