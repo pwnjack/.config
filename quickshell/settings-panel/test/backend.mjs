@@ -34,6 +34,9 @@ const dirs = new Map([
     ['/usr/share/Kvantum', ['KvArc']],
 ])
 const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
+const appsForType = {'inode/directory': [['thunar.desktop','Thunar'],['org.gnome.Nautilus.desktop','Files']], 'image/png': [['mpv.desktop','mpv']]}
+const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
+let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
@@ -57,6 +60,7 @@ globalThis.settingsMocks = {
         timeout_add: (_priority,_ms,fn) => { setImmediate(fn); },
     },
     Gio: {
+        AppInfo: { get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
         FileCreateFlags:{NONE:0},
         FileQueryInfoFlags:{NONE:0},
         File:{new_for_path: path => ({
@@ -85,6 +89,11 @@ globalThis.settingsMocks = {
     },
     execAsync: async args => {
         events.push(args)
+        if (args[0] === 'xdg-mime' && args[1] === 'query') return (mimeDefaults[args[3]] || '') + '\n'
+        if (args[0] === 'xdg-mime' && args[1] === 'default') {
+            if (args[3] === failMime) throw new Error('xdg-mime failed')
+            mimeDefaults[args[3]] = args[2]; return ''
+        }
         if (args[0] === 'fc-list') return 'FiraCode Nerd Font,FiraCode Nerd Font Med\nAdwaita Sans\n'
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
         if (args[0] === 'pgrep') { if (!running.has(args[2])) throw new Error('not running'); return '123'; }
@@ -304,3 +313,16 @@ await dispatch({op:'set',id:'apps.filemanager',value:'nautilus'})
 assert.equal(files.get(base+'/options/filemanager'),'nautilus\n')
 assert.ok(events.some(e=>e[1]==='reload'))
 console.log('ok: app rows must name an installed command and reload Hyprland')
+
+result = await dispatch({op:'read',ids:['mime.folders']})
+assert.equal(result.values['mime.folders'].value,'kitty-open.desktop')
+assert.deepEqual(result.values['mime.folders'].choices.map(c=>c.value),['thunar.desktop','org.gnome.Nautilus.desktop','kitty-open.desktop'])
+await assert.rejects(dispatch({op:'set',id:'mime.folders',value:'evil.desktop'}),/Unknown choice/)
+await dispatch({op:'set',id:'mime.folders',value:'thunar.desktop'})
+assert.equal(mimeDefaults['inode/directory'],'thunar.desktop')
+mimeDefaults['image/png']='old.desktop'; mimeDefaults['image/jpeg']='old.desktop'
+failMime='image/jpeg'
+await assert.rejects(dispatch({op:'set',id:'mime.images',value:'mpv.desktop'}),/xdg-mime failed/)
+assert.equal(mimeDefaults['image/png'],'old.desktop')
+failMime=''
+console.log('ok: file types use installed handlers and roll back partial changes')

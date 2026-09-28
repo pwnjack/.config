@@ -43,6 +43,7 @@ function themeNames(dirs, isTheme, builtins = []) {
     return [...names].sort((a, b) => a.localeCompare(b)).map(name => ({ label: name, value: name }))
 }
 const hasIcons = dir => { try { return /^Directories=/m.test(read(`${dir}/index.theme`)) } catch (_) { return false } }
+const mimeDefault = async mime => (await execAsync(["xdg-mime", "query", "default", mime])).trim()
 // Each enumerator returns what the system has now, so validation and the
 // dropdown can never disagree. GTK's built-ins have no theme directories:
 // they are libgtk-3 resources (`gresource list libgtk-3.so.0`, minus win32).
@@ -51,6 +52,12 @@ const enumerators = {
     "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
     "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
     "kvantum-themes": () => themeNames(kvantumDirs, dir => exists(`${dir}/${dir.split("/").pop()}.kvconfig`)),
+    applications: async row => {
+        const apps = Gio.AppInfo.get_all_for_type(row.mimes[0]).map(app => ({ label: app.get_name(), value: app.get_id() }))
+        const current = await mimeDefault(row.mimes[0])
+        if (current && !apps.some(app => app.value === current)) apps.push({ label: current.replace(/\.desktop$/, ""), value: current })
+        return apps
+    },
 }
 async function choicesFor(row) {
     if (row.items) return row.items
@@ -223,6 +230,7 @@ async function snapshot(ids, includeMonitors) {
             case "sunset": value = (await once("sunset", () => sunsetValues(read(sunsetPath))))[row.key]; break
             case "swaync": value = (await once("swaync", () => JSON.parse(read(swayPath))))[row.key] ?? row.default; break
             case "kvantum": value = exists(kvantumPath) ? iniValue(read(kvantumPath), "theme", "General") : ""; break
+            case "mime": value = await mimeDefault(row.mimes[0]); break
             }
             if (row.default !== undefined) reset = value !== row.default
             values[id] = row.choices ? { value, reset, choices: await choicesFor(row) } : { value, reset }
@@ -363,6 +371,21 @@ async function change(request) {
         return write(kvantumPath, updated)
     }
     case "gtk": return setGtk(row, value)
+    case "mime": {
+        const before = await Promise.all(row.mimes.map(mimeDefault))
+        const done = []
+        try {
+            for (const mime of row.mimes) { await execAsync(["xdg-mime", "default", value, mime]); done.push(mime) }
+        } catch (error) {
+            // xdg-mime cannot unset a default, so only mimes that had one are restored.
+            for (const mime of done) {
+                const previous = before[row.mimes.indexOf(mime)]
+                if (previous) await execAsync(["xdg-mime", "default", previous, mime])
+            }
+            throw error
+        }
+        return
+    }
     }
 }
 

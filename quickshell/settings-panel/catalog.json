@@ -49,6 +49,11 @@
       "id": "apps",
       "title": "Default Apps",
       "description": "Applications used by keybinds and scripts"
+    },
+    {
+      "id": "filetypes",
+      "title": "File Types",
+      "description": "Which app opens each kind of file or link"
     }
   ],
   "rows": [
@@ -1073,6 +1078,96 @@
           "value": "horizontal"
         }
       ]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.folders",
+      "title": "Folders",
+      "description": "Opened from other apps and the desktop",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["inode/directory"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.web",
+      "title": "Web Links",
+      "description": "Links opened from other apps (Super+B uses Browser)",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.pdf",
+      "title": "PDF Documents",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["application/pdf"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.images",
+      "title": "Images",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/tiff", "image/svg+xml"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.video",
+      "title": "Video",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.audio",
+      "title": "Audio",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/aac", "audio/mp4", "audio/x-opus+ogg"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.text",
+      "title": "Text Files",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["text/plain", "text/markdown"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.archives",
+      "title": "Archives",
+      "description": "Default app",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["application/zip", "application/x-tar", "application/x-7z-compressed", "application/gzip", "application/vnd.rar"]
+    },
+    {
+      "category": "filetypes",
+      "id": "mime.email",
+      "title": "Email Links",
+      "description": "mailto: links",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["x-scheme-handler/mailto"]
     }
   ]
 }
