@@ -4,13 +4,13 @@
     {
       "id": 0,
       "subject": "Task 1: Probe live display behaviour and record the baseline",
-      "status": "pending",
+      "status": "completed",
       "description": "**Goal:** Confirm on the real display, before building anything, that `hyprctl eval` applies a per-output rule immediately, that `hyprctl reload` restores the file's rule, how Hyprland treats scales, and that a `systemd-run` guard reverts on its own. Also record the baseline full-read time.\n\n**Files:**\n- Modify: `docs/settings-panel.md` (new section `## Displays: verified behaviour`)\n\n**Acceptance Criteria:**\n- [ ] `hyprctl eval 'hl.monitor({ output = \"DP-1\", mode = \"2560x1440@120.00\", position = \"auto\", scale = 1, transform = 0 })'` prints `ok`, and within 1 s `hyprctl monitors -j | jq '.[0].refreshRate'` is about 120\n- [ ] `hyprctl reload` then brings `refreshRate` back to about 144\n- [ ] A guard armed with `--on-active=5` reverts an applied 120 Hz mode by itself, and afterwards `systemctl --user list-units 'settings-display-*' --all --no-legend` prints nothing\n- [ ] The results of `scale = 1.25`, `scale = 1.3333333333333333` (160/120 as a full double) and `scale = 1.5` are recorded: accepted as-is, adjusted, or rejected, with the exact `hyprctl monitors` scale and any notification\n- [ ] The median of five full reads is recorded as the round-2 baseline\n- [ ] **If eval does not apply live, or reload does not restore 144 Hz: stop and report to the user.** The revert design depends on both.\n\n**Verify:** The new section in `docs/settings-panel.md` states each result with the command that produced it, and `hyprctl monitors -j | jq -c '.[0]|{refreshRate,scale}'` → about `144` and `1` at the end.\n\n**Steps:** see the plan document section for full code.\n\n```json:metadata\n{\"files\":[\"docs/settings-panel.md\"],\"verifyCommand\":\"The new section in `docs/settings-panel.md` states each result with the command that produced it, and `hyprctl monitors -j | jq -c '.[0]|{refreshRate,scale}'` → about `144` and `1` at the end.\",\"acceptanceCriteria\":[\"`hyprctl eval 'hl.monitor({ output = \\\"DP-1\\\", mode = \\\"2560x1440@120.00\\\", position = \\\"auto\\\", scale = 1, transform = 0 })'` prints `ok`, and within 1 s `hyprctl monitors -j | jq '.[0].refreshRate'` is about 120\",\"`hyprctl reload` then brings `refreshRate` back to about 144\",\"A guard armed with `--on-active=5` reverts an applied 120 Hz mode by itself, and afterwards `systemctl --user list-units 'settings-display-*' --all --no-legend` prints nothing\",\"The results of `scale = 1.25`, `scale = 1.3333333333333333` (160/120 as a full double) and `scale = 1.5` are recorded: accepted as-is, adjusted, or rejected, with the exact `hyprctl monitors` scale and any notification\",\"The median of five full reads is recorded as the round-2 baseline\",\"**If eval does not apply live, or reload does not restore 144 Hz: stop and report to the user.** The revert design depends on both.\"]}\n```"
     },
     {
       "id": 1,
       "subject": "Task 2: Sound rows on a `pulse` source",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         0
       ],
@@ -19,7 +19,7 @@
     {
       "id": 2,
       "subject": "Task 3: Live refresh while a live page is on screen",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         1
       ],
@@ -28,7 +28,7 @@
     {
       "id": 3,
       "subject": "Task 4: `displays.mjs` pure helpers",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         2
       ],
@@ -37,7 +37,7 @@
     {
       "id": 4,
       "subject": "Task 5: `monitor.lua` loads the per-machine state file",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         0
       ],
@@ -46,7 +46,7 @@
     {
       "id": 5,
       "subject": "Task 6: Backend display read, Apply, Keep, Revert and Edit file",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         3,
         4
@@ -56,7 +56,7 @@
     {
       "id": 6,
       "subject": "Task 7: Displays page UI, and retiring `monitor.sh`",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         2,
         5
@@ -66,12 +66,12 @@
     {
       "id": 7,
       "subject": "Task 8: Docs, smoke test, performance budget and review",
-      "status": "pending",
+      "status": "completed",
       "blockedBy": [
         6
       ],
       "description": "**Goal:** The docs describe the Sound and Displays pages and their traps. The smoke test survives the new rows. The spec's performance budget is measured and met, and the round gets an independent review.\n\n**Files:**\n- Modify: `docs/settings-panel.md`, `CLAUDE.md`\n- Modify: `quickshell/settings-panel/test/live-smoke.sh` (only if the new rows break it)\n\n**Acceptance Criteria:**\n- [ ] `docs/settings-panel.md` states the row and category counts from `jq '.rows|length, (.categories|length)' catalog.json`, and documents:\n  - the `pulse` source and the `card: null` trap;\n  - live tags and the event filter;\n  - the state-file location and format, hand-edited handling and Edit file;\n  - apply, guard, Keep and Revert;\n  - the File Types follow-up.\n- [ ] `CLAUDE.md`'s settings-panel paragraph mentions the Sound page, live refresh (on-screen only), and the Displays state file with its revert guard; the `options/` paragraph's `monitor.lua` sentence names the state file\n- [ ] Performance budget, measured and recorded:\n  - a full read is within the Task 1 baseline + 10 ms;\n  - with the panel closed there is no `pactl subscribe` process and no `settings-display-*` unit;\n  - the Task 3 audio/notification check gives 0 live reads.\n- [ ] `live-smoke.sh` passes: all N settings read successfully, no instance remains\n- [ ] `./test.sh` and `./doctor.sh` pass; `git status` shows only intended files\n- [ ] `delegate-review` has run on `git diff b6ca971..HEAD`, and its verified findings are fixed (each with a test) or reported\n\n**Verify:** `bash quickshell/settings-panel/test/live-smoke.sh` → `All N settings read successfully; no panel instance remains.`; `./test.sh` → all pass; `./doctor.sh` → exit 0.\n\n**Steps:** see the plan document section for full code.\n\n```json:metadata\n{\"files\":[\"docs/settings-panel.md\",\"CLAUDE.md\",\"quickshell/settings-panel/test/live-smoke.sh\"],\"verifyCommand\":\"`bash quickshell/settings-panel/test/live-smoke.sh` → `All N settings read successfully; no panel instance remains.`; `./test.sh` → all pass; `./doctor.sh` → exit 0.\",\"acceptanceCriteria\":[\"`docs/settings-panel.md` states the row and category counts from `jq '.rows|length, (.categories|length)' catalog.json`, and documents:\",\"`CLAUDE.md`'s settings-panel paragraph mentions the Sound page, live refresh (on-screen only), and the Displays state file with its revert guard; the `options/` paragraph's `monitor.lua` sentence names the state file\",\"Performance budget, measured and recorded:\",\"`live-smoke.sh` passes: all N settings read successfully, no instance remains\",\"`./test.sh` and `./doctor.sh` pass; `git status` shows only intended files\",\"`delegate-review` has run on `git diff b6ca971..HEAD`, and its verified findings are fixed (each with a test) or reported\"]}\n```"
     }
   ],
-  "lastUpdated": "2026-09-28T13:50:06.764Z"
+  "lastUpdated": "2026-09-28T20:03:23+02:00"
 }
