@@ -116,7 +116,7 @@ before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 `scripts/hyprland/settings-panel.sh`, used by both Super+I and Waybar. It exits
 on close after pending saves finish; failed saves reopen the panel with an
 error. There is no login autostart or wallpaper-triggered AGS restart.
-`catalog.json` declares the 55 settings in nine categories. The frame appears
+`catalog.json` declares the 56 settings in nine categories. The frame appears
 before values arrive; a short-lived, GTK-free GJS helper reads values outside
 the UI thread. One value snapshot covers all categories; switching tabs/search
 only builds the selected rows, with no new helper or loading layout shift.
@@ -190,7 +190,7 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
 ### Agent CLI status lines (`claude/`, `codex/`)
 

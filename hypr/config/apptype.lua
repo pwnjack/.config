@@ -20,6 +20,7 @@ return {
     browser = read_option("browser", "firefox"),
     terminal = read_option("terminal", "ghostty"),
     editor = read_option("editor", "nvim"), -- TUI editor, opened in the terminal
+    codeeditor = read_option("codeeditor", "zeditor"), -- GUI code editor
     cursorTheme = read_option("cursortheme", "Bibata-Modern-Classic"),
     fileManager = "thunar", -- GUI file manager (yazi for CLI)
 

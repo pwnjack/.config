@@ -720,6 +720,15 @@
     },
     {
       "category": "apps",
+      "id": "apps.codeeditor",
+      "title": "Code Editor",
+      "description": "GUI editor launched with Super+G",
+      "source": "option",
+      "key": "codeeditor",
+      "kind": "text"
+    },
+    {
+      "category": "apps",
       "id": "apps.launcher",
       "title": "Launcher Style",
       "description": "Rofi layout used by Super+Space",

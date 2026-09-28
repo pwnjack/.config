@@ -30,7 +30,7 @@ checkout.
 | `Super + B` | Web browser (`options/browser`) |
 | `Super + S` | Screenshot a region |
 | `Super + Alt + S` | Screenshot a region and annotate |
-| `Super + G` | Code editor (Zed) |
+| `Super + G` | Code editor (`options/codeeditor`) |
 | `Super + K` | Calculator |
 | `Super + A` | AI assistant sidebar |
 

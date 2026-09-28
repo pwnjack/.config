@@ -166,7 +166,7 @@ async function change(request) {
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
             // hypr/config/apptype.lua reads these at parse time.
-            if (["terminal", "browser", "editor"].includes(row.key)) await persistReload()
+            if (["terminal", "browser", "editor", "codeeditor"].includes(row.key)) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"])))
         })
     }
