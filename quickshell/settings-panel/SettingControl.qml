@@ -100,12 +100,14 @@ Rectangle {
         ComboBox {
             id: combo
             objectName: "select-" + control.row.id
+            readonly property var choices: control.row.items || control.settingState.choices || []
             implicitHeight: 40
-            model: control.row.items
+            model: combo.choices
             textRole: "label"
-            currentIndex: control.row.items.findIndex(item => item.value === String(control.settingState.value))
+            currentIndex: combo.choices.findIndex(item => item.value === String(control.settingState.value))
+            displayText: currentIndex < 0 ? String(control.settingState.value ?? "") : currentText
             Accessible.name: control.row.title
-            onActivated: index => control.controller.change(control.row.id, control.row.items[index].value)
+            onActivated: index => control.controller.change(control.row.id, combo.choices[index].value)
             palette.button: control.theme.background
             palette.buttonText: control.theme.foreground
             palette.base: control.theme.background
@@ -152,7 +154,7 @@ Rectangle {
                 y: combo.height + 4
                 width: combo.width
                 padding: 4
-                implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
+                implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
                 background: Rectangle {
                     radius: 10
                     color: control.theme.plate

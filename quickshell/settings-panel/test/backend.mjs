@@ -11,7 +11,19 @@ const files = new Map([
     [base + '/hypr/hyprsunset.conf', '# Keep this comment\nmax-gamma = 100\nprofile {\n time = 07:00\n temperature = 6000\n}\nprofile {\n time = 20:00\n temperature = 4000\n}\n'],
     [base + '/swaync/config.json', JSON.stringify({timeout:5,unrelated:{keep:true}})],
     [base + '/hypr/config/hardware/primary.conf', '$monitor =\n'],
+    ['/usr/share/icons/Papirus-Dark/index.theme', '[Icon Theme]\nDirectories=16x16/apps\n'],
+    ['/usr/share/icons/Bibata-Modern-Classic/index.theme', '[Icon Theme]\nName=Bibata\n'],
+    [base + '/gtk-3.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\ngtk-font-name=Sans 11\n'],
+    [base + '/gtk-4.0/settings.ini', '[Settings]\ngtk-theme-name=Kripton\n'],
 ])
+const dirs = new Map([
+    ['/usr/share/themes', ['Kripton','Adwaita','NoGtk']],
+    ['/usr/share/themes/Kripton/gtk-3.0', []],
+    ['/usr/share/themes/Adwaita/gtk-3.0', []],
+    ['/usr/share/icons', ['Papirus-Dark','Bibata-Modern-Classic']],
+    ['/usr/share/icons/Bibata-Modern-Classic/cursors', []],
+])
+const gsettings = {'gtk-theme':"'Kripton'",'icon-theme':"'Papirus-Dark'",'color-scheme':"'prefer-dark'",'text-scaling-factor':'1.0','cursor-size':'24','cursor-theme':"'Bibata-Modern-Classic'"}
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 let events = [], failingPath = '', failReload = false
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
@@ -36,7 +48,14 @@ globalThis.settingsMocks = {
     },
     Gio: {
         FileCreateFlags:{NONE:0},
+        FileQueryInfoFlags:{NONE:0},
         File:{new_for_path: path => ({
+            query_exists: () => files.has(path) || dirs.has(path),
+            enumerate_children: () => {
+                if (!dirs.has(path)) throw new Error('No such directory: '+path)
+                const names = [...dirs.get(path)]
+                return { next_file: () => names.length ? {get_name: (n => () => n)(names.shift())} : null, close: () => {} }
+            },
             load_contents: () => {
                 if (!files.has(path)) throw new Error('Missing fixture: '+path)
                 return [true,encoder.encode(files.get(path))]
@@ -63,6 +82,8 @@ globalThis.settingsMocks = {
             'list-x11-keymap-options': 'caps:escape\ngrp:alt_shift_toggle\n',
             'list-x11-keymap-variants': args[2] === 'us' ? 'intl\ncolemak\n' : 'nodeadkeys\n',
         }[args[1]]
+        if (args[0] === 'gsettings' && args[1] === 'get') return gsettings[args[3]]
+        if (args[0] === 'gsettings' && args[1] === 'set') { gsettings[args[3]] = args[4]; return '' }
         return 'ok'
     },
 }
@@ -169,3 +190,18 @@ await dispatch({op:'reset',id:'input.kb-variant'})
 await dispatch({op:'reset',id:'input.kb-layout'})
 assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override input:kb_layout /)
 console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
+
+result = await dispatch({op:'read',ids:['appearance.gtk-theme','appearance.icon-theme']})
+assert.deepEqual(result.values['appearance.gtk-theme'].choices.map(c=>c.value),['Adwaita','Kripton'])
+assert.deepEqual(result.values['appearance.icon-theme'].choices.map(c=>c.value),['Papirus-Dark'])
+assert.equal(result.values['appearance.gtk-theme'].value,'Kripton')
+events=[]
+await assert.rejects(dispatch({op:'set',id:'appearance.gtk-theme',value:'NoGtk'}),/Unknown choice/)
+assert.equal(events.some(e=>e[0]==='gsettings'),false)
+await dispatch({op:'set',id:'appearance.gtk-theme',value:'Adwaita'})
+assert.equal(gsettings['gtk-theme'],"'Adwaita'")
+assert.equal(files.get(base+'/gtk-3.0/settings.ini'),'[Settings]\ngtk-theme-name=Adwaita\ngtk-font-name=Sans 11\n')
+assert.equal(files.get(base+'/gtk-4.0/settings.ini'),'[Settings]\ngtk-theme-name=Adwaita\n')
+await dispatch({op:'set',id:'appearance.color-scheme',value:'prefer-light'})
+assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-application-prefer-dark-theme=false$/m)
+console.log('ok: GTK appearance writes gsettings and both settings.ini files, only to listed themes')

@@ -186,6 +186,67 @@
     },
     {
       "category": "appearance",
+      "id": "appearance.color-scheme",
+      "title": "Colour Scheme",
+      "description": "Light or dark preference for GTK and portal apps",
+      "keywords": [
+        "dark mode",
+        "light mode"
+      ],
+      "source": "gtk",
+      "key": "color-scheme",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Dark",
+          "value": "prefer-dark"
+        },
+        {
+          "label": "Light",
+          "value": "prefer-light"
+        },
+        {
+          "label": "Default",
+          "value": "default"
+        }
+      ],
+      "ini": {
+        "key": "gtk-application-prefer-dark-theme",
+        "values": {
+          "prefer-dark": "true",
+          "prefer-light": "false",
+          "default": "false"
+        }
+      }
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.gtk-theme",
+      "title": "GTK Theme",
+      "description": "Widget theme for GTK apps",
+      "source": "gtk",
+      "key": "gtk-theme",
+      "kind": "select",
+      "choices": "gtk-themes",
+      "ini": {
+        "key": "gtk-theme-name"
+      }
+    },
+    {
+      "category": "appearance",
+      "id": "appearance.icon-theme",
+      "title": "Icon Theme",
+      "description": "Application and file icons",
+      "source": "gtk",
+      "key": "icon-theme",
+      "kind": "select",
+      "choices": "icon-themes",
+      "ini": {
+        "key": "gtk-icon-theme-name"
+      }
+    },
+    {
+      "category": "appearance",
       "id": "appearance.cursor-theme",
       "title": "Cursor Theme",
       "description": "Cursor theme name; fully applies after restart",
@@ -633,6 +694,22 @@
       "min": 1,
       "max": 4,
       "step": 0.1
+    },
+    {
+      "category": "accessibility",
+      "id": "a11y.text-scale",
+      "title": "Text Size",
+      "description": "Scale text in GTK apps",
+      "keywords": [
+        "font",
+        "larger"
+      ],
+      "source": "gtk",
+      "key": "text-scaling-factor",
+      "kind": "slider",
+      "min": 0.75,
+      "max": 2,
+      "step": 0.05
     },
     {
       "category": "notifications",

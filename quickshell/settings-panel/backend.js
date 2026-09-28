@@ -22,6 +22,36 @@ function write(path, text) {
         new TextEncoder().encode(text), null, false, Gio.FileCreateFlags.NONE, null)
     if (!ok) throw new Error(`Cannot save ${path}`)
 }
+const exists = path => Gio.File.new_for_path(path).query_exists(null)
+function children(path) {
+    let enumerator
+    try { enumerator = Gio.File.new_for_path(path).enumerate_children("standard::name", Gio.FileQueryInfoFlags.NONE, null) }
+    catch (_) { return [] } // A missing search directory is normal.
+    const names = []
+    for (let info; (info = enumerator.next_file(null));) names.push(info.get_name())
+    enumerator.close(null)
+    return names
+}
+const home = GLib.get_home_dir()
+const themeDirs = kind => [`${home}/.local/share/${kind}`, `${home}/.${kind}`, `/usr/share/${kind}`]
+function themeNames(dirs, isTheme) {
+    const names = new Set()
+    for (const dir of dirs) for (const name of children(dir)) if (isTheme(`${dir}/${name}`)) names.add(name)
+    return [...names].sort((a, b) => a.localeCompare(b)).map(name => ({ label: name, value: name }))
+}
+const hasIcons = dir => { try { return /^Directories=/m.test(read(`${dir}/index.theme`)) } catch (_) { return false } }
+// Each enumerator returns what the system has now, so validation and the
+// dropdown can never disagree and no list of names is kept in the repo.
+const enumerators = {
+    "gtk-themes": () => themeNames(themeDirs("themes"), dir => exists(`${dir}/gtk-3.0`)),
+    "icon-themes": () => themeNames(themeDirs("icons"), hasIcons),
+    "cursor-themes": () => themeNames(themeDirs("icons"), dir => exists(`${dir}/cursors`)),
+}
+async function choicesFor(row) {
+    if (row.items) return row.items
+    if (!Object.hasOwn(enumerators, row.choices)) throw new Error("This setting has no choices")
+    return enumerators[row.choices](row)
+}
 function readOption(key) { return read(optionPath(key)).trim() }
 function idleValues(text) {
     const values = {}
@@ -90,6 +120,42 @@ function keywordValue(data) {
     throw new Error("Hyprland did not return a value")
 }
 
+const gtkIniPaths = ["gtk-3.0", "gtk-4.0"].map(dir => `${configDir}/${dir}/settings.ini`)
+const gsettingsArgs = key => ["org.gnome.desktop.interface", key]
+function gvariantValue(text) {
+    const quoted = text.trim().match(/^'(.*)'$/)
+    return quoted ? quoted[1] : Number(text)
+}
+const gvariantLiteral = value => typeof value === "number" ? String(value) : `'${String(value).replace(/[\\']/g, "\\$&")}'`
+function iniSet(path, text, key, value) {
+    if (!/^\[Settings\]$/m.test(text)) throw new Error(`${path} has no [Settings] section`)
+    const line = `${key}=${value}`
+    const pattern = new RegExp(`^${key}=.*$`, "m")
+    return pattern.test(text) ? text.replace(pattern, line) : text.replace(/^\[Settings\]\n/m, `[Settings]\n${line}\n`)
+}
+// GTK 3 on Wayland reads some keys from gsettings and others from settings.ini,
+// so both are written; the ini files are tracked and keep every other line.
+function writeGtkIni(entries) {
+    for (const path of gtkIniPaths) {
+        if (!exists(path)) continue
+        let text = read(path)
+        for (const [key, value] of entries) text = iniSet(path, text, key, value)
+        write(path, text)
+    }
+}
+async function setGtk(row, value) {
+    const before = gvariantValue(await execAsync(["gsettings", "get", ...gsettingsArgs(row.key)]))
+    const saved = gtkIniPaths.filter(exists).map(path => [path, read(path)])
+    try {
+        if (row.ini) writeGtkIni([[row.ini.key, row.ini.values ? row.ini.values[value] : String(value)]])
+        await execAsync(["gsettings", "set", ...gsettingsArgs(row.key), gvariantLiteral(value)])
+    } catch (error) {
+        for (const [path, text] of saved) write(path, text)
+        await execAsync(["gsettings", "set", ...gsettingsArgs(row.key), gvariantLiteral(before)])
+        throw error
+    }
+}
+
 async function snapshot(ids, includeMonitors) {
     // Share category reads, including one animation tree per request.
     const cached = new Map()
@@ -123,13 +189,14 @@ async function snapshot(ids, includeMonitors) {
                 break
             }
             case "option": value = readOption(row.key); if (row.kind === "toggle") value = value === "enabled"; break
-            case "cursor": value = Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"])); break
+            case "cursor": value = Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])); break
+            case "gtk": value = gvariantValue(await execAsync(["gsettings", "get", ...gsettingsArgs(row.key)])); break
             case "idle": value = (await once("idle", () => idleValues(read(idlePath))))[row.key]; break
             case "sunset": value = (await once("sunset", () => sunsetValues(read(sunsetPath))))[row.key]; break
             case "swaync": value = (await once("swaync", () => JSON.parse(read(swayPath))))[row.key] ?? row.default; break
             }
             if (row.default !== undefined) reset = value !== row.default
-            values[id] = { value, reset }
+            values[id] = row.choices ? { value, reset, choices: await choicesFor(row) } : { value, reset }
         } catch (error) { values[id] = { error: error.message } }
     }))
     const result = { values }
@@ -178,7 +245,7 @@ async function validate(row, value) {
     if (row.kind === "toggle" && typeof value !== "boolean") throw new Error("Expected an on/off value")
     if (row.kind === "slider" && (typeof value !== "number" || !Number.isFinite(value) || value < row.min || value > row.max)) throw new Error("Value is outside this setting's range")
     if (row.kind === "slider" && row.step >= 1 && !Number.isInteger(value)) throw new Error("Expected a whole number")
-    if (row.kind === "select" && !row.items.some(item => item.value === value)) throw new Error("Unknown choice")
+    if (row.kind === "select" && !(await choicesFor(row)).some(item => item.value === value)) throw new Error("Unknown choice")
     if (row.kind === "text") {
         if (typeof value !== "string" || /[\n\r\0]/.test(value) || value.length > 512) throw new Error("Enter a single-line value")
         if (!value.trim() && !row.optional) throw new Error("Enter a nonempty single-line value")
@@ -186,8 +253,8 @@ async function validate(row, value) {
     }
 }
 async function cursor(theme, size) {
-    await execAsync(["gsettings", "set", "org.gnome.desktop.interface", "cursor-theme", theme])
-    await execAsync(["gsettings", "set", "org.gnome.desktop.interface", "cursor-size", String(size)])
+    await execAsync(["gsettings", "set", ...gsettingsArgs("cursor-theme"), theme])
+    await execAsync(["gsettings", "set", ...gsettingsArgs("cursor-size"), String(size)])
     await checkedHyprctl(["setcursor", theme, String(size)])
 }
 async function change(request) {
@@ -217,11 +284,11 @@ async function change(request) {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
             // hypr/config/apptype.lua reads these at parse time.
             if (["terminal", "browser", "editor", "codeeditor"].includes(row.key)) await persistReload()
-            if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"])))
+            if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])))
         })
     }
     case "cursor": {
-        const size = Number(await execAsync(["gsettings", "get", "org.gnome.desktop.interface", "cursor-size"]))
+        const size = Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")]))
         const theme = readOption("cursortheme")
         try { await cursor(theme, value) } catch (error) { await cursor(theme, size); throw error }
         return
@@ -251,6 +318,7 @@ async function change(request) {
         config[row.key] = value
         return saveAndApply(swayPath, JSON.stringify(config, null, 2) + "\n", () => execAsync(["swaync-client", "-rs"]))
     }
+    case "gtk": return setGtk(row, value)
     }
 }
 

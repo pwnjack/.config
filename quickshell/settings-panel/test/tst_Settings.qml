@@ -25,10 +25,11 @@ Item {
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
             {id:"nickname",category:"appearance",title:"Nickname",description:"Optional label",kind:"text",optional:true},
+            {id:"theme",category:"appearance",title:"Theme",description:"GTK",kind:"select",choices:"gtk-themes"},
             {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},focus:{value:"1"},idle:{value:0}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -151,6 +152,16 @@ Item {
             tryCompare(combo.popup,"visible",false);
             compare(controller.calls.length,1);
             compare(controller.calls[0].value,"0");
+        }
+        function test_dynamic_choices() {
+            const combo = findChild(view,"select-theme");
+            compare(combo.currentIndex,1);
+            combo.forceActiveFocus();
+            mouseClick(combo);
+            tryCompare(combo.popup,"visible",true);
+            keyClick(Qt.Key_Up); keyClick(Qt.Key_Return);
+            tryCompare(combo.popup,"visible",false);
+            compare(controller.calls[0].value,"A");
         }
     }
 }
