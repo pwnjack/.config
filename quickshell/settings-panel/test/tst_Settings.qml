@@ -289,6 +289,19 @@ Item {
             compare(controller.calls[0].mode,"2560x1440@120.00");
             compare(JSON.stringify(controller.stagedDisplays),"{}");
         }
+        function test_changing_back_leaves_nothing_staged() {
+            controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
+            pick("select-DP-1-mode", 2);
+            verify(findChild(view,"applyDisplay-DP-1").enabled);
+            pick("select-DP-1-mode", 0);   // back to Automatic, the saved value
+            // the popup opens on the current item: Up twice returns to Automatic
+            const mode = findChild(view,"select-DP-1-mode");
+            mouseClick(mode); tryCompare(mode.popup,"visible",true);
+            keyClick(Qt.Key_Up); keyClick(Qt.Key_Up); keyClick(Qt.Key_Return);
+            tryCompare(mode.popup,"visible",false);
+            verify(!findChild(view,"applyDisplay-DP-1").enabled);
+            compare(JSON.stringify(controller.stagedDisplays),"{}");
+        }
         function test_countdown_reverts_once_per_deadline() {
             controller.keepPendingOnRevert = true;
             controller.pendingDisplay = {output:"DP-1",deadline:Date.now() - 1};

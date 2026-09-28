@@ -25,8 +25,9 @@ local machine = state_home .. "/hypr/monitors.lua"
 local file, open_err, errno = io.open(machine, "r")
 if file then
     file:close()
-    local specs = {}
-    local chunk, err = loadfile(machine, "t", { hl = { monitor = function(spec) specs[#specs + 1] = spec end } })
+    -- Counted, not appended: hl.monitor(nil) must still be seen and rejected.
+    local specs, count = {}, 0
+    local chunk, err = loadfile(machine, "t", { hl = { monitor = function(spec) count = count + 1; specs[count] = spec end } })
     local ok = chunk ~= nil
     if ok then ok, err = pcall(chunk) end
     -- Every rule is checked before any is applied. Keys are Hyprland's to
@@ -36,10 +37,11 @@ if file then
         local kind = type(value)
         if kind == "string" or kind == "number" or kind == "boolean" then return true end
         if kind ~= "table" or getmetatable(value) ~= nil then return false end
-        for _, item in pairs(value) do if type(item) ~= "number" then return false end end
+        for key, item in pairs(value) do if type(key) ~= "number" or type(item) ~= "number" then return false end end
         return true
     end
-    for index, spec in ipairs(ok and specs or {}) do
+    for index = 1, ok and count or 0 do
+        local spec = specs[index]
         if type(spec) ~= "table" or getmetatable(spec) ~= nil or type(spec.output) ~= "string" then
             ok, err = false, "entry " .. index .. " is not a monitor rule"
             break
@@ -54,7 +56,7 @@ if file then
     -- the config loads; Hyprland skips that one rule and shows it in its
     -- config-error banner, as for any hand-edited config. The panel only ever
     -- writes values it validated, so this needs a hand edit.
-    if ok then ok, err = pcall(function() for _, spec in ipairs(specs) do hl.monitor(spec) end end) end
+    if ok then ok, err = pcall(function() for index = 1, count do hl.monitor(specs[index]) end end) end
     if not ok then monitors_failed(err) end
 elseif errno ~= 2 then -- ENOENT: no file simply means all automatic.
     monitors_failed(open_err)

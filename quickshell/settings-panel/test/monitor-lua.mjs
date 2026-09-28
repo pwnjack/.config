@@ -8,7 +8,10 @@ import os from 'node:os'
 import path from 'node:path'
 import * as displays from '../displays.mjs'
 
-const lua = ['lua5.5', 'lua5.4', 'lua'].find(name => { try { execFileSync('sh', ['-c', `command -v ${name}`]); return true } catch (_) { return false } })
+// Found by looking on PATH, not by spawning a shell: a spawn failure must
+// fail the test, never pass for "no Lua here".
+const lua = ['lua5.5', 'lua5.4', 'lua'].flatMap(name => (process.env.PATH || '').split(':').map(dir => path.join(dir, name)))
+    .find(file => { try { fs.accessSync(file, fs.constants.X_OK); return true } catch (_) { return false } })
 if (!lua) { console.log('skip: no Lua interpreter for the monitor.lua loader test'); process.exit(0) }
 const loader = new URL('../../../hypr/config/hardware/monitor.lua', import.meta.url).pathname
 const state = fs.mkdtempSync(path.join(os.tmpdir(), 'monitor-lua-'))
@@ -38,5 +41,7 @@ assert.equal(load(written + 'error("broken")\n'), ':highres@highrr|1', 'a runtim
 assert.equal(load('hl.monitor({ output = '), ':highres@highrr|1', 'a syntax error applies nothing and notifies')
 assert.equal(load(written + 'hl.monitor({ output = "DP-2", mode = function() end })\n'), ':highres@highrr|1', 'a non-plain value applies nothing')
 assert.equal(load(written + 'os.execute("true")\n'), ':highres@highrr|1', 'os is not reachable')
+assert.equal(load(written + 'hl.monitor(nil)\n'), ':highres@highrr|1', 'a nil rule is not skipped silently')
+assert.equal(load(written + 'hl.monitor({ output = "DP-2", reserved = { [function() end] = 1 } })\n'), ':highres@highrr|1', 'nested tables may only hold numbers under number keys')
 fs.rmSync(state, { recursive: true, force: true })
 console.log('ok: monitor.lua loads exactly what displays.mjs writes, and fails closed')

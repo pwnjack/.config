@@ -21,6 +21,10 @@ Rectangle {
         const next = Object.assign({}, staged, {[key]: value});
         // Scale 1 divides every mode; a scale that no longer divides the new mode falls back to it.
         if (key === "mode" && !Displays.scaleChoices(...Displays.modeSize(value, monitor)).some(c => c.value === config.scale)) next.scale = 1;
+        // A field set back to its saved value is no longer an edit.
+        for (const field of Object.keys(next))
+            if (next[field] === (field === "disabled" ? !!saved.disabled : saved[field])) delete next[field];
+        if (!Object.keys(next).length) return unstage();
         controller.stagedDisplays = Object.assign({}, controller.stagedDisplays, {[monitor.name]: next});
     }
     function unstage() {
