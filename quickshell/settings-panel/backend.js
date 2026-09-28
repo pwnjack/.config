@@ -478,6 +478,8 @@ function displayConfig(request, monitors) {
     if (request.automatic === true) return { ...displays.AUTOMATIC }
     if (request.disabled === true) {
         if (!monitors.some(m => m.name !== monitor.name && !m.disabled)) throw new Error("At least one display must stay on")
+        // hyprlock draws its password field on the main display.
+        if (readOption("mainmonitor") === monitor.name) throw new Error("This is the main display; choose another main display first")
         return { disabled: true }
     }
     const config = { mode: request.mode, position: request.position, scale: request.scale, transform: request.transform }
@@ -574,7 +576,7 @@ export async function dispatch(request) {
         const primary = configDir + "/hypr/config/hardware/primary.conf"
         const before = read(optionPath("mainmonitor"))
         write(optionPath("mainmonitor"), request.value + "\n")
-        try { write(primary, "$monitor = " + request.value + "\n") }
+        try { write(primary, (request.value ? "$monitor = " + request.value : "$monitor =") + "\n") }
         catch (error) { write(optionPath("mainmonitor"), before); throw error }
         return {}
     }

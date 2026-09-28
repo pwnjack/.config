@@ -61,11 +61,13 @@ export function parseStateFile(text) {
     for (const line of text.split("\n")) {
         if (!line.trim() || line.startsWith("--")) continue
         const match = line.match(linePattern)
-        if (match) {
+        // A second line for one output is not something the panel writes either.
+        if (match && !Object.hasOwn(outputs, match[1])) {
             outputs[match[1]] = match[2] === undefined ? { disabled: true }
                 : { mode: match[2], position: match[3], scale: Number(match[4]), transform: Number(match[5]) }
             continue
         }
+        if (match) { delete outputs[match[1]]; handEdited.add(match[1]); continue }
         const named = line.match(/output\s*=\s*"([^"]+)"/)
         handEdited.add(named ? named[1] : "*")
     }

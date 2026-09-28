@@ -8,3 +8,4 @@ QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_RUNTIME_DIR="$runtime" \
 bash "$test_dir/test-persist.sh"
 node "$test_dir/backend.mjs"
 node "$test_dir/displays.mjs"
+node "$test_dir/monitor-lua.mjs"

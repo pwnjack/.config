@@ -46,3 +46,6 @@ assert.equal(displays.stateFileWith(unterminated,'DP-1',line),'-- hand comment\n
 console.log('ok: the state file keeps one line per output, round-trips exactly and reports hand edits')
 assert.deepEqual(displays.modeChoices({availableModes:['2560x1440@144.00Hz','weird-mode']}).map(c=>c.value),['highres@highrr','2560x1440@144.00'])
 console.log('ok: unparseable modes are skipped, never fatal')
+const twice = displays.stateFileWith('','DP-1',line) + line + '\n'
+assert.deepEqual([...displays.parseStateFile(twice).handEdited],['DP-1'])
+console.log('ok: two panel lines for one output count as a hand edit')

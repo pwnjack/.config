@@ -11,21 +11,28 @@ Rectangle {
     required property var theme
     required property var controller
     readonly property var saved: monitor.saved || (monitor.disabled ? {disabled: true} : Displays.AUTOMATIC)
-    readonly property string savedKey: JSON.stringify(saved)
-    property var staged: ({})
+    // Staged edits live on the controller: a refresh recreates every card.
+    readonly property var staged: controller.stagedDisplays[monitor.name] || ({})
     readonly property var config: Object.assign({}, saved.disabled ? Displays.AUTOMATIC : saved, {disabled: !!saved.disabled}, staged)
     readonly property var scales: Displays.scaleChoices(...Displays.modeSize(config.mode, monitor))
     readonly property bool changed: Object.keys(staged).some(key => staged[key] !== (key === "disabled" ? !!saved.disabled : saved[key]))
     readonly property bool locked: monitor.handEdited || !!controller.pendingDisplay || controller.busy
-    onSavedKeyChanged: staged = ({})
     function stage(key, value) {
         const next = Object.assign({}, staged, {[key]: value});
         // Scale 1 divides every mode; a scale that no longer divides the new mode falls back to it.
         if (key === "mode" && !Displays.scaleChoices(...Displays.modeSize(value, monitor)).some(c => c.value === config.scale)) next.scale = 1;
-        staged = next;
+        controller.stagedDisplays = Object.assign({}, controller.stagedDisplays, {[monitor.name]: next});
     }
+    function unstage() {
+        const rest = Object.assign({}, controller.stagedDisplays);
+        delete rest[monitor.name];
+        controller.stagedDisplays = rest;
+    }
+    // An open dropdown keeps display refreshes from recreating this card under it.
+    function interact(open) { controller.interacting = open ? "display:" + monitor.name : ""; }
     function apply() {
         const c = config;
+        unstage();
         controller.submit(c.disabled ? {op: "displayApply", output: monitor.name, disabled: true}
             : {op: "displayApply", output: monitor.name, mode: c.mode, position: c.position, scale: c.scale, transform: c.transform});
     }
@@ -62,13 +69,13 @@ Rectangle {
             columns: 4; columnSpacing: 10; rowSpacing: 8
             enabled: !card.locked && !card.config.disabled
             Label { text: "Mode"; color: card.theme.foreground; font.pixelSize: 12 }
-            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-mode"; choices: card.monitor.choices.modes; value: card.config.mode; onPicked: value => card.stage("mode", value) }
+            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-mode"; choices: card.monitor.choices.modes; value: card.config.mode; onOpenChanged: card.interact(open); onPicked: value => card.stage("mode", value) }
             Label { text: "Scale"; color: card.theme.foreground; font.pixelSize: 12 }
-            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-scale"; choices: card.scales; value: card.config.scale; onPicked: value => card.stage("scale", value) }
+            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-scale"; choices: card.scales; value: card.config.scale; onOpenChanged: card.interact(open); onPicked: value => card.stage("scale", value) }
             Label { text: "Position"; color: card.theme.foreground; font.pixelSize: 12 }
-            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-position"; choices: card.monitor.choices.positions; value: card.config.position; onPicked: value => card.stage("position", value) }
+            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-position"; choices: card.monitor.choices.positions; value: card.config.position; onOpenChanged: card.interact(open); onPicked: value => card.stage("position", value) }
             Label { text: "Rotation"; color: card.theme.foreground; font.pixelSize: 12 }
-            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-rotation"; choices: card.monitor.choices.transforms; value: card.config.transform; onPicked: value => card.stage("transform", value) }
+            PanelCombo { Layout.fillWidth: true; theme: card.theme; key: card.monitor.name + "-rotation"; choices: card.monitor.choices.transforms; value: card.config.transform; onOpenChanged: card.interact(open); onPicked: value => card.stage("transform", value) }
         }
         RowLayout {
             Layout.fillWidth: true
@@ -81,7 +88,7 @@ Rectangle {
                 palette.windowText: card.theme.foreground
             }
             Item { Layout.fillWidth: true }
-            PanelButton { objectName: "automaticDisplay-" + card.monitor.name; theme: card.theme; text: "Automatic"; enabled: !card.locked && card.monitor.saved !== null; onClicked: card.controller.submit({op: "displayApply", output: card.monitor.name, automatic: true}) }
+            PanelButton { objectName: "automaticDisplay-" + card.monitor.name; theme: card.theme; text: "Automatic"; enabled: !card.locked && card.monitor.saved !== null; onClicked: { card.unstage(); card.controller.submit({op: "displayApply", output: card.monitor.name, automatic: true}); } }
             PanelButton { objectName: "applyDisplay-" + card.monitor.name; theme: card.theme; text: "Apply"; enabled: !card.locked && card.changed; onClicked: card.apply() }
         }
     }

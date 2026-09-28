@@ -22,8 +22,10 @@ Item {
         property var calls: []
         property string interacting: ""
         property var pendingDisplay: null
+        property var stagedDisplays: ({})
+        property bool keepPendingOnRevert: false
         function keepDisplay() { calls = calls.concat([{op:"displayKeep"}]); }
-        function revertDisplay() { pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
+        function revertDisplay() { if (!keepPendingOnRevert) pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
         property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
@@ -51,7 +53,7 @@ Item {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
             controller.calls = []; controller.busy = false; controller.interacting = "";
             controller.loaded = true; controller.loading = false;
-            controller.pendingDisplay = null; controller.monitors = [];
+            controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
             controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
@@ -266,11 +268,33 @@ Item {
             verify(!findChild(view,"toggle-blur").enabled);
             verify(!findChild(view,"reloadHyprland").enabled);
             controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
-            for (const name of ["mainDisplay-DP-1","editDisplaysFile","automaticMainDisplay","applyDisplay-DP-1","automaticDisplay-DP-1"])
+            for (const name of ["mainDisplay-DP-1","editDisplaysFile","automaticMainDisplay","applyDisplay-DP-1","automaticDisplay-DP-1","restartWaybar","updateSystem"])
                 verify(!findChild(view,name).enabled, name + " waits");
             controller.pendingDisplay = null; controller.select("appearance"); wait(20);
             verify(findChild(view,"toggle-blur").enabled);
             verify(findChild(view,"reloadHyprland").enabled);
+        }
+        function test_staged_edits_survive_a_refresh() {
+            controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
+            const mode = findChild(view,"select-DP-1-mode");
+            mouseClick(mode); tryCompare(mode.popup,"visible",true);
+            compare(controller.interacting,"display:DP-1");
+            keyClick(Qt.Key_Down); keyClick(Qt.Key_Down); keyClick(Qt.Key_Return);
+            tryCompare(mode.popup,"visible",false);
+            compare(controller.interacting,"");
+            controller.monitors = [pg279q()]; wait(50);   // a live read replaces the array
+            const apply = findChild(view,"applyDisplay-DP-1");
+            verify(apply.enabled);
+            mouseClick(apply);
+            compare(controller.calls[0].mode,"2560x1440@120.00");
+            compare(JSON.stringify(controller.stagedDisplays),"{}");
+        }
+        function test_countdown_reverts_once_per_deadline() {
+            controller.keepPendingOnRevert = true;
+            controller.pendingDisplay = {output:"DP-1",deadline:Date.now() - 1};
+            wait(1200);
+            compare(controller.calls.filter(c => c.op === "displayRevert").length,1);
+            controller.keepPendingOnRevert = false; controller.pendingDisplay = null;
         }
         function test_pending_banner_keep_and_timeout() {
             controller.pendingDisplay = {output:"DP-1",deadline:Date.now() + 60000}; wait(20);

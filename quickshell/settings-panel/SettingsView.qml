@@ -20,13 +20,19 @@ FocusScope {
     readonly property color accentText: controller.accentText
     readonly property color plate: Qt.tint(background, Qt.rgba(foreground.r, foreground.g, foreground.b, 0.055))
     property double now: Date.now()
+    property double autoRevertedFor: 0
     // The visible countdown. systemd's guard reverts at 20 s even if this never fires.
     Timer {
         interval: 250; repeat: true
         running: !!view.controller.pendingDisplay
         onTriggered: {
             view.now = Date.now();
-            if (view.now >= view.controller.pendingDisplay.deadline && !view.controller.busy) view.controller.revertDisplay();
+            const deadline = view.controller.pendingDisplay.deadline;
+            // Once per deadline: a revert that failed must not retry every 250 ms.
+            if (view.now >= deadline && !view.controller.busy && view.autoRevertedFor !== deadline) {
+                view.autoRevertedFor = deadline;
+                view.controller.revertDisplay();
+            }
         }
     }
     focus: true
@@ -180,8 +186,8 @@ FocusScope {
                     spacing: 8
                     // A reload would undo a display change still awaiting Keep or Revert.
                     PanelButton { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.action("reload") }
-                    PanelButton { theme: view; text: "Restart Waybar"; onClicked: view.controller.action("waybar") }
-                    PanelButton { theme: view; text: "Update system"; onClicked: view.controller.action("update") }
+                    PanelButton { objectName: "restartWaybar"; theme: view; text: "Restart Waybar"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("waybar") }
+                    PanelButton { objectName: "updateSystem"; theme: view; text: "Update system"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("update") }
                 }
             }
         }

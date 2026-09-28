@@ -88,13 +88,17 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 
 Per-machine display rules live outside the repo in
 `${XDG_STATE_HOME:-~/.local/state}/hypr/monitors.lua`, one `hl.monitor()` per
-output, written only by the Displays page (Edit file opens it in
-`options/editor`). The tracked `hypr/config/hardware/monitor.lua` keeps its
+output, written only by the Displays page. Edit file opens it in
+`options/editor`; Hyprland does not watch it, so run Reload Hyprland after a
+hand edit. The tracked `hypr/config/hardware/monitor.lua` keeps its
 host-neutral catch-all and loads that file if present, in an environment that
-can only record `hl.monitor()` calls; rules are type-checked and applied only
-once the whole file has run, so a broken file leaves the catch-all and shows a
-notification. A missing file means all automatic. A line the panel did not
-write locks that output ("edited by hand"). While Hyprland loads its config,
+can only record `hl.monitor()` calls; every value must be plain data (keys
+are Hyprland's to judge, so a hand-added `vrr` or `bitdepth` applies), and
+rules are applied only once the whole file has run, so a broken file leaves
+the catch-all and shows a notification. A missing file means all automatic. A line the panel did not
+write, or a second line for the same output, locks that output ("edited by
+hand"). The main display cannot be turned off (hyprlock draws its password
+field there); choose another main display first. While Hyprland loads its config,
 `hl.monitor()` does not raise for a value it rejects (transform 9, a mode it
 cannot parse): it records a config error and skips that one rule, so such a
 hand edit shows in Hyprland's error banner instead.
@@ -109,8 +113,7 @@ state file only changes on Keep, so a reload restores the last kept layout)
 before disarming the guard. Keep writes the evaluated line while the guard is
 still armed, stops it, and reloads so the live layout always equals the saved
 file. If the panel dies or its screen goes dark, the guard reverts at 20 s.
-While a change is pending every other setting, Set as main, Edit file and
-Reload Hyprland wait, and the backend refuses every request but reads and the
+While a change is pending every other setting and button waits, and the backend refuses every request but reads and the
 display operations, since a reset or reload would silently undo it.
 
 Verified on DP-1 (ROG PG279Q, 2560×1440) with Hyprland 0.56.2:
@@ -166,6 +169,7 @@ The saving at idle comes from exiting, not from keeping a Qt runtime hidden.
 ```bash
 bash quickshell/settings-panel/test/run-tests.sh
 node quickshell/settings-panel/test/displays.mjs
+node quickshell/settings-panel/test/monitor-lua.mjs # runs monitor.lua under Lua
 bash quickshell/settings-panel/test/live-smoke.sh # opens/closes on the desktop
 bash scripts/hyprland/test-wallpaper.sh
 /usr/lib/qt6/bin/qmllint -I /usr/lib/qt6/qml quickshell/settings-panel/*.qml

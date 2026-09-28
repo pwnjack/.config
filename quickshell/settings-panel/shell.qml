@@ -21,6 +21,7 @@ ShellRoot {
     property var monitors: []
     property string mainMonitor: ""
     property var pendingDisplay: null
+    property var stagedDisplays: ({})
     property string interacting: ""
     property var liveDirty: ({})
     property string liveReply: ""
@@ -159,7 +160,8 @@ ShellRoot {
                 const result = JSON.parse(root.readReply);
                 if (!result.ok) throw new Error(result.error);
                 root.values = Object.assign({}, root.values, result.values);
-                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; root.pendingDisplay = result.displayPending; }
+                // An open display dropdown keeps its card; a queued Keep/Revert is about to change pendingDisplay.
+                if (result.monitors && !root.interacting.startsWith("display:")) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; if (!root.busy) root.pendingDisplay = result.displayPending; }
                 root.readyMs = Date.now() - root.startedAt;
                 console.info("Settings ready in " + root.readyMs + " ms");
             } catch (error) { root.problem = root.readError.trim() || "Could not read settings: " + error; }
@@ -216,7 +218,8 @@ ShellRoot {
                 // Never move a control under the user's hand.
                 delete values[root.interacting];
                 root.values = Object.assign({}, root.values, values);
-                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; root.pendingDisplay = result.displayPending; }
+                // An open display dropdown keeps its card; a queued Keep/Revert is about to change pendingDisplay.
+                if (result.monitors && !root.interacting.startsWith("display:")) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; if (!root.busy) root.pendingDisplay = result.displayPending; }
             } catch (error) { console.warn("Live refresh failed: " + error); }
             if (Object.keys(root.liveDirty).length) liveTimer.restart();
             if (root.busy || root.closing) root.drain();

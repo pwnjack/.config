@@ -29,17 +29,23 @@ if file then
     local chunk, err = loadfile(machine, "t", { hl = { monitor = function(spec) specs[#specs + 1] = spec end } })
     local ok = chunk ~= nil
     if ok then ok, err = pcall(chunk) end
-    -- Every spec is checked before any is applied, so hl.monitor() rejecting a
-    -- later one cannot strand the earlier ones. Only plain values of the kinds
-    -- the Displays page writes get through.
-    local kinds = { output = "string", mode = "string", position = "string", scale = "number", transform = "number", disabled = "boolean" }
+    -- Every rule is checked before any is applied. Keys are Hyprland's to
+    -- judge (a hand edit may add vrr, bitdepth, reserved, ...); values must be
+    -- plain data, so no function or metatable reaches the real hl.monitor().
+    local function plain(value)
+        local kind = type(value)
+        if kind == "string" or kind == "number" or kind == "boolean" then return true end
+        if kind ~= "table" or getmetatable(value) ~= nil then return false end
+        for _, item in pairs(value) do if type(item) ~= "number" then return false end end
+        return true
+    end
     for index, spec in ipairs(ok and specs or {}) do
         if type(spec) ~= "table" or getmetatable(spec) ~= nil or type(spec.output) ~= "string" then
             ok, err = false, "entry " .. index .. " is not a monitor rule"
             break
         end
         for key, value in pairs(spec) do
-            if kinds[key] ~= type(value) then ok, err = false, "entry " .. index .. " has an unsupported " .. tostring(key) break end
+            if type(key) ~= "string" or not plain(value) then ok, err = false, "entry " .. index .. " has an unsupported " .. tostring(key) break end
         end
         if not ok then break end
     end
