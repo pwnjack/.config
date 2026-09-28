@@ -304,9 +304,9 @@ hl.config("decoration", {
 
 **Window Rules:** `~/.config/hypr/config/software/rules.lua`
 
-### Monitors
+### Displays
 
-Edit `~/.config/hypr/config/hardware/monitor.lua`
+Use the Displays page of the settings panel (Super+I). Per-machine rules are written to ~/.local/state/hypr/monitors.lua and loaded by ~/.config/hypr/config/hardware/monitor.lua, which stays host-neutral.
 
 ## Troubleshooting
 

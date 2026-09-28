@@ -227,6 +227,7 @@ for (const request of [
     {op:'set',id:'apps.browser',value:'line\nbreak'},
     {op:'reset',id:'apps.browser'},
     {op:'action',id:'../../anything'},
+    {op:'action',id:'monitors'},
 ]) await assert.rejects(dispatch(request))
 assert.equal(events.length,0)
 console.log('ok: invalid settings, types, ranges, actions and resets are rejected before side effects')

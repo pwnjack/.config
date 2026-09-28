@@ -37,8 +37,8 @@
     },
     {
       "id": "monitors",
-      "title": "Monitors",
-      "description": "Connected displays and adaptive sync"
+      "title": "Displays",
+      "description": "Resolution, refresh rate, scale, arrangement and the main display"
     },
     {
       "id": "power",

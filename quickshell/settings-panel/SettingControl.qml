@@ -101,82 +101,14 @@ Rectangle {
     }
     Component {
         id: selectComponent
-        ComboBox {
-            id: combo
-            objectName: "select-" + control.row.id
-            readonly property var choices: control.row.items || control.settingState.choices || []
-            implicitHeight: 40
-            model: combo.choices
-            textRole: "label"
-            currentIndex: combo.choices.findIndex(item => item.value === String(control.settingState.value))
-            displayText: currentIndex < 0 ? String(control.settingState.value ?? "") : currentText
+        PanelCombo {
+            theme: control.theme
+            key: control.row.id
+            choices: control.row.items || control.settingState.choices || []
+            value: control.settingState.value
             Accessible.name: control.row.title
-            onActivated: index => control.controller.change(control.row.id, combo.choices[index].value)
-            palette.button: control.theme.background
-            palette.buttonText: control.theme.foreground
-            palette.base: control.theme.background
-            palette.text: control.theme.foreground
-            palette.highlight: control.theme.accent
-            palette.highlightedText: control.theme.accentText
-            contentItem: Text {
-                text: combo.displayText
-                color: control.theme.foreground
-                font.pixelSize: 13
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-                leftPadding: 12
-                rightPadding: 32
-            }
-            indicator: Text {
-                x: combo.width - width - 12
-                y: (combo.height - height) / 2
-                text: "▾"
-                color: control.theme.foreground
-                font.pixelSize: 16
-            }
-            delegate: ItemDelegate {
-                id: choice
-                required property int index
-                required property var modelData
-                width: combo.width - 8
-                height: 40
-                highlighted: combo.highlightedIndex === index
-                contentItem: Text {
-                    text: choice.modelData.label
-                    color: choice.highlighted ? control.theme.accentText : control.theme.foreground
-                    font.pixelSize: 13
-                    verticalAlignment: Text.AlignVCenter
-                    elide: Text.ElideRight
-                    leftPadding: 8
-                }
-                background: Rectangle { radius: 6; color: choice.highlighted ? control.theme.accent : control.theme.plate }
-            }
-            popup: Popup {
-                objectName: "choices-" + control.row.id
-                // Keep the popup in the panel scene, independent of platform menus.
-                popupType: Popup.Item
-                y: combo.height + 4
-                width: combo.width
-                padding: 4
-                implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
-                background: Rectangle {
-                    radius: 10
-                    color: control.theme.plate
-                    border.color: Qt.rgba(control.theme.foreground.r, control.theme.foreground.g, control.theme.foreground.b, 0.25)
-                }
-                contentItem: ListView {
-                    clip: true
-                    implicitHeight: contentHeight
-                    model: combo.popup.visible ? combo.delegateModel : null
-                    currentIndex: combo.highlightedIndex
-                    boundsBehavior: Flickable.StopAtBounds
-                }
-            }
-            background: Rectangle { color: control.theme.background; radius: 8; border.width: combo.activeFocus ? 2 : 1; border.color: combo.activeFocus ? control.theme.accent : Qt.rgba(control.theme.foreground.r, control.theme.foreground.g, control.theme.foreground.b, 0.25) }
-            Connections {
-                target: combo.popup
-                function onVisibleChanged() { control.controller.interacting = combo.popup.visible ? control.row.id : ""; }
-            }
+            onPicked: value => control.controller.change(control.row.id, value)
+            onOpenChanged: control.controller.interacting = open ? control.row.id : ""
         }
     }
     Component {

@@ -583,7 +583,7 @@ export async function dispatch(request) {
             detached([readOption("terminal") || "ghostty", "-e", ...(readOption("editor") || "nvim").split(/\s+/), displayStatePath])
             return {}
         }
-        const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh", monitors: "/scripts/settings/advanced/monitor.sh" }
+        const scripts = { waybar: "/scripts/waybar/waybar.sh", update: "/scripts/settings/update.sh" }
         if (!Object.hasOwn(scripts, request.id)) throw new Error("Unknown action")
         const path = configDir + scripts[request.id]
         detached(request.id === "waybar" ? ["bash", path] : [readOption("terminal") || "ghostty", "-e", path])

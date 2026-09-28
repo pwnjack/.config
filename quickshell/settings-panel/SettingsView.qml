@@ -19,6 +19,16 @@ FocusScope {
     readonly property color accent: controller.accent
     readonly property color accentText: controller.accentText
     readonly property color plate: Qt.tint(background, Qt.rgba(foreground.r, foreground.g, foreground.b, 0.055))
+    property double now: Date.now()
+    // The visible countdown. systemd's guard reverts at 20 s even if this never fires.
+    Timer {
+        interval: 250; repeat: true
+        running: !!view.controller.pendingDisplay
+        onTriggered: {
+            view.now = Date.now();
+            if (view.now >= view.controller.pendingDisplay.deadline && !view.controller.busy) view.controller.revertDisplay();
+        }
+    }
     focus: true
     Keys.onEscapePressed: controller.close()
     Shortcut { sequence: "Ctrl+F"; onActivated: search.forceActiveFocus() }
@@ -96,6 +106,22 @@ FocusScope {
                     radius: 10; color: view.plate; border.color: view.foreground
                     Label { id: errorLabel; anchors.fill: parent; anchors.margins: 12; text: view.controller.problem; color: view.foreground; wrapMode: Text.Wrap; Accessible.role: Accessible.AlertMessage }
                 }
+                Rectangle {
+                    id: pendingBanner
+                    objectName: "displayPending"
+                    visible: !!view.controller.pendingDisplay
+                    readonly property int secondsLeft: view.controller.pendingDisplay ? Math.max(0, Math.ceil((view.controller.pendingDisplay.deadline - view.now) / 1000)) : 0
+                    Layout.fillWidth: true
+                    implicitHeight: pendingRow.implicitHeight + 24
+                    radius: 10; color: view.plate; border.color: view.accent; border.width: 2
+                    RowLayout {
+                        id: pendingRow
+                        anchors.fill: parent; anchors.margins: 12
+                        Label { objectName: "displayCountdown"; text: "Keep this display layout? Reverting in " + pendingBanner.secondsLeft + " s"; color: view.foreground; Layout.fillWidth: true; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
+                        PanelButton { objectName: "keepDisplay"; theme: view; text: "Keep"; enabled: !view.controller.busy; onClicked: view.controller.keepDisplay() }
+                        PanelButton { objectName: "revertDisplay"; theme: view; text: "Revert"; enabled: !view.controller.busy; onClicked: view.controller.revertDisplay() }
+                    }
+                }
                 ScrollView {
                     id: scroll
                     objectName: "settingsScroll"
@@ -111,33 +137,18 @@ FocusScope {
                         spacing: 8
                         Repeater {
                             model: view.controller.category === "monitors" && !view.controller.query.trim() ? view.controller.monitors : []
-                            delegate: Rectangle {
-                                id: display
+                            delegate: DisplayCard {
                                 required property var modelData
                                 Layout.fillWidth: true
-                                implicitHeight: monitorInfo.implicitHeight + 28
-                                radius: 12; color: view.plate
-                                RowLayout {
-                                    id: monitorInfo
-                                    anchors.fill: parent; anchors.margins: 14
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        Label { text: display.modelData.name + " · " + (display.modelData.model || "Display"); color: view.foreground; font.bold: true }
-                                        Label { text: display.modelData.width + " × " + display.modelData.height + " · " + Number(display.modelData.refreshRate).toFixed(1) + " Hz · scale " + display.modelData.scale; color: view.foreground; opacity: 0.75; font.pixelSize: 12 }
-                                    }
-                                    PanelButton {
-                                        theme: view
-                                        text: view.controller.mainMonitor === display.modelData.name ? "Main display" : "Set as main"
-                                        enabled: !view.controller.busy && view.controller.mainMonitor !== display.modelData.name
-                                        onClicked: view.controller.submit({op: "mainMonitor", value: display.modelData.name})
-                                    }
-                                }
+                                monitor: modelData
+                                theme: view
+                                controller: view.controller
                             }
                         }
                         Flow {
                             visible: view.controller.category === "monitors" && !view.controller.query.trim()
                             Layout.fillWidth: true; spacing: 8
-                            PanelButton { theme: view; text: "Advanced display setup"; onClicked: view.controller.action("monitors") }
+                            PanelButton { theme: view; text: "Edit file"; onClicked: view.controller.action("displays-file") }
                             PanelButton { theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
                         }
                         Label { visible: !view.controller.visibleRows.length && !view.controller.loading; text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24 }

@@ -20,6 +20,7 @@ ShellRoot {
     property var values: ({})
     property var monitors: []
     property string mainMonitor: ""
+    property var pendingDisplay: null
     property string interacting: ""
     property var liveDirty: ({})
     property string liveReply: ""
@@ -87,6 +88,12 @@ ShellRoot {
     function change(id, value) { submit({op: "set", id: id, value: value}); }
     function reset(id) { submit({op: "reset", id: id}); }
     function action(id) { submit({op: "action", id: id}); }
+    function keepDisplay() { submit({op: "displayKeep"}); }
+    function revertDisplay() {
+        // Cleared first so the countdown cannot submit twice; the next read restores it if still pending.
+        pendingDisplay = null;
+        submit({op: "displayRevert"});
+    }
     function submit(request) {
         if (closing) return;
         problem = "";
@@ -111,6 +118,8 @@ ShellRoot {
         writer.running = true;
     }
     function close() {
+        // A layout nobody confirmed is never left behind.
+        if (pendingDisplay && !closing) revertDisplay();
         closing = true;
         opened = false;
         if (!writer.running && !queue.length) Qt.quit();
@@ -150,7 +159,7 @@ ShellRoot {
                 const result = JSON.parse(root.readReply);
                 if (!result.ok) throw new Error(result.error);
                 root.values = Object.assign({}, root.values, result.values);
-                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; }
+                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; root.pendingDisplay = result.displayPending; }
                 root.readyMs = Date.now() - root.startedAt;
                 console.info("Settings ready in " + root.readyMs + " ms");
             } catch (error) { root.problem = root.readError.trim() || "Could not read settings: " + error; }
@@ -167,6 +176,7 @@ ShellRoot {
             try {
                 const result = JSON.parse(root.writeReply);
                 if (code !== 0 || !result.ok) throw new Error(result.error || "Settings helper failed");
+                if (result.pending !== undefined) root.pendingDisplay = result.pending;
             } catch (error) {
                 root.problem = String(error);
                 if (!root.writeReply.trim()) root.problem = root.writeError.trim() || "The settings helper stopped before confirming the change.";
@@ -203,7 +213,7 @@ ShellRoot {
                 // Never move a control under the user's hand.
                 delete values[root.interacting];
                 root.values = Object.assign({}, root.values, values);
-                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; }
+                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; root.pendingDisplay = result.displayPending; }
             } catch (error) { console.warn("Live refresh failed: " + error); }
             if (Object.keys(root.liveDirty).length) liveTimer.restart();
             if (root.busy || root.closing) root.drain();
