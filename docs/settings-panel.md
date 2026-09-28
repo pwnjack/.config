@@ -57,7 +57,7 @@ wallpaper carousel remains a separate application with its existing lifecycle.
   `powerprofilesctl`; the `idle` source adds, retimes and removes only the
   suspend listener it marked, and refuses to change a hand-written one.
 - `hyprctl getoption -j` names the value field after its type (`bool`, `int`,
-  `float`, `str`, `css`); `set` only says whether the config assigns the
+  `float`, `str`, `css`, `custom`); `set` only says whether the config assigns the
   option and is never a value. The Lua provider rejects legacy hyphenated
   names: use `input:touchpad:tap_to_click`, not `tap-to-click`.
 - AGS no longer starts at login or after wallpaper changes. Its retired source
@@ -101,8 +101,7 @@ scripts/docs/generate-keybindings.sh --check
 ./doctor.sh
 ```
 
-The new suite must be run explicitly until its files are tracked: `test.sh`
-intentionally discovers tracked files only. Tests cover keyboard/search/close,
+`./test.sh` runs this suite. Tests cover keyboard/search/close,
 no writes while building controls, slider release and explicit text saves,
 backend validation (XKB, fonts, commands, choices), GTK/Kvantum ini
 round-trips, File Types subtype handling and rollback, suspend listener

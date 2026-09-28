@@ -370,7 +370,12 @@ async function change(request) {
     case "cursor": {
         const size = Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")]))
         const theme = readOption("cursortheme")
-        try { await cursor(theme, value) } catch (error) { await cursor(theme, size); throw error }
+        try { await cursor(theme, value) }
+        catch (error) {
+            try { await cursor(theme, size) }
+            catch (rollback) { throw new Error(`${error.message}. Restoring the previous cursor also failed: ${rollback.message}`) }
+            throw error
+        }
         return
     }
     case "idle": {

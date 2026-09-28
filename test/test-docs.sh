@@ -23,6 +23,8 @@ CONF="$ROOT/hypr/config/software/keybinds.lua"
 
 # shellcheck source=scripts/lib/assert.sh
 . "$ROOT/scripts/lib/assert.sh"
+# shellcheck source=scripts/lib/hypr-vars.sh
+. "$ROOT/scripts/lib/hypr-vars.sh"
 
 # --- the generated file is current ------------------------------------------
 
@@ -116,7 +118,14 @@ while IFS= read -r name; do
     if grep -qi "(\`\?$value\`\?)" "$DOC"; then
         frozen+=("$name: the document names '$value' instead of options/$name")
     fi
-done < <(printf '%s\n' terminal browser editor codeeditor filemanager)
+done < <(
+    # apptype.lua's read_option() calls, kept to the names hypr_var_origin owns.
+    sed -n 's/^[[:space:]]*\([a-z]*\)[[:space:]]*=[[:space:]]*read_option("\1".*/\1/p' \
+        "$ROOT/hypr/config/apptype.lua" |
+        while IFS= read -r candidate; do
+            [ "$(hypr_var_origin "$candidate")" = options ] && printf '%s\n' "$candidate"
+        done
+)
 
 if [ "${#frozen[@]}" -eq 0 ]; then
     pass "options-backed values are named by file, not by this machine's answer"
