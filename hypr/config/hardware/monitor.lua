@@ -29,6 +29,20 @@ if file then
     local chunk, err = loadfile(machine, "t", { hl = { monitor = function(spec) specs[#specs + 1] = spec end } })
     local ok = chunk ~= nil
     if ok then ok, err = pcall(chunk) end
+    -- Every spec is checked before any is applied, so hl.monitor() rejecting a
+    -- later one cannot strand the earlier ones. Only plain values of the kinds
+    -- the Displays page writes get through.
+    local kinds = { output = "string", mode = "string", position = "string", scale = "number", transform = "number", disabled = "boolean" }
+    for index, spec in ipairs(ok and specs or {}) do
+        if type(spec) ~= "table" or getmetatable(spec) ~= nil or type(spec.output) ~= "string" then
+            ok, err = false, "entry " .. index .. " is not a monitor rule"
+            break
+        end
+        for key, value in pairs(spec) do
+            if kinds[key] ~= type(value) then ok, err = false, "entry " .. index .. " has an unsupported " .. tostring(key) break end
+        end
+        if not ok then break end
+    end
     if ok then ok, err = pcall(function() for _, spec in ipairs(specs) do hl.monitor(spec) end end) end
     if not ok then monitors_failed(err) end
 elseif errno ~= 2 then -- ENOENT: no file simply means all automatic.
