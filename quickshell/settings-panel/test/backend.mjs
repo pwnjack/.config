@@ -75,6 +75,7 @@ globalThis.settingsMocks = {
     },
     execAsync: async args => {
         events.push(args)
+        if (args[0] === 'fc-list') return 'FiraCode Nerd Font,FiraCode Nerd Font Med\nAdwaita Sans\n'
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
         if (args[0] === 'pgrep') { if (!running.has(args[2])) throw new Error('not running'); return '123'; }
         if (args[1] === 'getoption') return JSON.stringify(hyprOptions[args[2]] ?? {int:1,set:true})
@@ -248,3 +249,12 @@ assert.deepEqual(events.find(e=>e[0]==='gsettings' && e[1]==='set'),['gsettings'
 await dispatch({op:'set',id:'appearance.color-scheme',value:'prefer-light'})
 assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-application-prefer-dark-theme=false$/m)
 console.log('ok: GTK appearance filters themes, preserves literal INI values and line endings, and rolls back failures')
+
+events=[]
+await assert.rejects(dispatch({op:'set',id:'appearance.font',value:'No Such Font'}),/No installed font/)
+assert.equal(events.some(e=>e[0]==='bash'),false)
+await dispatch({op:'set',id:'appearance.font',value:'FiraCode Nerd Font Med'})
+await dispatch({op:'set',id:'appearance.cursor-theme',value:'Bibata-Modern-Classic'})
+assert.match(files.get(base+'/gtk-3.0/settings.ini'),/^gtk-cursor-theme-name=Bibata-Modern-Classic$/m)
+assert.match(files.get(base+'/gtk-4.0/settings.ini'),/^gtk-cursor-theme-size=24$/m)
+console.log('ok: fonts must be installed and the cursor theme reaches settings.ini')

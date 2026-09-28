@@ -173,7 +173,8 @@
       "description": "Applied to Rofi, Waybar and terminals",
       "source": "option",
       "key": "font",
-      "kind": "text"
+      "kind": "text",
+      "check": "font"
     },
     {
       "category": "appearance",
@@ -182,7 +183,8 @@
       "description": "Font for GTK applications",
       "source": "option",
       "key": "font-gtk",
-      "kind": "text"
+      "kind": "text",
+      "check": "font"
     },
     {
       "category": "appearance",
@@ -252,7 +254,8 @@
       "description": "Cursor theme name; fully applies after restart",
       "source": "option",
       "key": "cursortheme",
-      "kind": "text"
+      "kind": "select",
+      "choices": "cursor-themes"
     },
     {
       "category": "appearance",

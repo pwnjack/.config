@@ -70,10 +70,10 @@ fi
 
 # GTK 3 and 4. Keep the size and any variable-font weight already configured:
 # "Name 11" or "Name 11 @wght=500".
+size=11 weight=""
 for gtk_conf in "$config_dir/gtk-3.0/settings.ini" "$config_dir/gtk-4.0/settings.ini"; do
     [[ -f "$gtk_conf" ]] || continue
     current=$(sed -n 's/^gtk-font-name=//p' "$gtk_conf" | head -n1)
-    size=11 weight=""
     if [[ "$current" =~ ([0-9]+)( @wght=[0-9]+)?$ ]]; then
         size=${BASH_REMATCH[1]}
         weight=${BASH_REMATCH[2]}
@@ -84,6 +84,11 @@ for gtk_conf in "$config_dir/gtk-3.0/settings.ini" "$config_dir/gtk-4.0/settings
         echo "gtk-font-name=$gtk_font $size$weight" >> "$gtk_conf" || failed=1
     fi
 done
+
+# GTK 4, libadwaita and the settings portal read gsettings, not settings.ini.
+if command -v gsettings >/dev/null; then
+    gsettings set org.gnome.desktop.interface font-name "$gtk_font $size$weight" || failed=1
+fi
 
 if [[ "$failed" -ne 0 ]]; then
     echo "Some configs could not be updated" >&2

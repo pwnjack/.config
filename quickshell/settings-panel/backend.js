@@ -250,6 +250,10 @@ const checks = {
         const known = await xkbList("list-x11-keymap-options")
         for (const option of value.split(",")) if (!known.includes(option)) throw new Error(`Unknown keyboard option ${option}`)
     },
+    font: async value => {
+        const families = (await execAsync(["fc-list", ":", "family"])).split("\n").flatMap(line => line.split(",")).map(name => name.trim())
+        if (!families.includes(value)) throw new Error(`No installed font is named ${value}`)
+    },
 }
 async function validate(row, value) {
     if (row.kind === "toggle" && typeof value !== "boolean") throw new Error("Expected an on/off value")
@@ -265,6 +269,7 @@ async function validate(row, value) {
 async function cursor(theme, size) {
     await execAsync(["gsettings", "set", ...gsettingsArgs("cursor-theme"), theme])
     await execAsync(["gsettings", "set", ...gsettingsArgs("cursor-size"), String(size)])
+    writeGtkIni([["gtk-cursor-theme-name", theme], ["gtk-cursor-theme-size", String(size)]])
     await checkedHyprctl(["setcursor", theme, String(size)])
 }
 async function change(request) {
