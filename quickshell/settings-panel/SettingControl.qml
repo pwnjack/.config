@@ -80,7 +80,10 @@ Rectangle {
                 value: control.ready ? Number(control.settingState.value) : from
                 Accessible.name: control.row.title
                 onMoved: { if (!pressed) control.controller.change(control.row.id, Number(value.toFixed(4))); }
-                onPressedChanged: { if (!pressed && control.ready && Math.abs(value - Number(control.settingState.value)) > 0.00001) control.controller.change(control.row.id, Number(value.toFixed(4))); }
+                onPressedChanged: {
+                    control.controller.interacting = pressed ? control.row.id : "";
+                    if (!pressed && control.ready && Math.abs(value - Number(control.settingState.value)) > 0.00001) control.controller.change(control.row.id, Number(value.toFixed(4)));
+                }
                 background: Rectangle {
                     x: slider.leftPadding; y: slider.topPadding + slider.availableHeight / 2 - height / 2
                     width: slider.availableWidth; height: 4; radius: 2; color: control.theme.background
@@ -170,6 +173,10 @@ Rectangle {
                 }
             }
             background: Rectangle { color: control.theme.background; radius: 8; border.width: combo.activeFocus ? 2 : 1; border.color: combo.activeFocus ? control.theme.accent : Qt.rgba(control.theme.foreground.r, control.theme.foreground.g, control.theme.foreground.b, 0.25) }
+            Connections {
+                target: combo.popup
+                function onVisibleChanged() { control.controller.interacting = combo.popup.visible ? control.row.id : ""; }
+            }
         }
     }
     Component {

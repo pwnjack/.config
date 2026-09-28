@@ -20,6 +20,7 @@ Item {
         property color accent: "#6097a1"
         property color accentText: "#05090c"
         property var calls: []
+        property string interacting: ""
         property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
@@ -45,7 +46,7 @@ Item {
         when: windowShown
         function init() {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
-            controller.calls = []; controller.busy = false;
+            controller.calls = []; controller.busy = false; controller.interacting = "";
             controller.loaded = true; controller.loading = false;
             controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}});
             view.forceActiveFocus();
@@ -190,6 +191,19 @@ Item {
             verify(combo.popup.height <= 320);
             keyClick(Qt.Key_Escape);
             tryCompare(combo.popup,"visible",false);
+        }
+        function test_slider_and_popup_report_interaction() {
+            const slider = findChild(view,"slider-size");
+            mousePress(slider, slider.width / 2, slider.height / 2);
+            compare(controller.interacting,"size");
+            mouseRelease(slider, slider.width / 2, slider.height / 2);
+            compare(controller.interacting,"");
+            const combo = findChild(view,"select-theme");
+            mouseClick(combo);
+            tryCompare(combo.popup,"visible",true);
+            compare(controller.interacting,"theme");
+            keyClick(Qt.Key_Escape);
+            tryCompare(controller,"interacting","");
         }
     }
 }

@@ -20,6 +20,16 @@ ShellRoot {
     property var values: ({})
     property var monitors: []
     property string mainMonitor: ""
+    property string interacting: ""
+    property var liveDirty: ({})
+    property string liveReply: ""
+    property int liveReads: 0
+    // Only what is on screen is watched: no page, no subscription.
+    readonly property var liveTags: {
+        const tags = new Set(visibleRows.map(row => row.live).filter(Boolean));
+        if (category === "monitors" && !query.trim()) tags.add("displays");
+        return [...tags];
+    }
     property var queue: []
     property string readReply: ""
     property string writeReply: ""
@@ -53,6 +63,23 @@ ShellRoot {
         reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true})];
         reader.running = true;
     }
+    function markLive(tag) {
+        // A write refreshes everything afterwards, so its own echoes are not news.
+        if (busy || reader.running || !liveTags.includes(tag)) return;
+        liveDirty = Object.assign({}, liveDirty, {[tag]: true});
+        liveTimer.restart();
+    }
+    function readLive() {
+        const tags = Object.keys(liveDirty).filter(tag => liveTags.includes(tag));
+        if (!tags.length || busy || closing) { liveDirty = ({}); return; }
+        if (reader.running || liveReader.running) { liveTimer.restart(); return; }
+        liveDirty = ({});
+        liveReads += 1;
+        const ids = catalog.rows.filter(row => tags.includes(row.live)).map(row => row.id);
+        liveReply = "";
+        liveReader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: tags.includes("displays")})];
+        liveReader.running = true;
+    }
     function select(id) { query = ""; category = id; }
     function change(id, value) { submit({op: "set", id: id, value: value}); }
     function reset(id) { submit({op: "reset", id: id}); }
@@ -65,7 +92,7 @@ ShellRoot {
         drain();
     }
     function drain() {
-        if (writer.running || reader.running) return;
+        if (writer.running || reader.running || liveReader.running) return;
         if (!queue.length) {
             busy = false;
             if (closing) Qt.quit();
@@ -101,10 +128,12 @@ ShellRoot {
             else { root.closing = false; root.opened = true; }
         }
         function close(): void { root.close(); }
+        function show(category: string): void { root.select(category); }
         function status(): string {
             return JSON.stringify({opened: root.opened, loading: root.loading, busy: root.busy,
                 category: root.category, rows: root.visibleRows.length, error: root.problem,
                 frameMs: root.frameMs, readyMs: root.readyMs,
+                liveTags: root.liveTags, liveReads: root.liveReads,
                 rowErrors: root.visibleRows.filter(row => root.values[row.id]?.error).map(row => ({id:row.id,error:root.values[row.id].error}))});
         }
     }
@@ -142,6 +171,38 @@ ShellRoot {
                 root.opened = true;
             }
             root.drain();
+        }
+    }
+    Timer { id: liveTimer; interval: 300; onTriggered: root.readLive() }
+    Process {
+        id: audioEvents
+        running: root.opened && root.liveTags.includes("audio")
+        command: ["pactl", "subscribe"]
+        // `sink-input #3` must not count as `sink`; clients and streams are noise.
+        stdout: SplitParser { onRead: line => { if (/ on (sink|source|card|server)( #|$)/.test(line)) root.markLive("audio"); } }
+    }
+    Connections {
+        target: Hyprland
+        enabled: root.opened && root.liveTags.includes("displays")
+        function onRawEvent(event) {
+            if (["monitoradded", "monitoraddedv2", "monitorremoved", "monitorremovedv2", "configreloaded"].includes(event.name)) root.markLive("displays");
+        }
+    }
+    Process {
+        id: liveReader
+        stdout: StdioCollector { onStreamFinished: root.liveReply = text }
+        onExited: code => {
+            try {
+                const result = JSON.parse(root.liveReply);
+                if (!result.ok) throw new Error(result.error);
+                const values = Object.assign({}, result.values);
+                // Never move a control under the user's hand.
+                delete values[root.interacting];
+                root.values = Object.assign({}, root.values, values);
+                if (result.monitors) { root.monitors = result.monitors; root.mainMonitor = result.mainMonitor; }
+            } catch (error) { console.warn("Live refresh failed: " + error); }
+            if (Object.keys(root.liveDirty).length) liveTimer.restart();
+            if (root.busy || root.closing) root.drain();
         }
     }
     PanelWindow {
