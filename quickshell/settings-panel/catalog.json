@@ -2,71 +2,85 @@
   "categories": [
     {
       "id": "appearance",
+      "icon": "f0e0c",
       "title": "Appearance",
       "description": "Borders, blur, gaps, opacity, fonts and cursor"
     },
     {
       "id": "animations",
+      "icon": "f0a90",
       "title": "Animations",
       "description": "Master switch and per-animation speeds"
     },
     {
       "id": "windows",
+      "icon": "f0a1d",
       "title": "Windows",
       "description": "Tiling layout and window behavior"
     },
     {
       "id": "input",
+      "icon": "f097b",
       "title": "Input",
       "description": "Mouse, keyboard and touchpad"
     },
     {
       "id": "accessibility",
+      "icon": "f02e6",
       "title": "Accessibility",
       "description": "Zoom and text size"
     },
     {
       "id": "sound",
+      "icon": "f057e",
       "title": "Sound",
       "description": "Devices, ports and microphone level. Volume lives in the notification sidebar."
     },
     {
       "id": "network",
+      "icon": "f05a9",
       "title": "Network",
       "description": "Wi-Fi, wired and VPN connections"
     },
     {
       "id": "notifications",
+      "icon": "f009c",
       "title": "Notifications",
       "description": "SwayNC toasts and control center"
     },
     {
       "id": "monitors",
+      "icon": "f0379",
       "title": "Displays",
       "description": "Resolution, refresh rate, scale, arrangement and the main display"
     },
     {
       "id": "power",
+      "icon": "f0425",
       "title": "Power",
       "description": "Idle timeouts, display power and night light"
     },
     {
       "id": "region",
+      "icon": "f01e7",
       "title": "Date & Region",
       "description": "Time zone, clock and regional formats. System-wide changes ask for your password."
     },
     {
       "id": "startup",
+      "icon": "f14df",
       "title": "Startup",
       "description": "Apps started at login, and what Hyprland itself starts"
     },
     {
       "id": "apps",
+      "icon": "f003b",
       "title": "Default Apps",
       "description": "Applications used by keybinds and scripts"
     },
     {
       "id": "filetypes",
+      "icon": "f09ee",
       "title": "File Types",
       "description": "Which app opens each kind of file or link"
     }

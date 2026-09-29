@@ -19,6 +19,11 @@ FocusScope {
     readonly property color accent: controller.accent
     readonly property color accentText: controller.accentText
     readonly property color plate: Qt.tint(background, Qt.rgba(foreground.r, foreground.g, foreground.b, 0.055))
+    // Category icons are Material Design glyphs from Symbols Nerd Font (ttf-nerd-fonts-symbols),
+    // kept in catalog.json as hex codepoints: text, so they take the label's color.
+    readonly property string iconFont: "Symbols Nerd Font"
+    function glyph(hex) { return hex ? String.fromCodePoint(parseInt(hex, 16)) : ""; }
+    readonly property var page: controller.catalog.categories.find(c => c.id === controller.category)
     property double now: Date.now()
     property double autoRevertedFor: 0
     // The visible countdown. systemd's guard reverts at 20 s even if this never fires.
@@ -95,7 +100,23 @@ FocusScope {
                         text: modelData.title
                         readonly property bool selected: view.controller.category === modelData.id && !view.controller.query.trim()
                         onClicked: view.controller.select(modelData.id)
-                        contentItem: Text { text: nav.text; color: nav.selected ? view.accentText : view.foreground; font.pixelSize: 14; font.bold: nav.selected; verticalAlignment: Text.AlignVCenter; leftPadding: 12 }
+                        contentItem: RowLayout {
+                            spacing: 10
+                            Text {
+                                visible: !!nav.modelData.icon
+                                text: view.glyph(nav.modelData.icon)
+                                font.family: view.iconFont; font.pixelSize: 18
+                                color: nav.selected ? view.accentText : view.foreground
+                                Layout.leftMargin: 12
+                                Layout.preferredWidth: 20
+                                horizontalAlignment: Text.AlignHCenter
+                                Accessible.ignored: true
+                            }
+                            Text {
+                                text: nav.text; color: nav.selected ? view.accentText : view.foreground; font.pixelSize: 14; font.bold: nav.selected
+                                Layout.fillWidth: true; Layout.leftMargin: nav.modelData.icon ? 0 : 12; elide: Text.ElideRight
+                            }
+                        }
                         background: Rectangle { radius: 10; color: nav.selected ? view.accent : nav.hovered ? view.plate : "transparent"; border.color: nav.activeFocus ? view.foreground : "transparent"; border.width: 2 }
                     }
                 }
@@ -107,12 +128,26 @@ FocusScope {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 12
-                Label {
-                    text: view.controller.query.trim() ? "Search results" : (view.controller.catalog.categories.find(c => c.id === view.controller.category)?.title || "Settings")
-                    color: view.foreground; font.pixelSize: 24; font.bold: true
+                RowLayout {
+                    spacing: 12
+                    Text {
+                        objectName: "pageIcon"
+                        // Search results get a magnifier; a page without an icon gets none.
+                        readonly property string code: view.controller.query.trim() ? "f0349" : (view.page?.icon || "")
+                        visible: !!code
+                        text: view.glyph(code)
+                        font.family: view.iconFont; font.pixelSize: 26
+                        color: view.accent
+                        Accessible.ignored: true
+                    }
+                    Label {
+                        objectName: "pageTitle"
+                        text: view.controller.query.trim() ? "Search results" : (view.page?.title || "Settings")
+                        color: view.foreground; font.pixelSize: 24; font.bold: true
+                    }
                 }
                 Label {
-                    text: view.controller.query.trim() ? view.controller.visibleRows.length + " matching settings" : (view.controller.catalog.categories.find(c => c.id === view.controller.category)?.description || "")
+                    text: view.controller.query.trim() ? view.controller.visibleRows.length + " matching settings" : (view.page?.description || "")
                     Layout.fillWidth: true; color: view.foreground; opacity: 0.75; wrapMode: Text.WordWrap; font.pixelSize: 13
                 }
                 Rectangle {

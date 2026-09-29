@@ -21,6 +21,11 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 ## Implementation
 
 - `catalog.json` owns setting metadata, accepted ranges and dropdown choices.
+  Each category's `icon` is a hex codepoint of a Material Design glyph in
+  Symbols Nerd Font (`ttf-nerd-fonts-symbols`), drawn in the nav rail and beside
+  the page title. It is text, so it follows the selection and palette colors —
+  the Papirus symbolic icons would not (see the night light notes). Look names
+  up in the font's cmap (`md-<name>`) rather than retyping glyphs.
 - `SettingsView.qml` and `SettingControl.qml` build only visible category/search
   rows. Reads and writes never run synchronously on the QML thread. The first
   rows appear with their real values; loading never inserts/removes a layout row.

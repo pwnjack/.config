@@ -681,6 +681,22 @@ Item {
             mouseClick(findChild(view, "wifi-Office"));
             compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Office"});
         }
+        function test_page_icon_follows_category_and_search() {
+            const saved = controller.catalog;
+            controller.catalog = ({categories: [{id:"appearance",title:"Appearance",description:"",icon:"f0e0c"}, {id:"input",title:"Input",description:""}], rows: saved.rows});
+            controller.select("appearance"); wait(20);
+            const icon = findChild(view,"pageIcon");
+            verify(icon.visible);
+            compare(icon.text.codePointAt(0),0xf0e0c);
+            controller.select("input"); wait(20);
+            verify(!icon.visible, "a category without an icon shows none");
+            controller.query = "blur"; wait(20);
+            compare(icon.text.codePointAt(0),0xf0349);
+            controller.query = "";
+            controller.catalog = saved;
+            controller.select("appearance");
+            wait(20);
+        }
         function test_many_categories_stay_inside_the_panel() {
             const saved = controller.catalog;
             const categories = [];
