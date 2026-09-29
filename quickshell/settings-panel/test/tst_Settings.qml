@@ -1,6 +1,8 @@
 import QtQuick
 import QtTest
 import ".."
+import "../autostart.mjs" as Autostart
+import "../network.mjs" as Network
 
 Item {
     width: 1280; height: 900
@@ -54,6 +56,19 @@ Item {
     TestCase {
         name: "Settings"
         when: windowShown
+        function test_pure_modules_load_in_qml() {
+            const entries = Autostart.autostartEntries({system:[{id:"nm-applet.desktop",text:"[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n"}],user:[],desktops:["Hyprland"],onPath:function() { return true; }});
+            compare(entries.length, 1);
+            compare(Autostart.withStatus(entries, [{unit:entries[0].unit,active:"active"}])[0].status.state, "running");
+            compare(Autostart.unitName("nm-applet.desktop"), "app-nm\\x2dapplet@autostart.service");
+            compare(Autostart.setHidden("[Desktop Entry]\nName=X\n", true), "[Desktop Entry]\nName=X\nHidden=true\n");
+            compare(Autostart.sessionCommands('hl.exec_cmd("waybar")')[0], "waybar");
+            verify(Autostart.isMinimalOverride(Autostart.minimalOverride("X")));
+            const snap = {connections:[],accessPoints:[{ssid:"Cafe",strength:80,flags:0,wpaFlags:0,rsnFlags:0}]};
+            compare(Network.wifiNetworks(snap)[0].ssid, "Cafe");
+            compare(Network.securityOf(snap.accessPoints[0]), "open");
+            compare(Network.connectPlan(snap, {ssid:"Cafe"}).kind, "add");
+        }
         function init() {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
             controller.calls = []; controller.busy = false; controller.interacting = "";
