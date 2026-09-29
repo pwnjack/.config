@@ -80,7 +80,7 @@ ColumnLayout {
                     active: !!app.modelData.removable && !app.modelData.link
                     sourceComponent: PanelButton {
                         objectName: "startupRemove-" + app.modelData.id
-                        theme: page.theme; text: page.confirming === app.modelData.id ? "Confirm remove" : "Remove"
+                        theme: page.theme; text: page.confirming === app.modelData.id ? (app.modelData.origin === "override" ? "Confirm: starts again at login" : "Confirm remove") : "Remove"
                         enabled: !page.controller.busy
                         onClicked: {
                             if (page.confirming !== app.modelData.id) { page.confirming = app.modelData.id; confirmTimer.restart(); return }

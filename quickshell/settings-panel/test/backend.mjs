@@ -1093,6 +1093,18 @@ assert.equal(files.get(base+'/autostart/manual.desktop'), '[Desktop Entry]\nType
 files.set(base+'/autostart/manual.desktop', manualBefore)
 console.log('ok: hand-edited overrides, system removals, unknown ids and actions are refused')
 
+// A customised override (its own Exec) is the user's work: Remove is refused, nothing is touched.
+{
+    const custom = '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual --my-flag\n'
+    files.set(base+'/autostart/manual.desktop', custom)
+    events = []
+    await assert.rejects(dispatch({op:'autostart',action:'remove',id:'manual.desktop'}), /is your own version of this entry/)
+    assert.equal(files.get(base+'/autostart/manual.desktop'), custom)
+    assert.equal(mutations().length, 0)
+    files.set(base+'/autostart/manual.desktop', manualBefore)
+}
+console.log('ok: a customised override cannot be removed from the panel')
+
 // --- Startup page safety: links, exclusive creation, encodings, scopes ------------------
 put('/elsewhere/target.desktop', '[Desktop Entry]\nType=Application\nName=Target\nExec=manual\n')
 link(mine('linked.desktop'), '/elsewhere/target.desktop')
