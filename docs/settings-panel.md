@@ -183,6 +183,77 @@ The systemd user manager already has `LANG=en_US.UTF-8` and `LC_TIME=it_IT.UTF-8
 `/etc/profile.d/locale.sh` reads `~/.config/locale.conf` only when `LANG` is unset.
 Decision: **formats use SetLocale** (system-wide, polkit).
 
+## Network
+
+Reads: libnm through `nm.js` (`NM.Client.new(null)`, about 7.5 ms) for devices, access
+points, saved profiles and VPN connections; `network.mjs` is pure and turns that
+snapshot into the view (security grouping is under "Network: security rules").
+Writes: connect/disconnect, forget, Wi-Fi radio, and new connections. **Advanced…**
+opens `nm-connection-editor`; hidden SSIDs, enterprise Wi-Fi, WEP, hotspots and IP/DNS
+editing are out of scope.
+
+Live behaviour: while the page is on screen, exactly one `nmcli monitor` runs
+(`/usr/bin/nmcli monitor`; pattern `^(/usr/bin/)?nmcli monitor$`) and a 20 s rescan timer
+runs. Leaving the page or closing stops both. The monitor prints only a startup banner
+and nothing on scans, so the list refresh after a rescan comes from the follow-up read.
+
+Traps:
+
+- **The PSK only travels on stdin.** Panel writes reach `panel-request.sh -` as one JSON
+  line on the helper's stdin, never in argv, so a password cannot show in `ps` or a log.
+- **A failed new connection is deleted.** A wrong password leaves no half-made profile.
+- **`PROTON_MODE = "app"`.** The Proton app deletes its WireGuard profile on disconnect
+  and creates a new one per server, so the panel shows the state and opens the app; it
+  never brings a Proton profile up or down.
+- **Nothing runs when closed:** no `nmcli monitor`, no timer, no panel process.
+- `pgrep -f '^nmcli monitor$'` finds nothing: the real command line is
+  `/usr/bin/nmcli monitor`.
+
+## Date & Region
+
+Reads `timedatectl show` and `localectl status` (both daemons are socket-activated:
+about 100 ms cold). Writes time zone, NTP, language and formats through `timedated` and
+`localed` over D-Bus (`dbus.js`), authorised by polkit. Clock format is not system-wide:
+`options/clock` (`12h` or `24h`) is rendered by `scripts/waybar/clock-format.sh` into
+`~/.local/state/waybar/clock.jsonc`, which Waybar merges through `include`; hyprlock reads
+the option too.
+
+Traps:
+
+- **Polkit focus and visibility.** `AUTH_HIDES_PANEL = true` (`authHidesPanel` in
+  `shell.qml`): a panel-shaped Overlay hid hyprpolkitagent's dialog completely, so the
+  panel hides while `authPending` is set and comes back after the answer. A dismissed
+  dialog returns `org.freedesktop.DBus.Error.AccessDenied: Permission denied`, shown as
+  "Authentication was cancelled; nothing changed."
+- **`timedated` cold start.** A first call after idle costs tens of ms more; the zone
+  list (598 zones) is read once per full read.
+- **The Waybar include** merges key by key and the main file's `clock` has no `format`,
+  so the include's format wins; the include path is fixed (`~/.local/state/waybar/`).
+- **Formats use `SetLocale`** (system-wide, polkit): a per-user `locale.conf` is not
+  effective because the systemd user manager already exports `LANG`/`LC_TIME`.
+- **Stale hyprlock is not a lock.** `pgrep -x hyprlock` alone is not a lock test: stale
+  instances (0 CPU time) linger for a day, and they also defeat hypridle's
+  `pidof`-guarded `lock_cmd`. Check `ps -o time= -p PID` before any synthetic input.
+
+## Startup
+
+Lists what Hyprland's `autostart.lua` starts (parsed, read-only, with **Edit file**) and
+the XDG autostart apps. The apps follow uwsm's generator rules (`autostart.mjs` is pure):
+later `Show-In` lists win, condition keys parse strictly, and `TryExec` is verbatim.
+Changes take effect at the next login; nothing is started or stopped immediately.
+`~/.config/autostart` is per-machine and gitignored.
+
+Traps:
+
+- **Generator rules and the minimal override.** Disabling a system entry writes only a
+  minimal `Hidden=true` override with the same file name; removing a stub restores the entry.
+- **Hand-edited overrides are never deleted.** Only stubs the panel wrote and apps it
+  added are removable; a customised override is left alone and a broken one names its file.
+- **Never write through symlinks;** a symlinked entry is not edited or replaced.
+- **`arch-update-tray` was silently skipped:** its `TryExec` names a program that is
+  not installed, so the generator drops it without a message. The page says "Not installed"
+  and `doctor.sh`'s `check_autostart` warns about it.
+
 ## Network: security rules
 
 `network.mjs`'s `groupSecurity` groups every BSS sharing an SSID and picks the
@@ -243,6 +314,24 @@ for a **296 ms median**. Each run used:
 req=$(jq -c '{op:"read",ids:[.rows[].id],monitors:true}' quickshell/settings-panel/catalog.json)
 bash scripts/settings/panel-request.sh "$req"
 ```
+
+Round 3 (September 29, 2026), measured with `live-smoke.sh` and the loop above:
+
+| Measurement | Observed |
+| --- | --- |
+| Full read, five runs (median) | 292, 293, 299, 301, 307 ms (**299 ms**) against Task 1's 278 ms; two more sets 295 and 299 ms |
+| Full read at `ee1ab1d` (round 2 code, same session) | 296, 295, 292, 288, 296 and 301, 298, 288, 291, 293 ms (median about 294 ms), so round 3 adds about 5 ms; the +21 ms against Task 1 is machine drift, not code |
+| Empty read (`ids: []`) median | 44 ms |
+| Network read median | 48 ms (+4, budget 30) |
+| Startup read median | 69 ms (+25, budget 40) |
+| `nmcli monitor` RSS on the Network page | 10.9 MB (about 10.7 MB in a second run), one process |
+| Off the Network page / closed | `nmcli monitor`: 0; `pgrep -af 'nmcli monitor\|settings-panel/shell.qml'`: no process |
+
+Live checks deferred earlier, done September 29, 2026 with screenshots: the Network
+page shows the Wi-Fi list, Wired and VPN with "Open Proton VPN"; the Waybar clock shows
+`12:08` in 24 h, `12:08 PM` after `region.clock=12h`, and `options/clock` was set back to
+`24h`; the Startup and Date & Region pages render (nothing was toggled or changed).
+Hyprlock's 12/24 h check needs the user and has not run.
 
 The timestamp starts after the launcher's lock, IPC probe and palette load, so
 these are not full keypress-to-display measurements. A frame swap is a render

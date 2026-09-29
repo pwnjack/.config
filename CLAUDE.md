@@ -149,6 +149,19 @@ and profiles, and rolls file changes back on reload failure. Night light state
 still goes through `nightlight.sh`. Theme colors come from the shared palette
 loader at launch. See `docs/settings-panel.md` for measurements and checks.
 
+Round 3 added three pages. **Network** reads libnm through `nm.js` with the pure
+`network.mjs` model; `nmcli monitor` and a 20 s rescan run only while the page is
+visible, and `PROTON_MODE = "app"` means the panel shows Proton VPN and opens its app
+rather than toggling a profile the app deletes. **Date & Region** writes time zone, NTP,
+language and formats through polkit-authorised `timedated`/`localed` calls in `dbus.js`;
+`authPending` hides the panel so the polkit dialog is reachable (`authHidesPanel`).
+The 12/24 h clock is `options/clock`, rendered by `scripts/waybar/clock-format.sh` into
+the `~/.local/state/waybar/clock.jsonc` Waybar include, and hyprlock reads the option.
+**Startup** lists `autostart.lua` and manages XDG autostart entries by uwsm's generator
+rules; `~/.config/autostart` is per-machine and gitignored, and disabling a system entry
+writes a minimal `Hidden=true` override. Panel writes reach `panel-request.sh -` on stdin,
+never in argv, so passwords stay out of `ps`.
+
 ### Night Light (hyprsunset)
 
 `hyprsunset` runs as a daemon from `config/setup/autostart.lua` and owns the schedule in `hypr/hyprsunset.conf` — a tracked, panel-writable file, the same arrangement as `hypr/hypridle.conf`. `scripts/hyprland/nightlight.sh` is the **only** thing that talks to `hyprctl hyprsunset`; the keybind ($Mod SHIFT+D toggle, $Mod CTRL+D follow-schedule), the waybar `custom/nightlight` module and the panel's Power rows all call the script.
@@ -202,7 +215,7 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`, `clock`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
 ### Agent CLI status lines (`claude/`, `codex/`)
 
@@ -266,6 +279,7 @@ doctor.sh                    # Entry point: sources lib + modules, guards the re
 scripts/doctor/
 ├── lib.sh                   # group/ok/err/warn/note/summary, counters, doctor_q, doctor_require_repo
 ├── checks/
+│   ├── autostart.sh         # check_autostart  — per-user XDG autostart entries whose program is missing
 │   ├── symlinks.sh          # check_symlinks   — from `git ls-files -s` mode 120000
 │   ├── references.sh        # check_references — from Lua require(), Hyprlang source, literal paths
 │   ├── binaries.sh          # check_binaries   — from Lua keybind/autostart hl.exec_cmd() calls
@@ -279,6 +293,6 @@ scripts/doctor/
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hctl_`, `_hw_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

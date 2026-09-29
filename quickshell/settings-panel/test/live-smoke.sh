@@ -3,7 +3,7 @@
 set -euo pipefail
 config_dir="$HOME/.config"
 entry="$config_dir/quickshell/settings-panel/shell.qml"
-ipc() { qs -p "$entry" ipc call settings "$1"; }
+ipc() { qs -p "$entry" ipc call settings "$@"; }
 if ipc status >/dev/null 2>&1; then
     echo 'Close the settings panel before running this check.' >&2
     exit 1
@@ -46,6 +46,43 @@ for run in 1 2 3; do
         if [[ -e /proc/$process_pid/smaps_rollup ]]; then echo "Process $process_pid survived close" >&2; exit 1; fi
     done
 done
+# Network page: exactly one event source while visible, none after leaving or closing.
+bash "$config_dir/scripts/hyprland/settings-panel.sh" network
+for ((attempt=0; attempt<100; attempt++)); do
+    status=$(ipc status 2>/dev/null || true)
+    if jq -e '.loading == false and .category == "network"' <<< "$status" >/dev/null 2>&1; then break; fi
+    sleep 0.05
+done
+sleep 0.5
+monitors=$(pgrep -fc '^(/usr/bin/)?nmcli monitor$' || true)
+[[ $monitors == 1 ]] || { echo "Expected one nmcli monitor on the Network page, found $monitors" >&2; exit 1; }
+ps -o rss= -C nmcli | awk '{printf "nmcli monitor RSS: %s KiB\n", $1}'
+ipc page appearance >/dev/null; sleep 0.5
+[[ $(pgrep -fc '^(/usr/bin/)?nmcli monitor$' || true) == 0 ]] || { echo 'nmcli monitor kept running off the Network page' >&2; exit 1; }
+ipc close >/dev/null; sleep 1
+if pgrep -af '^(/usr/bin/)?nmcli monitor$|settings-panel/shell.qml'; then echo 'Something survived close' >&2; exit 1; fi
+echo 'Network page: one monitor while visible, none after leaving or closing.'
+
+# Page entry while another read is in flight must still load the network view
+# (shell.qml readerNetwork/liveTimer path; SettingsView tests use a mock controller).
+bash "$config_dir/scripts/hyprland/settings-panel.sh"
+ipc page network >/dev/null
+for ((attempt=0; attempt<60; attempt++)); do
+    [[ $(ipc status | jq -r .network) == up ]] && break
+    sleep 0.05
+done
+[[ $(ipc status | jq -r .network) == up ]] || { echo 'Network page entered during the first read never loaded' >&2; exit 1; }
+ipc close >/dev/null; sleep 1
+
+median() { sort -n | sed -n 3p; }
+time_request() { for _ in 1 2 3 4 5; do s=$(date +%s%N); bash "$config_dir/scripts/settings/panel-request.sh" "$1" >/dev/null; echo $(( ($(date +%s%N)-s)/1000000 )); done | median; }
+empty=$(time_request '{"op":"read","ids":[]}')
+network=$(time_request '{"op":"read","ids":[],"network":true}')
+startup=$(time_request '{"op":"read","ids":[],"startup":true}')
+printf 'Empty %s ms, network %s ms, startup %s ms\n' "$empty" "$network" "$startup"
+(( network - empty <= 30 )) || { echo 'network read over budget' >&2; exit 1; }
+(( startup - empty <= 40 )) || { echo 'startup read over budget' >&2; exit 1; }
+
 # Query all categories through the actual native helper, without changing values.
 request=$(jq -c '{op:"read", ids:[.rows[].id], monitors:true}' "$config_dir/quickshell/settings-panel/catalog.json")
 response=$(bash "$config_dir/scripts/settings/panel-request.sh" "$request")
