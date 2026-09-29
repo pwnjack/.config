@@ -331,7 +331,7 @@ Live checks deferred earlier, done September 29, 2026 with screenshots: the Netw
 page shows the Wi-Fi list, Wired and VPN with "Open Proton VPN"; the Waybar clock shows
 `12:08` in 24 h, `12:08 PM` after `region.clock=12h`, and `options/clock` was set back to
 `24h`; the Startup and Date & Region pages render (nothing was toggled or changed).
-Hyprlock's 12/24 h check needs the user and has not run.
+Hyprlock's 12/24 h check ran with the user on 2026-09-29: with `options/clock` at 24h the lock screen showed 15:56, and at 12h the hour label showed 03 at 15:59. The option was set back to 24h afterwards.
 
 The timestamp starts after the launcher's lock, IPC probe and palette load, so
 these are not full keypress-to-display measurements. A frame swap is a render
