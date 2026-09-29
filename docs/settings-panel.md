@@ -174,6 +174,32 @@ The systemd user manager already has `LANG=en_US.UTF-8` and `LC_TIME=it_IT.UTF-8
 `/etc/profile.d/locale.sh` reads `~/.config/locale.conf` only when `LANG` is unset.
 Decision: **formats use SetLocale** (system-wide, polkit).
 
+## Network: security rules
+
+`network.mjs`'s `groupSecurity` groups every BSS sharing an SSID and picks the
+security **fail-closed**: any 802.1X-only/WEP BSS wins outright (unsupported
+here); otherwise any SAE-capable BSS (a PSK+SAE transition BSS included) beats
+plain PSK, which beats OWE, which beats open. A weaker BSS sharing the SSID can
+therefore never downgrade what the panel offers to connect to, and `nm.js`'s
+`addAndActivate` re-derives this from the *live* access points immediately
+before connecting — refusing with "The network changed; try again" if a scan
+landed in between and the group's security no longer matches the plan.
+
+A **saved profile activates as saved** regardless of this grouping: its own
+key management was the user's trust decision when it was created (including
+through *Advanced…*), and NetworkManager autoconnects it the same way. The
+grouping only governs new connections.
+
+A lone WPA2/WPA3 **transition-mode** AP (advertising both PSK and SAE)
+connects with SAE, the stronger of the two — a device whose Wi-Fi hardware
+lacks SAE support must use `nm-connection-editor` to force PSK instead.
+
+Display SSIDs are libnm's UTF-8 rendering of the AP's raw bytes
+(`NM.utils_ssid_to_utf8`); two different non-UTF-8 byte sequences that render
+to the same escaped string are indistinguishable in the network list. This is
+an accepted limitation, not a bug: the panel only ever compares and connects
+by display SSID.
+
 ## Measurements
 
 Measured September 19, 2026 with Quickshell 0.3.1 / Qt 6.11.2 on this host,

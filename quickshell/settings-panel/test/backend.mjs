@@ -816,6 +816,20 @@ console.log('ok: network connect activates saved, adds new, replaces old only af
 nmCalls = []
 await dispatch({op:'wifiForget',ssid:'Dimensione-E92F'})
 assert.deepEqual(nmCalls, [['remove','u-old']])
+console.log('ok: network forget removes the single saved profile')
+
+nmState.connections.push({uuid:'u-forget2', id:'Dimensione-E92F', type:'802-11-wireless', ssid:'Dimensione-E92F', state:null, iface:null})
+nmCalls = []; nmFailRemove = new Set(['u-forget2'])
+await assert.rejects(dispatch({op:'wifiForget', ssid:'Dimensione-E92F'}), /Some saved profiles for this network could not be removed: Cannot remove u-forget2/)
+assert.deepEqual(nmCalls.map(c => c[1]), ['u-old', 'u-forget2'], 'every saved profile is attempted even though one fails')
+nmFailRemove = new Set()
+nmCalls = []; nmMissingRemove = new Set(['u-old'])
+await dispatch({op:'wifiForget', ssid:'Dimensione-E92F'})
+assert.deepEqual(nmCalls.map(c => c[1]), ['u-old', 'u-forget2'], 'an already-missing profile counts as removed, not a failure')
+nmMissingRemove = new Set()
+nmState.connections = nmState.connections.filter(c => c.uuid !== 'u-forget2')
+console.log('ok: wifiForget removes every saved profile individually, tolerating an already-missing one, surfacing the first real failure')
+
 await assert.rejects(dispatch({op:'vpn',uuid:'u-proton',active:false}), /Proton VPN app/)
 await assert.rejects(dispatch({op:'vpn',uuid:'u-kill',active:false}), /not a VPN/)
 events = []

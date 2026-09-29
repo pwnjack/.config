@@ -176,6 +176,13 @@ assert.deepEqual(network.connectPlan(transitionSnap, {ssid: 'Transition', psk: '
 const utf8Ssid = 'é'.repeat(16)
 assert.deepEqual(network.connectPlan({...snap, connections: [], accessPoints: [{ssid: utf8Ssid, strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0}]}, {ssid: utf8Ssid}),
     {kind: 'add', ssid: utf8Ssid, psk: null, keyMgmt: null, replace: []})
+// A non-UTF-8 SSID's display form (libnm's escaped rendering) maps each raw
+// byte to one code point: a valid 17-byte Latin-1 SSID can render as 17 'é'
+// characters, which is well under the 32-byte limit and must be accepted even
+// though 17 'é' would be 34 bytes if re-encoded as UTF-8.
+const latin1Ssid = 'é'.repeat(17)
+assert.deepEqual(network.connectPlan({...snap, connections: [], accessPoints: [{ssid: latin1Ssid, strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0}]}, {ssid: latin1Ssid}),
+    {kind: 'add', ssid: latin1Ssid, psk: null, keyMgmt: null, replace: []})
 for (const [request, message] of [
     [{ssid: 'Old'}, /not supported/],
     [{ssid: 'Office'}, /not supported/],
@@ -189,7 +196,7 @@ for (const [request, message] of [
     [{ssid: 'New3', psk: 'x'.repeat(257)}, /too long/],
     [{ssid: ''}, /Invalid network name/],
     [{ssid: 'x'.repeat(33)}, /Invalid network name/],
-    [{ssid: 'é'.repeat(17)}, /Invalid network name/],
+    [{ssid: 'é'.repeat(33)}, /Invalid network name/],
     [{ssid: 42}, /Invalid network name/],
 ]) assert.throws(() => network.connectPlan(snap, request), message)
 assert.throws(() => network.connectPlan({...snap, connections: [...snap.connections, {uuid: 'u-gone', id: 'Gone', type: '802-11-wireless', ssid: 'Gone', state: null}]}, {ssid: 'Gone'}), /no longer in range/)
@@ -232,7 +239,7 @@ console.log('ok: saved enterprise profiles activate, the live duplicate wins, SA
     const {TextEncoder: encoder} = globalThis, hasOwn = Object.hasOwn
     delete globalThis.TextEncoder; delete Object.hasOwn
     try {
-        assert.throws(() => network.connectPlan(snap, {ssid: 'é'.repeat(17)}), /Invalid network name/)
+        assert.throws(() => network.connectPlan(snap, {ssid: 'é'.repeat(33)}), /Invalid network name/)
         assert.equal(network.connectPlan(snap, {ssid: 'New3', psk: 'pässwörd1'}).keyMgmt, 'sae')
         assert.deepEqual(network.forgetPlan(snap, 'Saved'), ['u-saved', 'u-saved2'])
         assert.equal(network.failureMessage('constructor'), 'Connection failed (constructor)')

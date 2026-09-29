@@ -623,7 +623,18 @@ export async function dispatch(request) {
         }
         return {}
     }
-    if (request.op === "wifiForget") { await removeConnections(network.forgetPlan(requiredSnapshot(), request.ssid)); return {} }
+    if (request.op === "wifiForget") {
+        // Best effort, one at a time: an already-missing profile is removed as
+        // far as the user is concerned, and one real failure must not stop the
+        // rest of this SSID's saved profiles from being removed.
+        let firstError = null
+        for (const uuid of network.forgetPlan(requiredSnapshot(), request.ssid)) {
+            try { await removeConnections([uuid]) }
+            catch (error) { firstError ??= error }
+        }
+        if (firstError) throw new Error(`Some saved profiles for this network could not be removed: ${firstError.message}`)
+        return {}
+    }
     if (request.op === "vpn") {
         const plan = network.vpnPlan(requiredSnapshot(), request)
         if (plan.active) await activate(plan.uuid); else await deactivate(plan.uuid)

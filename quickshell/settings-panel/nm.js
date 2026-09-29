@@ -1,7 +1,7 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import NM from "gi://NM"
-import { failureMessage, apSupports } from "./network.mjs"
+import { failureMessage, apSupports, groupSecurity } from "./network.mjs"
 
 // The only libnm user. It returns plain objects so everything else is testable
 // without NetworkManager, and it waits for real activation, not just the D-Bus reply.
@@ -87,15 +87,14 @@ export function settled(active, timeoutMs = 45000) {
             if (removed === active) finish(new Error(failureMessage("CONNECTION_REMOVED")))
         })
         timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeoutMs, () => { timer = 0; finish(new Error(failureMessage("CONNECT_TIMEOUT"))); return GLib.SOURCE_REMOVE })
-        const initialState = active.get_state()
         // A freshly created ActiveConnection can briefly read UNKNOWN before its
-        // state property syncs, but it is already registered in the client's
-        // active-connections list by then. UNKNOWN *and* absent from that list
-        // means NM never attached it (or already tore it down) - waiting out
-        // the timeout would just be a slow way to report the same failure.
-        if (initialState === NM.ActiveConnectionState.UNKNOWN && !nm().get_active_connections().includes(active))
-            finish(new Error(failureMessage("CONNECTION_REMOVED")))
-        else check(initialState, active.get_state_reason())
+        // state property syncs, and before libnm's own cache even lists it in
+        // get_active_connections() - that gap is not evidence NM dropped it, just
+        // that its cache has not caught up yet. Reporting it as removed here would
+        // race a connection that is actually about to come up; the
+        // active-connection-removed signal and the UNKNOWN-after-ACTIVATING check
+        // below are what catch a real removal.
+        check(active.get_state(), active.get_state_reason())
     })
 }
 function remote(uuid) {
@@ -123,8 +122,16 @@ export async function activate(uuid) {
 // page model. The same compatibility test decides both which BSS a group
 // reports here and which BSS addAndActivate actually connects to.
 const keyMgmtSecurity = { "wpa-psk": "psk", sae: "sae", owe: "owe" }
+// null is a truly open network; anything else must be one of the three the
+// panel ever sends — an unrecognized keyMgmt is a bug, not a network to
+// silently treat as open.
+function securityForKeyMgmt(keyMgmt) {
+    if (keyMgmt === null) return "open"
+    if (!Object.prototype.hasOwnProperty.call(keyMgmtSecurity, keyMgmt)) throw new Error(`Unknown key management ${keyMgmt}`)
+    return keyMgmtSecurity[keyMgmt]
+}
 function apCompatible(ap, keyMgmt) {
-    return apSupports({ flags: ap.get_flags(), wpaFlags: ap.get_wpa_flags(), rsnFlags: ap.get_rsn_flags() }, keyMgmtSecurity[keyMgmt] || "open")
+    return apSupports({ flags: ap.get_flags(), wpaFlags: ap.get_wpa_flags(), rsnFlags: ap.get_rsn_flags() }, securityForKeyMgmt(keyMgmt))
 }
 export async function addAndActivate({ ssid, psk, keyMgmt }) {
     const devices = wifiDevices()
@@ -133,9 +140,16 @@ export async function addAndActivate({ ssid, psk, keyMgmt }) {
     // one BSS); pick the strongest sighting that can actually take this
     // connection's security — the strongest sighting overall can be a
     // different, incompatible security (e.g. SAE-only next to a weaker PSK one).
-    const candidates = devices.flatMap(device => device.get_access_points()
-        .filter(a => ssidText(a.get_ssid()) === ssid && apCompatible(a, keyMgmt)).map(ap => ({ device, ap })))
+    const sightings = devices.flatMap(device => device.get_access_points()
+        .filter(a => ssidText(a.get_ssid()) === ssid).map(ap => ({ device, ap })))
+    const candidates = sightings.filter(({ ap }) => apCompatible(ap, keyMgmt))
     if (!candidates.length) throw new Error("That network is no longer in range")
+    // The plan was built from a snapshot that can be stale by the time this
+    // runs (a scan landed, someone else changed the AP). Re-derive the group's
+    // security from what is live right now and refuse rather than connect
+    // under a security the caller never agreed to.
+    const liveSecurity = groupSecurity(sightings.map(({ ap }) => ({ flags: ap.get_flags(), wpaFlags: ap.get_wpa_flags(), rsnFlags: ap.get_rsn_flags() })))
+    if (liveSecurity !== securityForKeyMgmt(keyMgmt)) throw new Error("The network changed; try again")
     const { device, ap } = candidates.sort((a, b) => b.ap.get_strength() - a.ap.get_strength())[0]
     const uuid = NM.utils_uuid_generate()
     const connection = NM.SimpleConnection.new()
@@ -151,10 +165,10 @@ export async function addAndActivate({ ssid, psk, keyMgmt }) {
     // active.get_connection(): NM can unexport the ActiveConnection before this
     // runs, which makes that getter return null.
     async function cleanupAfterFailure(error) {
-        try {
-            const saved = nm().get_connection_by_uuid(uuid)
-            if (saved) await saved.delete_async(null)
-        } catch (deleteError) {
+        // A profile NM already removed (or never finished registering) by the
+        // time this runs is nothing to clean up, not a cleanup failure.
+        try { await deleteIfPresent(uuid) }
+        catch (deleteError) {
             throw new Error(`${error.message}; removing the new network profile also failed: ${deleteError.message}`)
         }
         throw error
@@ -172,23 +186,30 @@ export async function deactivate(uuid) {
 // A profile can vanish between the caller's snapshot and this call (someone
 // else removed it, or NM auto-removed it): get_connection_by_uuid then misses
 // it, or - if it unexports the object mid-call - delete_async itself rejects
-// with an "unknown object" D-Bus error. Both are reported structurally
-// (missing uuids, never thrown), so callers never have to match nm.js's own
-// wording to tell "already gone" from a real failure.
-function isUnknownObject(error) {
-    return error instanceof GLib.Error && Gio.DBusError.is_remote_error(error)
+// with an "unknown object"/"unknown method" D-Bus error. libnm strips the
+// GDBus remote-error prefix on void calls (delete_async included), so
+// Gio.DBusError.is_remote_error alone is unreliable; matching the error's own
+// domain/code is what actually works, with the remote-name check kept only as
+// a fallback path.
+function isVanished(error) {
+    if (!(error instanceof GLib.Error)) return false
+    if (error.matches(Gio.DBusError, Gio.DBusError.UNKNOWN_METHOD) || error.matches(Gio.DBusError, Gio.DBusError.UNKNOWN_OBJECT)) return true
+    return Gio.DBusError.is_remote_error(error)
         && ["org.freedesktop.DBus.Error.UnknownObject", "org.freedesktop.DBus.Error.UnknownMethod"].includes(Gio.DBusError.get_remote_error(error))
+}
+// Both callers report "already gone" structurally (never throwing for it), so
+// neither one has to match nm.js's own wording to tell that apart from a real failure.
+async function deleteIfPresent(uuid) {
+    const connection = nm().get_connection_by_uuid(uuid)
+    if (!connection) return false
+    try { await connection.delete_async(null); return true }
+    catch (error) {
+        if (isVanished(error)) return false
+        throw error
+    }
 }
 export async function removeConnections(uuids) {
     const missing = []
-    for (const uuid of uuids) {
-        const connection = nm().get_connection_by_uuid(uuid)
-        if (!connection) { missing.push(uuid); continue }
-        try { await connection.delete_async(null) }
-        catch (error) {
-            if (isUnknownObject(error)) { missing.push(uuid); continue }
-            throw error
-        }
-    }
+    for (const uuid of uuids) if (!(await deleteIfPresent(uuid))) missing.push(uuid)
     return { missing }
 }

@@ -27,7 +27,7 @@ const savedWifi = snap => snap.connections.filter(c => c.type === WIFI && c.ssid
 // downgrade the connection. unsupported (802.1X/WEP) always wins because it is
 // not encrypted here; otherwise any BSS advertising SAE (a PSK+SAE transition
 // BSS included) beats plain PSK, which beats OWE, which beats open.
-function groupSecurity(bsses) {
+export function groupSecurity(bsses) {
     if (bsses.some(ap => securityOf(ap) === "unsupported")) return "unsupported"
     if (bsses.some(ap => (ap.wpaFlags | ap.rsnFlags) & SAE)) return "sae"
     if (bsses.some(ap => securityOf(ap) === "psk")) return "psk"
@@ -102,7 +102,11 @@ function utf8Length(text) {
     return bytes
 }
 function validSsid(ssid) {
-    if (typeof ssid !== "string" || !ssid || /[\0\r\n]/.test(ssid) || utf8Length(ssid) > 32) throw new Error("Invalid network name")
+    // Bounded by code points, not UTF-8 bytes: the display form of a non-UTF-8
+    // SSID (libnm's escaped rendering) maps each raw byte to one code point, so
+    // a valid 32-byte SSID can display as up to 32 code points regardless of
+    // how many bytes each one would take if re-encoded.
+    if (typeof ssid !== "string" || !ssid || /[\0\r\n]/.test(ssid) || [...ssid].length > 32) throw new Error("Invalid network name")
     return ssid
 }
 function validPsk(psk) {

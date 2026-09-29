@@ -3,6 +3,7 @@
 // its lazily-created NM.Client for a fake through useClientForTests().
 import NM from "gi://NM"
 import GLib from "gi://GLib"
+import Gio from "gi://Gio"
 import * as nm from "../nm.js"
 
 function assert(cond, msg) { if (!cond) throw new Error(msg || "assertion failed") }
@@ -180,14 +181,20 @@ console.log("ok: settled treats UNKNOWN after ACTIVATING as a failure")
 console.log("ok: settled does not treat UNKNOWN before any ACTIVATING as a failure when the client already knows about it")
 
 {
-    // UNKNOWN *and* absent from the client's active list at attach time means
-    // NM never attached it (or already tore it down): fail immediately rather
-    // than wait out the timeout for a connection that will never arrive.
+    // UNKNOWN and absent from the client's active list at attach time used to
+    // be treated as an immediate failure, but libnm can resolve the add before
+    // its own cache lists the ActiveConnection - that gap is not evidence NM
+    // dropped it. settled() must wait rather than fail immediately, so a
+    // connection that is actually about to come up is not deleted out from
+    // under the caller.
     const active = fakeActive({ state: NM.ActiveConnectionState.UNKNOWN })
     client.activeConnections = []
-    await assertRejects(checkedSettled(active, 1000), /connection was removed/)
+    soon(() => { client.activeConnections = [active]; active.setState(NM.ActiveConnectionState.ACTIVATING) })
+    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30, () => { active.setState(NM.ActiveConnectionState.ACTIVATED); return GLib.SOURCE_REMOVE })
+    await checkedSettled(active, 1000)
+    client.activeConnections = []
 }
-console.log("ok: settled fails immediately, not after the timeout, when attaching to an ActiveConnection that is UNKNOWN and already gone from NM.Client")
+console.log("ok: settled does not fast-fail on an initial UNKNOWN absent from NM.Client's active list; it waits for a later state change")
 
 // --- addAndActivate: no device / out of range ---------------------------
 client.devices = []
@@ -195,6 +202,14 @@ await assertRejects(nm.addAndActivate({ ssid: "Ghost", psk: null, keyMgmt: null 
 client.devices = [fakeWifiDevice("wlan0", [])]
 await assertRejects(nm.addAndActivate({ ssid: "Ghost", psk: null, keyMgmt: null }), /no longer in range/)
 console.log("ok: addAndActivate rejects when there is no Wi-Fi device or the network is out of range")
+
+// --- addAndActivate: unknown keyMgmt must throw, never fall back to open --
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("Weird", 60, "/ap/weird")])]
+    client.connections = new Map()
+    await assertRejects(nm.addAndActivate({ ssid: "Weird", psk: "hunter2222", keyMgmt: "wep" }), /Unknown key management/)
+}
+console.log("ok: addAndActivate throws on an unrecognized keyMgmt instead of silently treating it as open")
 
 // --- addAndActivate: cleanup on a failed activation ---------------------
 {
@@ -258,18 +273,40 @@ console.log("ok: a missing saved profile (get_connection_by_uuid misses) still s
 }
 console.log("ok: a rejection from add_and_activate_connection_async itself still cleans up the generated uuid")
 
+{
+    // NM can remove the just-added profile itself between the failed
+    // activation and this cleanup call (a race, or NM's own bookkeeping) -
+    // delete_async rejecting with a vanished-object error must read the same
+    // as the profile already being gone, never as a cleanup failure layered
+    // on top of the real one.
+    client.connections = new Map()
+    client.addAndActivateImpl = async connection => {
+        const uuid = connection.get_uuid()
+        client.connections.set(uuid, fakeConnection(uuid, {
+            deleteImpl: async () => { throw GLib.Error.new_literal(Gio.DBusError, Gio.DBusError.UNKNOWN_OBJECT, "no such object") },
+        }))
+        const active = fakeActive({ state: NM.ActiveConnectionState.ACTIVATING })
+        soon(() => active.setState(NM.ActiveConnectionState.DEACTIVATED, NM.ActiveConnectionStateReason.NO_SECRETS))
+        return active
+    }
+    const error = await assertRejects(nm.addAndActivate({ ssid: "Home", psk: "hunter2222", keyMgmt: "wpa-psk" }), /Wrong password/)
+    assert(!/removing the new network profile also failed/.test(error.message), "a vanished profile during cleanup must not be reported as a cleanup failure")
+}
+console.log("ok: cleanup after a failed activation tolerates a profile NM already removed, reporting only the activation error")
+
 // --- addAndActivate: AP compatibility with the requested security --------
 {
+    // A stronger SAE-only BSS sharing this SSID means the group's LIVE security
+    // is sae, not the psk this plan was built for (a stale snapshot, or a scan
+    // that landed in between) - addAndActivate must refuse rather than connect
+    // under the weaker, no-longer-current security.
     const strongIncompatible = fakeAp("Mix", 90, "/ap/strong-sae", { rsnFlags: 0x400 })
     const weakCompatible = fakeAp("Mix", 20, "/ap/weak-psk", { rsnFlags: 0x100 })
     client.devices = [fakeWifiDevice("wlan0", [strongIncompatible, weakCompatible])]
     client.connections = new Map()
-    let chosenPath = null
-    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
-    await nm.addAndActivate({ ssid: "Mix", psk: "hunter2222", keyMgmt: "wpa-psk" })
-    assertEqual(chosenPath, "/ap/weak-psk", "must skip the incompatible stronger AP and pick the weaker compatible one")
+    await assertRejects(nm.addAndActivate({ ssid: "Mix", psk: "hunter2222", keyMgmt: "wpa-psk" }), /network changed/)
 }
-console.log("ok: addAndActivate picks the strongest AP that is compatible with the requested security, not the strongest overall")
+console.log("ok: addAndActivate refuses when a stronger, incompatible BSS means the live group security no longer matches the plan")
 
 {
     client.devices = [fakeWifiDevice("wlan0", [fakeAp("SaeOnly", 90, "/ap/sae", { rsnFlags: 0x400 })])]
@@ -496,6 +533,39 @@ console.log("ok: deactivate reaches the client with the matching active connecti
     assertEqual(captured[5], null, "must pass no cancellable")
 }
 console.log("ok: setWifiEnabled reaches the client's dbus property setter with every argument correct")
+
+// --- removeConnections -----------------------------------------------------
+{
+    client.connections = new Map()
+    const result = await nm.removeConnections(["u-absent"])
+    assertEqual(result.missing.length, 1, "an absent uuid must be reported missing")
+    assertEqual(result.missing[0], "u-absent")
+}
+console.log("ok: removeConnections reports a uuid that was never present as missing")
+
+{
+    client.connections = new Map([["u-unknown-method", fakeConnection("u-unknown-method", {
+        deleteImpl: async () => { throw GLib.Error.new_literal(Gio.DBusError, Gio.DBusError.UNKNOWN_METHOD, "no such method") },
+    })]])
+    const result = await nm.removeConnections(["u-unknown-method"])
+    assertEqual(result.missing[0], "u-unknown-method", "an UNKNOWN_METHOD delete failure means the profile is already gone")
+}
+console.log("ok: removeConnections treats a delete_async UNKNOWN_METHOD error as already gone, not a failure")
+
+{
+    client.connections = new Map([["u-unknown-object", fakeConnection("u-unknown-object", {
+        deleteImpl: async () => { throw Gio.DBusError.new_for_dbus_error("org.freedesktop.DBus.Error.UnknownObject", "no such object") },
+    })]])
+    const result = await nm.removeConnections(["u-unknown-object"])
+    assertEqual(result.missing[0], "u-unknown-object", "an UNKNOWN_OBJECT delete failure means the profile is already gone")
+}
+console.log("ok: removeConnections treats a delete_async UNKNOWN_OBJECT error as already gone, not a failure")
+
+{
+    client.connections = new Map([["u-real-fail", fakeConnection("u-real-fail", { deleteImpl: async () => { throw new Error("disk full") } })]])
+    await assertRejects(nm.removeConnections(["u-real-fail"]), /disk full/)
+}
+console.log("ok: removeConnections throws an unrelated delete failure instead of reporting it as missing")
 
 // --- nmSnapshot: access point and connection-state mapping -----------------
 {
