@@ -12,6 +12,8 @@ ShellRoot {
     property bool closing: false
     property bool busy: false
     property bool authPending: false
+    // Set when an authorised write timed out with its polkit dialog possibly still open.
+    property bool authStalled: false
     // Task 1: whether hyprpolkitagent's dialog can be seen and used over this Overlay surface.
     readonly property bool authHidesPanel: true
     property bool loading: true
@@ -197,6 +199,7 @@ ShellRoot {
     IpcHandler {
         target: "settings"
         function toggle(): void {
+            if (root.authStalled) { root.authStalled = false; return; }
             if (root.opened) root.close();
             else { root.closing = false; root.opened = true; }
         }
@@ -204,6 +207,7 @@ ShellRoot {
         // Not `show`: qs parses that word as its own `ipc show` subcommand even inside `ipc call`.
         function page(category: string): void { root.select(category); }
         function open(category: string): void {
+            root.authStalled = false;
             root.closing = false; root.opened = true;
             if (root.catalog.categories.some(c => c.id === category)) root.select(category);
         }
@@ -248,6 +252,7 @@ ShellRoot {
         stdout: StdioCollector { onStreamFinished: root.writeReply = text }
         stderr: StdioCollector { onStreamFinished: root.writeError = text }
         onExited: code => {
+            const wasAuth = root.authPending;
             root.authPending = false;
             root.writeRequest = "";
             try {
@@ -260,6 +265,9 @@ ShellRoot {
             } catch (error) {
                 root.problem = String(error);
                 if (!root.writeReply.trim()) root.problem = root.writeError.trim() || "The settings helper stopped before confirming the change.";
+                // The polkit dialog outlives a timed-out call: stay out of its way (hidden,
+                // no keyboard grab) until the user opens the panel again.
+                if (wasAuth && root.problem.includes("Authentication timed out")) root.authStalled = true;
                 root.queue = [];
                 root.closing = false;
                 root.opened = true;
@@ -326,14 +334,14 @@ ShellRoot {
     }
     PanelWindow {
         id: overlay
-        visible: root.opened && !(root.authPending && root.authHidesPanel)
+        visible: root.opened && !((root.authPending || root.authStalled) && root.authHidesPanel)
         color: "transparent"
         screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) || Quickshell.screens[0]
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "settings-panel"
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: root.opened && !root.authPending ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: root.opened && !root.authPending && !root.authStalled ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         SettingsView {
             anchors.fill: parent
             controller: root

@@ -1,6 +1,6 @@
 export const CANCELLED = "Authentication was cancelled; nothing changed."
 export const NO_AGENT = "No authentication agent is running; nothing changed."
-export const TIMED_OUT = "Authentication timed out; the setting may still change if you finish in the dialog"
+export const TIMED_OUT = "Authentication timed out. The panel stepped aside; the setting may still change if you finish the dialog. Reopen the panel to check."
 
 const cancelledNames = [
     "org.freedesktop.PolicyKit1.Error.NotAuthorized",

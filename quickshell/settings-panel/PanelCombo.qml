@@ -27,14 +27,18 @@ ComboBox {
     textRole: "label"
     currentIndex: combo.shown.findIndex(item => String(item.value) === String(combo.value))
     displayText: currentIndex < 0 ? (combo.choices.find(item => String(item.value) === String(combo.value))?.label ?? String(combo.value ?? "")) : currentText
-    onActivated: index => { combo.picked(combo.shown[index].value); combo.filter = ""; }
-    Keys.onUpPressed: event => {
-        if (!combo.open && !combo.commitOnArrows) { combo.popup.open(); event.accepted = true; }
-        else event.accepted = false;
-    }
-    Keys.onDownPressed: event => {
-        if (!combo.open && !combo.commitOnArrows) { combo.popup.open(); event.accepted = true; }
-        else event.accepted = false;
+    onActivated: index => { if (index >= 0 && index < combo.shown.length) combo.picked(combo.shown[index].value); combo.filter = ""; }
+    // A closed ComboBox commits on arrows, Home/End/PageUp/PageDown and type-ahead
+    // letters. For rows whose write asks for a password, every such key opens the
+    // list instead (a typed letter seeds the filter), so no stray key changes a system setting.
+    Keys.onPressed: event => {
+        if (combo.open || combo.commitOnArrows) return;
+        const navigation = [Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End, Qt.Key_PageUp, Qt.Key_PageDown].includes(event.key);
+        const typed = !navigation && event.text && event.text.trim() && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier));
+        if (!navigation && !typed) return;
+        combo.popup.open();
+        if (typed && combo.filterable) { combo.filter = event.text; combo.filterIndex = combo.shown.length ? 0 : -1; }
+        event.accepted = true;
     }
     palette.button: combo.theme.background
     palette.buttonText: combo.theme.foreground
@@ -103,10 +107,11 @@ ComboBox {
                 text: combo.filter
                 onTextEdited: { combo.filter = text; combo.filterIndex = combo.shown.length && combo.filter ? 0 : -1; }
                 color: combo.theme.foreground
-                Keys.onDownPressed: combo.filterIndex = Math.min(combo.filterIndex + 1, combo.shown.length - 1)
-                Keys.onUpPressed: combo.filterIndex = Math.max(combo.filterIndex - 1, 0)
-                Keys.onReturnPressed: { if (combo.filterIndex >= 0) { combo.activated(combo.filterIndex); combo.popup.close(); } }
-                Keys.onEnterPressed: { if (combo.filterIndex >= 0) { combo.activated(combo.filterIndex); combo.popup.close(); } }
+                // With no matches there is nothing to highlight: the index stays -1.
+                Keys.onDownPressed: combo.filterIndex = combo.shown.length ? Math.min(combo.filterIndex + 1, combo.shown.length - 1) : -1
+                Keys.onUpPressed: combo.filterIndex = combo.shown.length ? Math.max(combo.filterIndex - 1, 0) : -1
+                Keys.onReturnPressed: { if (combo.filterIndex >= 0 && combo.filterIndex < combo.shown.length) { combo.activated(combo.filterIndex); combo.popup.close(); } }
+                Keys.onEnterPressed: { if (combo.filterIndex >= 0 && combo.filterIndex < combo.shown.length) { combo.activated(combo.filterIndex); combo.popup.close(); } }
                 Keys.onEscapePressed: combo.popup.close()
             }
             ListView {

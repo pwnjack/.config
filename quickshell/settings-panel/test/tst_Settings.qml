@@ -222,6 +222,38 @@ Item {
             compare(controller.calls.length, 0);
             keyClick(Qt.Key_Escape);
         }
+        function test_auth_combo_other_keys_open_without_committing() {
+            controller.category = "input"; waitForRendering(view);
+            const combo = findChild(view, "select-zone");
+            for (const key of [Qt.Key_End, Qt.Key_Home, Qt.Key_PageDown]) {
+                combo.forceActiveFocus();
+                keyClick(key);
+                tryCompare(combo.popup, "visible", true);
+                compare(controller.calls.length, 0);
+                keyClick(Qt.Key_Escape);
+                tryCompare(combo.popup, "visible", false);
+            }
+            combo.forceActiveFocus();
+            keyClick("z");
+            tryCompare(combo.popup, "visible", true);
+            compare(combo.filter, "z", "a typed letter seeds the filter instead of committing a match");
+            compare(controller.calls.length, 0);
+            keyClick(Qt.Key_Escape);
+        }
+        function test_filter_without_matches_commits_nothing() {
+            controller.category = "input"; waitForRendering(view);
+            const combo = findChild(view, "select-zone");
+            mouseClick(combo); waitForRendering(view);
+            const filter = combo.popup.contentItem.children.find(item => item.objectName === "filter-zone") || findChild(combo.popup.contentItem, "filter-zone");
+            filter.forceActiveFocus();
+            for (const c of "qqqq") keyClick(c);
+            compare(combo.shown.length, 0);
+            keyClick(Qt.Key_Up);
+            compare(combo.filterIndex, -1);
+            keyClick(Qt.Key_Return);
+            compare(controller.calls.length, 0);
+            keyClick(Qt.Key_Escape);
+        }
         function test_dynamic_choices() {
             const combo = findChild(view,"select-theme");
             compare(combo.currentIndex,1);
