@@ -154,7 +154,7 @@ async function autostartChange(request) {
     const path = `${autostartUser}/${entry.id}`, shown = `~/.config/autostart/${entry.id}`
     if (entry.link) throw new Error(`${shown} is a link; edit it by hand`)
     if (request.action === "remove") {
-        if (entry.origin === "system") throw new Error("Only apps you added can be removed")
+        if (!entry.removable) throw new Error(entry.origin === "override" ? `~/.config/autostart/${entry.id} is your own version of this entry; edit or delete it there` : "Only apps you added can be removed")
         return remove(path)
     }
     if (entry.scope) throw new Error(`${entry.name} cannot be changed: ${entry.scope}`)

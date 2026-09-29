@@ -72,7 +72,7 @@ ColumnLayout {
                         text: [app.modelData.scope, app.modelData.status.label,
                             app.modelData.ignoredGnomeFlag ? "X-GNOME-Autostart-enabled has no effect under systemd" : "",
                             app.modelData.link ? "A link; edit it by hand" : "",
-                            app.modelData.origin === "user" ? "In ~/.config/autostart" : ""].filter(Boolean).join(" · ")
+                            app.modelData.origin === "user" ? "In ~/.config/autostart" : app.modelData.origin === "override" && !app.modelData.staleOverride && app.modelData.enabled ? "Your version in ~/.config/autostart" : ""].filter(Boolean).join(" · ")
                         color: page.theme.foreground; opacity: 0.75; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true
                     }
                 }

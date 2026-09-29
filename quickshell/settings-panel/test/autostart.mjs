@@ -134,7 +134,7 @@ console.log('ok: setHidden keeps mixed line endings intact')
     assert.equal(autostart.entryProblem('[Desktop Entry]\nExec=a\\sb\;c\\\\d\nHidden=Yes\n'), '')
     const [bad] = autostart.autostartEntries({system: [], user: [{id: 'bad.desktop', text: '[Desktop Entry]\nType=Application\nName=Bad\nExec=sh -c "echo \\$HOME"\n'}], desktops: ['Hyprland'], onPath: () => true})
     assert.equal(bad.enabled, false)
-    assert.match(bad.scope, /^Ignored by systemd/)
+    assert.match(bad.scope, /Ignored by systemd/)
     assert.equal(autostart.withStatus([bad], [])[0].status.state, 'none')
 }
 console.log('ok: files systemd cannot parse are reported as ignored, not enabled')
@@ -233,3 +233,17 @@ console.log('ok: appScope applies the generator rules to an installed applicatio
     assert.equal(env.BROKEN, "$'")
 }
 console.log("ok: show-environment $'...' quoting is undone")
+
+{
+    // A customised override is never removable; a broken one names its file.
+    const sys = [{id: 'nm-applet.desktop', text: '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n'}]
+    const [custom] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet --indicator\n'}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(custom.removable, false)
+    const [broken] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: '[Desktop Entry]\nType=Application\nName=Network\nComment=mine\nHidden=true\n'}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(broken.scope, '~/.config/autostart/nm-applet.desktop: No command to run')
+    assert.equal(broken.removable, false)
+    const [stale] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: autostart.minimalOverride('Old name')}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(stale.removable, true)
+    assert.equal(stale.scope, '')
+}
+console.log('ok: customised overrides are not removable; a broken override names its file')

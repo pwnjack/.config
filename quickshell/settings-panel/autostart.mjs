@@ -115,16 +115,20 @@ export function autostartEntries({ system, user, desktops, onPath }) {
         const tryBinary = described.TryExec ? unescape(described.TryExec) : ""
         const commandBinary = firstExecWord(unescape(described.Exec))
         const binary = tryBinary && !onPath(tryBinary) ? tryBinary : commandBinary || tryBinary
+        // When the user's own file is what makes the entry unusable, say which file.
+        const fileNote = own !== undefined && !shaped ? `~/.config/autostart/${id}: ` : ""
+        const baseScope = problem ? `Ignored by systemd: ${problem}` : scopeOf(described, desktops)
         return {
             id, name: described.Name || id.replace(/\.desktop$/, ""), origin,
             enabled: !problem && !isTrue(effective.Hidden),
             invalid: problem,
             ignoredGnomeFlag: (effective["X-GNOME-Autostart-enabled"] || "").toLowerCase() === "false",
-            scope: problem ? `Ignored by systemd: ${problem}` : scopeOf(described, desktops), binary,
+            scope: baseScope ? fileNote + baseScope : "", binary,
             installed: Boolean(commandBinary) && (!tryBinary || onPath(tryBinary)) && onPath(commandBinary), unit: unitName(id),
             link, staleOverride: shaped && !exact,
-            // A file the page wrote itself is toggled with the switch; any other user file can be removed.
-            removable: origin === "user" || (origin === "override" && !exact),
+            // Remove deletes only a file that adds an app, or a stale Hidden stub. A customised
+            // override (its own Exec, Name, …) is the user's work and is never offered for deletion.
+            removable: origin === "user" || (origin === "override" && shaped && !exact),
         }
     }).sort((a, b) => (b.enabled && !b.scope) - (a.enabled && !a.scope) || a.name.localeCompare(b.name))
 }
