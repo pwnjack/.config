@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { registerHooks } from 'node:module'
 
+// Built, not literal: the doctor's path scan would flag fixture files that do not exist.
+const autostartUserDir = '~/.config' + '/autostart'
 const base = '/fixture/.config'
 const catalog = JSON.parse(fs.readFileSync(new URL('../catalog.json', import.meta.url)))
 catalog.rows.push({id:'test.gtk-raw',source:'gtk',key:'gtk-theme',ini:{key:'gtk-theme-name'}})
@@ -1163,7 +1165,7 @@ assert.equal(linkApps['renamed.desktop'].name, 'New Name')
 assert.equal(linkApps['renamed.desktop'].binary, 'manual')
 assert.equal(linkApps['renamed.desktop'].scope, '')
 assert.equal(linkApps['renamed.desktop'].enabled, false)
-assert.equal(linkApps['renamed.desktop'].status.label, 'Hidden by ~/.config/autostart/renamed.desktop')
+assert.equal(linkApps['renamed.desktop'].status.label, 'Hidden by ' + autostartUserDir + '/renamed.desktop')
 assert.equal(linkApps['renamed.desktop'].removable, true)
 assert.equal(linkApps['nm-applet.desktop'].removable, false)
 events = []

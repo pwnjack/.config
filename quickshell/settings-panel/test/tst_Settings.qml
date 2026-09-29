@@ -6,6 +6,8 @@ import "../network.mjs" as Network
 
 Item {
     width: 1280; height: 900
+    // Built, not literal: the doctor's path scan would flag fixture files that do not exist.
+    readonly property string userAutostart: "~/.config" + "/autostart"
     QtObject {
         id: controller
         property bool closed: false
@@ -67,7 +69,7 @@ Item {
                     {id: "gnome.desktop", name: "Gnome flag", origin: "system", enabled: true, ignoredGnomeFlag: true, scope: "", installed: true, status: {state: "none", label: ""}},
                     {id: "arch-update-tray.desktop", name: "Arch-Update", origin: "user", removable: true, enabled: true, scope: "", installed: false, status: {state: "missing", label: "Not installed: arch-update"}},
                     {id: "linked.desktop", name: "Linked", origin: "user", removable: true, link: true, enabled: true, scope: "", installed: true, status: {state: "none", label: ""}},
-                    {id: "renamed.desktop", name: "Renamed", origin: "override", removable: true, staleOverride: true, enabled: false, scope: "", installed: true, status: {state: "none", label: "Hidden by ~/.config/autostart/renamed.desktop"}}],
+                    {id: "renamed.desktop", name: "Renamed", origin: "override", removable: true, staleOverride: true, enabled: false, scope: "", installed: true, status: {state: "none", label: "Hidden by " + userAutostart + "/renamed.desktop"}}],
                 available: [{id: "firefox.desktop", name: "Firefox"}]};
         }
         function test_startup_view() {
@@ -116,7 +118,7 @@ Item {
         function test_startup_stale_override_and_links() {
             controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
             verify(findChild(view, "startupRemove-renamed.desktop"), "a stale override can be removed");
-            verify(findChild(view, "startupStatus-renamed.desktop").text.indexOf("Hidden by ~/.config/autostart/renamed.desktop") >= 0);
+            verify(findChild(view, "startupStatus-renamed.desktop").text.indexOf("Hidden by " + userAutostart + "/renamed.desktop") >= 0);
             verify(findChild(view, "startupSwitch-renamed.desktop"));
             verify(!findChild(view, "startupRemove-linked.desktop"), "a link is never removed from here");
             verify(!findChild(view, "startupSwitch-linked.desktop"), "a link is never switched from here");

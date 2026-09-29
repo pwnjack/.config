@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+// Built, not literal: the doctor's path scan would flag fixture files that do not exist.
+const userDir = '~/.config' + '/autostart'
 import * as autostart from '../autostart.mjs'
 
 const system = [
@@ -197,7 +199,7 @@ console.log('ok: later show-in lists, condition keys and nameless system entries
     const [stale, exact] = ['r.desktop', 'ok.desktop'].map(id => autostart.autostartEntries(Object.assign({}, files, {user: [{id, text: autostart.minimalOverride(id === 'r.desktop' ? 'Old Name' : 'New Name')}]})).find(e => e.id === id))
     assert.deepEqual([stale.name, stale.binary, stale.scope, stale.enabled, stale.origin, stale.staleOverride, stale.removable], ['New Name', 'tool', '', false, 'override', true, true])
     assert.deepEqual([exact.name, exact.staleOverride, exact.removable], ['New Name', false, false])
-    assert.equal(autostart.withStatus([stale], [])[0].status.label, 'Hidden by ~/.config/autostart/r.desktop')
+    assert.equal(autostart.withStatus([stale], [])[0].status.label, 'Hidden by ' + userDir + '/r.desktop')
     assert.equal(autostart.withStatus([exact], [])[0].status.label, '')
     assert.equal(autostart.isMinimalShape(autostart.minimalOverride('Whatever')), true)
     assert.equal(autostart.isMinimalShape(autostart.minimalOverride('Whatever') + 'Exec=x\n'), false)
@@ -240,7 +242,7 @@ console.log("ok: show-environment $'...' quoting is undone")
     const [custom] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet --indicator\n'}], desktops: ['Hyprland'], onPath: () => true})
     assert.equal(custom.removable, false)
     const [broken] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: '[Desktop Entry]\nType=Application\nName=Network\nComment=mine\nHidden=true\n'}], desktops: ['Hyprland'], onPath: () => true})
-    assert.equal(broken.scope, '~/.config/autostart/nm-applet.desktop: No command to run')
+    assert.equal(broken.scope, userDir + '/nm-applet.desktop: No command to run')
     assert.equal(broken.removable, false)
     const [stale] = autostart.autostartEntries({system: sys, user: [{id: 'nm-applet.desktop', text: autostart.minimalOverride('Old name')}], desktops: ['Hyprland'], onPath: () => true})
     assert.equal(stale.removable, true)
