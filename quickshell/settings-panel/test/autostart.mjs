@@ -152,3 +152,21 @@ console.log('ok: files systemd cannot parse are reported as ignored, not enabled
     assert.equal(byId['spaced.desktop'].installed, true)
 }
 console.log('ok: TryExec is checked verbatim')
+
+{
+    // A bad escape in OnlyShowIn/NotShowIn only drops that list; the entry still starts.
+    const [entry] = autostart.autostartEntries({system: [], user: [{id: 'x.desktop', text: '[Desktop Entry]\nType=Application\nName=X\nExec=true\nOnlyShowIn=Hypr\\land;\n'}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(entry.enabled, true)
+    assert.equal(entry.scope, '')
+    assert.equal(autostart.entryProblem('[Desktop Entry]\nNotShowIn=K\\DE;\n'), '')
+}
+console.log('ok: a bad escape in a show-in list drops only that list')
+
+{
+    // Only the exact canonical form with the masked entry's name is "ours".
+    assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Original'), 'Original'), true)
+    assert.equal(autostart.isMinimalOverride('[Desktop Entry]\nName=Custom\nHidden=true\nType=Application\n'), false)
+    assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Custom'), 'Original'), false)
+    assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Original').replace(/\n/g, '\r\n'), 'Original'), true)
+}
+console.log('ok: a reordered or renamed override is never treated as the minimal one')

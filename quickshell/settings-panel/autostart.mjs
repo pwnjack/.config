@@ -21,7 +21,9 @@ const list = value => (value || "").split(";").map(s => s.trim()).filter(Boolean
 // other backslash sequence fails the parse and systemd then hides the entry.
 const escapes = { s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\", ";": ";" }
 const unescape = value => (value || "").replace(/\\(.)/g, (_, char) => escapes[char] ?? char)
-const parsedStringKeys = ["Name", "Exec", "TryExec", "Type", "Path", "OnlyShowIn", "NotShowIn"]
+// A bad escape in these fails the whole file. In OnlyShowIn/NotShowIn systemd only
+// discards that list and still starts the entry (see scopeOf).
+const parsedStringKeys = ["Name", "Exec", "TryExec", "Type", "Path"]
 const booleanKeys = ["Hidden", "X-systemd-skip"]
 const falseValues = ["0", "no", "n", "false", "f", "off"]
 // Escapes are read in pairs: a backslash consumes the character after it.
@@ -72,7 +74,8 @@ function scopeOf(entry, desktops) {
     if (entry.Type !== "Application") return "Not an application entry"
     if (!firstExecWord(unescape(entry.Exec))) return "No command to run"
     if (isTrue(entry["X-systemd-skip"])) return "Skipped by systemd"
-    const only = list(entry.OnlyShowIn), not = list(entry.NotShowIn)
+    const showList = value => hasBadEscape(value || "") ? [] : list(value)
+    const only = showList(entry.OnlyShowIn), not = showList(entry.NotShowIn)
     if (only.length && !only.some(d => desktops.includes(d))) return `Only for ${only.join(", ")}`
     const excluded = not.filter(d => desktops.includes(d))
     if (excluded.length) return `Not for ${excluded.join(", ")}`
@@ -85,7 +88,7 @@ export function autostartEntries({ system, user, desktops, onPath }) {
         const own = usr.get(id), base = sys.get(id)
         const effective = parseEntry(own ?? base)
         // A minimal override carries no Exec of its own: describe the file it masks.
-        const described = own !== undefined && base !== undefined && isMinimalOverride(own) ? parseEntry(base) : effective
+        const described = own !== undefined && base !== undefined && isMinimalOverride(own, parseEntry(base).Name) ? parseEntry(base) : effective
         const problem = entryProblem(own ?? base)
         // TryExec is looked up verbatim (after unescaping), never split like a command line.
         const tryBinary = described.TryExec ? unescape(described.TryExec) : ""
@@ -142,10 +145,14 @@ export function withStatus(entries, units) {
 }
 
 export const minimalOverride = name => `[Desktop Entry]\nType=Application\nName=${name.replace(/[\r\n]+/g, " ")}\nHidden=true\n`
-export function isMinimalOverride(text) {
-    const lines = text.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#"))
-    return lines.length === 4 && lines[0] === "[Desktop Entry]" && lines.includes("Type=Application")
-        && lines.includes("Hidden=true") && lines.some(l => l.startsWith("Name="))
+// Exactly what minimalOverride writes, in that order (comments and blank lines aside).
+// Given the masked entry's name, the Name line must match it too: anything else was
+// written by hand and must never be deleted as "ours".
+export function isMinimalOverride(text, name) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"))
+    return lines.length === 4 && lines[0] === "[Desktop Entry]" && lines[1] === "Type=Application"
+        && lines[2].startsWith("Name=") && lines[3] === "Hidden=true"
+        && (name === undefined || lines[2] === "Name=" + name.replace(/[\r\n]+/g, " "))
 }
 // Only [Desktop Entry]'s Hidden (and on enable the GNOME flag) changes; every other line is kept.
 export function setHidden(text, hidden) {
