@@ -36,9 +36,9 @@ Item {
             {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
             {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
-            {id:"wifi-radio",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
+            {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"wifi-radio":{value:true}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -57,7 +57,7 @@ Item {
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
             controller.network = null;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"wifi-radio":{value:true}});
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -340,10 +340,8 @@ Item {
         function test_network_lists_and_connects() {
             openNetwork();
             verify(findChild(view, "wifi-Home")); verify(findChild(view, "wifi-Office"));
-            verify(!findChild(view, "toggle-wifi-radio"), "the radio row is drawn by the view, not the row list");
+            verify(!findChild(view, "toggle-network.wifi"), "the radio row is drawn by the view, not the row list");
             verify(findChild(view, "wifiRadio"));
-            mouseClick(findChild(view, "wifi-Home"));
-            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Home"});
             mouseClick(findChild(view, "wifi-Cafe"));
             compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Cafe"});
             const before = controller.calls.length;
@@ -357,6 +355,12 @@ Item {
             mouseClick(findChild(view, "connect-Neighbour"));
             compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Neighbour", psk: "secret123"});
             compare(field.text, "");
+        }
+        function test_network_active_row_click_is_noop() {
+            openNetwork();
+            const before = controller.calls.length;
+            mouseClick(findChild(view, "wifi-Home"));
+            compare(controller.calls.length, before, "clicking the already-active network does nothing");
         }
         function test_network_enterprise_is_not_connectable() {
             openNetwork();
@@ -384,7 +388,78 @@ Item {
             controller.network = {running: false}; controller.category = "network"; waitForRendering(view);
             verify(findChild(view, "networkDown").visible);
             controller.query = "wi-fi"; waitForRendering(view);
-            verify(findChild(view, "toggle-wifi-radio"), "search still finds the radio row");
+            verify(findChild(view, "toggle-network.wifi"), "search still finds the radio row");
+        }
+        function test_network_password_survives_live_rebuild() {
+            openNetwork();
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            const field = findChild(view, "psk-Neighbour");
+            verify(field && field.visible);
+            field.forceActiveFocus();
+            for (const c of "secret123") keyClick(c);
+            compare(field.text, "secret123");
+            // A live read replaces controller.network wholesale (new arrays), which
+            // used to recreate delegates and wipe a half-typed password.
+            controller.network = networkFixture();
+            wait(20);
+            const rebuilt = findChild(view, "psk-Neighbour");
+            verify(rebuilt && rebuilt.visible, "the password row must still be expanded after a live rebuild");
+            compare(rebuilt.text, "secret123");
+        }
+        function test_network_password_clears_on_collapse() {
+            openNetwork();
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            let field = findChild(view, "psk-Neighbour");
+            field.forceActiveFocus();
+            for (const c of "secret123") keyClick(c);
+            compare(field.text, "secret123");
+            mouseClick(findChild(view, "wifi-Neighbour")); // collapse
+            wait(20);
+            verify(!field.visible);
+            mouseClick(findChild(view, "wifi-Neighbour")); // reopen
+            wait(20);
+            field = findChild(view, "psk-Neighbour");
+            compare(field.text, "", "a typed password must not survive a collapse");
+        }
+        function test_network_password_clears_on_category_change() {
+            openNetwork();
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            const field = findChild(view, "psk-Neighbour");
+            field.forceActiveFocus();
+            for (const c of "secret123") keyClick(c);
+            compare(field.text, "secret123");
+            controller.select("appearance"); wait(20);
+            openNetwork();
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            const reopened = findChild(view, "psk-Neighbour");
+            compare(reopened.text, "", "a typed password must not survive a category change");
+        }
+        function test_no_results_label_hidden_on_network_view() {
+            openNetwork();
+            const label = findChild(view, "noSettingsMatch");
+            verify(label, "the empty-search label needs an objectName to be tested");
+            verify(!label.visible, "the network view's only row is inView, but that must not show the empty-search label");
+        }
+        function test_no_results_label_shown_for_empty_search() {
+            controller.query = "no-such-setting-exists"; wait(20);
+            const label = findChild(view, "noSettingsMatch");
+            verify(label.visible);
+            controller.query = "";
+        }
+        function test_network_row_keyboard_enter_activates() {
+            openNetwork();
+            const row = findChild(view, "wifi-Cafe");
+            row.forceActiveFocus();
+            keyClick(Qt.Key_Return);
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Cafe"});
+        }
+        function test_network_known_enterprise_is_activatable() {
+            const fixture = networkFixture();
+            fixture.wifi.networks = fixture.wifi.networks.map(n => n.ssid === "Office" ? Object.assign({}, n, {known: true}) : n);
+            controller.network = fixture; controller.category = "network"; waitForRendering(view);
+            verify(!findChild(view, "advanced-Office"), "a known unsupported network shows no Advanced button");
+            mouseClick(findChild(view, "wifi-Office"));
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Office"});
         }
         function test_many_categories_stay_inside_the_panel() {
             const saved = controller.catalog;

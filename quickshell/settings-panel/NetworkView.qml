@@ -12,10 +12,26 @@ ColumnLayout {
     readonly property var model: controller.network
     readonly property var radio: controller.values["network.wifi"] || ({})
     property string expanded: ""
+    // Kept off the delegates: a live read replaces controller.network with fresh
+    // arrays on every poll, which recreates delegates and would otherwise wipe
+    // whatever the user had half-typed into the password field.
+    property string pskText: ""
+    property bool pskFocused: false
     spacing: 8
     // Nerd Font glyphs by code point: pasted private-use characters vanish. Index = bars (1-4).
     readonly property var bars: ["", String.fromCodePoint(0xF091F), String.fromCodePoint(0xF0922), String.fromCodePoint(0xF0925), String.fromCodePoint(0xF0928)]
     readonly property string lock: String.fromCodePoint(0xF033E)
+    function validPsk(text) { return /^[\x20-\x7e]{8,63}$/.test(text) || /^[0-9a-fA-F]{64}$/.test(text) }
+    function validSae(text) { return text.length > 0 && !/[\0\r\n]/.test(text) }
+
+    onExpandedChanged: {
+        pskText = "";
+        pskFocused = false;
+        // Pauses live reads to the Wi-Fi list while a password is being typed, so
+        // the list does not jump under the user's hands (shell.qml honours this).
+        controller.interacting = expanded ? "network.psk" : "";
+    }
+    onVisibleChanged: if (!visible) expanded = ""
 
     Label { objectName: "networkDown"; visible: !!page.model && !page.model.running; text: "NetworkManager is not running."; color: page.theme.foreground }
     Label { visible: !page.model; text: "Reading connections…"; color: page.theme.foreground; opacity: 0.75 }
@@ -25,14 +41,24 @@ ColumnLayout {
         Layout.fillWidth: true
         Label { text: "Wi-Fi"; color: page.theme.foreground; font.pixelSize: 16; font.bold: true; Layout.fillWidth: true }
         Label { visible: !!page.radio.error; text: page.radio.error || ""; color: page.theme.foreground; opacity: 0.75 }
+        Label { visible: !!page.model?.running && !page.model.wifi.enabled; text: "Wi-Fi is off"; color: page.theme.foreground; opacity: 0.75 }
         PanelButton { objectName: "networkEditor"; theme: page.theme; text: "Advanced…"; onClicked: page.controller.action("networkEditor") }
         Switch {
+            id: radioSwitch
             objectName: "wifiRadio"
-            visible: page.radio.value !== undefined
+            visible: page.radio.value !== undefined && !!page.model?.wifi?.available
             checked: page.radio.value === true
             enabled: !page.controller.busy
             Accessible.name: "Wi-Fi"
             onToggled: page.controller.change("network.wifi", checked)
+            implicitWidth: 54; implicitHeight: 40
+            indicator: Rectangle {
+                width: 48; height: 26; x: 3; y: 7; radius: 13
+                color: radioSwitch.checked ? page.theme.accent : page.theme.background
+                border.width: radioSwitch.activeFocus ? 2 : 1
+                border.color: radioSwitch.activeFocus ? page.theme.accent : page.theme.foreground
+                Rectangle { width: 18; height: 18; radius: 9; y: 4; x: radioSwitch.checked ? 26 : 4; color: radioSwitch.checked ? page.theme.accentText : page.theme.foreground }
+            }
         }
     }
     Repeater {
@@ -42,21 +68,35 @@ ColumnLayout {
             required property var modelData
             readonly property bool secured: modelData.security === "psk" || modelData.security === "sae"
             readonly property bool askPassword: page.expanded === modelData.ssid
+            readonly property string statusText: modelData.active ? "Connected" : modelData.activating ? "Connecting" : modelData.known ? "Saved" : ""
+            readonly property string accessibleName: [modelData.ssid, modelData.bars + " of 4 bars",
+                (modelData.security === "open" || modelData.security === "owe") ? "open" : "secured"].concat(statusText ? [statusText] : []).join(", ")
+            function activate() {
+                if (page.controller.busy || entry.modelData.activating) return;
+                if (entry.modelData.security === "unsupported" && !entry.modelData.known) return;
+                if (entry.modelData.active) return;
+                if (entry.modelData.known || !entry.secured) {
+                    page.expanded = "";
+                    page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid});
+                } else page.expanded = entry.askPassword ? "" : entry.modelData.ssid;
+            }
             objectName: "wifi-" + modelData.ssid
             Layout.fillWidth: true
             implicitHeight: entryColumn.implicitHeight + 16
             radius: 10
             color: page.theme.plate
-            border.color: modelData.active ? page.theme.accent : "transparent"
+            border.width: entry.activeFocus ? 2 : 1
+            border.color: entry.activeFocus ? page.theme.accent : modelData.active ? page.theme.accent : "transparent"
+            activeFocusOnTab: true
+            Accessible.role: Accessible.Button
+            Accessible.name: entry.accessibleName
+            Keys.onReturnPressed: entry.activate()
+            Keys.onEnterPressed: entry.activate()
+            Keys.onSpacePressed: entry.activate()
             MouseArea {
                 anchors.fill: parent
-                enabled: !page.controller.busy && entry.modelData.security !== "unsupported" && !entry.modelData.activating
-                onClicked: {
-                    if (entry.modelData.known || !entry.secured) {
-                        page.expanded = "";
-                        page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid});
-                    } else page.expanded = entry.askPassword ? "" : entry.modelData.ssid;
-                }
+                enabled: !page.controller.busy && !entry.modelData.activating && (entry.modelData.security !== "unsupported" || entry.modelData.known)
+                onClicked: entry.activate()
             }
             ColumnLayout {
                 id: entryColumn
@@ -65,27 +105,35 @@ ColumnLayout {
                     Label { text: page.bars[entry.modelData.bars]; color: page.theme.foreground; font.pixelSize: 18 }
                     Label { text: entry.modelData.ssid; color: page.theme.foreground; font.bold: entry.modelData.active; elide: Text.ElideRight; Layout.fillWidth: true }
                     Label { visible: entry.modelData.security !== "open" && entry.modelData.security !== "owe"; text: page.lock; color: page.theme.foreground; opacity: 0.75 }
-                    Label { text: entry.modelData.active ? "Connected" : entry.modelData.activating ? "Connecting…" : entry.modelData.known ? "Saved" : ""; color: page.theme.foreground; opacity: 0.75 }
+                    Label { text: entry.statusText; color: page.theme.foreground; opacity: 0.75 }
                     Loader {
                         active: entry.modelData.known
                         sourceComponent: PanelButton {
                             objectName: "forget-" + entry.modelData.ssid
                             theme: page.theme; text: "Forget"
+                            Accessible.name: "Forget " + entry.modelData.ssid
                             enabled: !page.controller.busy
                             onClicked: page.controller.submit({op: "wifiForget", ssid: entry.modelData.ssid})
                         }
                     }
                     Loader {
-                        active: entry.modelData.security === "unsupported"
+                        // A known enterprise/WEP profile activates like any saved network;
+                        // Advanced… is only for one we cannot offer to connect at all.
+                        active: entry.modelData.security === "unsupported" && !entry.modelData.known
                         sourceComponent: PanelButton {
                             objectName: "advanced-" + entry.modelData.ssid
                             theme: page.theme; text: "Advanced…"
+                            Accessible.name: "Advanced settings for " + entry.modelData.ssid
                             onClicked: page.controller.action("networkEditor")
                         }
                     }
                 }
                 RowLayout {
                     visible: entry.askPassword
+                    // Swallows clicks inside the password row (including a disabled Connect
+                    // button, which is transparent to input) so they cannot fall through to
+                    // the entry's own MouseArea and collapse the row out from under the user.
+                    MouseArea { anchors.fill: parent; onClicked: {} }
                     TextField {
                         id: psk
                         objectName: "psk-" + entry.modelData.ssid
@@ -93,18 +141,24 @@ ColumnLayout {
                         echoMode: TextInput.Password
                         placeholderText: "Password"
                         color: page.theme.foreground
+                        text: page.pskText
                         Accessible.name: "Password for " + entry.modelData.ssid
+                        onTextEdited: page.pskText = text
+                        onActiveFocusChanged: page.pskFocused = activeFocus
+                        Component.onCompleted: if (page.pskFocused) forceActiveFocus()
                         onAccepted: { if (connectButton.enabled) connectButton.clicked(); }
                     }
                     PanelButton {
                         id: connectButton
                         objectName: "connect-" + entry.modelData.ssid
                         theme: page.theme; text: "Connect"
-                        // WPA2 needs 8–63 characters; WPA3-SAE accepts any non-empty password (network.mjs validates both).
-                        enabled: (entry.modelData.security === "sae" ? psk.text.length > 0 : psk.text.length >= 8) && !page.controller.busy
+                        Accessible.name: "Connect " + entry.modelData.ssid
+                        // WPA2 needs 8–63 characters (or 64 hex digits); WPA3-SAE accepts any
+                        // non-empty password without line breaks (network.mjs validates both authoritatively).
+                        enabled: (entry.modelData.security === "sae" ? page.validSae(page.pskText) : page.validPsk(page.pskText)) && !page.controller.busy
                         onClicked: {
-                            page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid, psk: psk.text});
-                            psk.text = "";
+                            page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid, psk: page.pskText});
+                            page.pskText = "";
                             page.expanded = "";
                         }
                     }
@@ -152,11 +206,20 @@ ColumnLayout {
             Loader {
                 active: vpnRow.modelData.control === "switch"
                 sourceComponent: Switch {
+                    id: vpnSwitch
                     objectName: "vpn-" + vpnRow.modelData.uuid
                     checked: vpnRow.modelData.state !== "off"
                     enabled: !page.controller.busy
                     Accessible.name: vpnRow.modelData.name
                     onToggled: page.controller.submit({op: "vpn", uuid: vpnRow.modelData.uuid, active: checked})
+                    implicitWidth: 54; implicitHeight: 40
+                    indicator: Rectangle {
+                        width: 48; height: 26; x: 3; y: 7; radius: 13
+                        color: vpnSwitch.checked ? page.theme.accent : page.theme.background
+                        border.width: vpnSwitch.activeFocus ? 2 : 1
+                        border.color: vpnSwitch.activeFocus ? page.theme.accent : page.theme.foreground
+                        Rectangle { width: 18; height: 18; radius: 9; y: 4; x: vpnSwitch.checked ? 26 : 4; color: vpnSwitch.checked ? page.theme.accentText : page.theme.foreground }
+                    }
                 }
             }
         }

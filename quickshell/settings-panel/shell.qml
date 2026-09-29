@@ -34,19 +34,32 @@ ShellRoot {
     property var liveDirty: ({})
     property string liveReply: ""
     property int liveReads: 0
-    // Only what is on screen is watched: no page, no subscription.
+    // Only what is on screen is watched: no page, no subscription. A row marked
+    // inView (the network.wifi toggle, drawn by NetworkView itself) contributes
+    // no live tag on its own — otherwise a search that merely matches its title
+    // would start the network poller even while looking at an unrelated page.
     readonly property var liveTags: {
-        const tags = new Set(visibleRows.map(row => row.live).filter(Boolean));
+        const tags = new Set(visibleRows.filter(row => !row.inView).map(row => row.live).filter(Boolean));
         if (category === "monitors" && !query.trim()) tags.add("displays");
         if (category === "network" && !query.trim()) tags.add("network");
         return [...tags];
     }
     property var shownTags: []
     onLiveTagsChanged: {
-        const added = liveTags.filter(tag => !shownTags.includes(tag));
+        const previous = shownTags;
+        const added = liveTags.filter(tag => !previous.includes(tag));
+        const removed = previous.filter(tag => !liveTags.includes(tag));
         shownTags = liveTags;
-        if (added.includes("network") && opened && !busy) { liveDirty = Object.assign({}, liveDirty, {network: true}); readLive(); }
+        // Skipped while a full read is already in flight or has never happened
+        // (loaded false): that read already carries the network view data, so an
+        // immediate extra live read here would just race it at launch.
+        if (added.includes("network") && opened && !busy && loaded && !reader.running) { liveDirty = Object.assign({}, liveDirty, {network: true}); readLive(); }
+        if (removed.includes("network")) { scanner.running = false; scanSettle.stop(); }
     }
+    // Covers the third way the network tag "goes away": closing the panel while
+    // still on the network page, which changes no category/query and so never
+    // fires onLiveTagsChanged above.
+    onOpenedChanged: { if (!opened) { scanner.running = false; scanSettle.stop(); } }
     property var queue: []
     property string readReply: ""
     property string writeReply: ""
@@ -186,7 +199,9 @@ ShellRoot {
                 const result = JSON.parse(root.readReply);
                 if (!result.ok) throw new Error(result.error);
                 root.values = Object.assign({}, root.values, result.values);
-                if (result.network) root.network = result.network;
+                // A password mid-edit keeps its own network snapshot: replacing it here
+                // would recreate the Wi-Fi list's delegates under the user's hands.
+                if (result.network && root.interacting !== "network.psk") root.network = result.network;
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
@@ -248,7 +263,9 @@ ShellRoot {
     Process {
         id: scanner
         command: ["bash", root.configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "networkScan"})]
-        onExited: scanSettle.restart()
+        // Only restarts the settle timer if the panel is open and the page (or a
+        // matching search) is still up; otherwise a scan that outlives either would relight it.
+        onExited: { if (root.opened && root.liveTags.includes("network")) scanSettle.restart(); }
     }
     // A scan completes a few seconds later, and `nmcli monitor` may not report it (Task 1).
     Timer { id: scanSettle; interval: 5000; onTriggered: root.markLive("network") }
@@ -270,7 +287,7 @@ ShellRoot {
                 // Never move a control under the user's hand.
                 delete values[root.interacting];
                 root.values = Object.assign({}, root.values, values);
-                if (result.network) root.network = result.network;
+                if (result.network && root.interacting !== "network.psk") root.network = result.network;
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
