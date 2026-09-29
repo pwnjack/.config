@@ -199,7 +199,8 @@ ShellRoot {
     IpcHandler {
         target: "settings"
         function toggle(): void {
-            if (root.authStalled) { root.authStalled = false; return; }
+            // Back after a timed-out prompt: the dialog may have applied the change since.
+            if (root.authStalled) { root.authStalled = false; root.refresh(); return; }
             if (root.opened) root.close();
             else { root.closing = false; root.opened = true; }
         }
@@ -207,8 +208,10 @@ ShellRoot {
         // Not `show`: qs parses that word as its own `ipc show` subcommand even inside `ipc call`.
         function page(category: string): void { root.select(category); }
         function open(category: string): void {
+            const stalled = root.authStalled;
             root.authStalled = false;
             root.closing = false; root.opened = true;
+            if (stalled) root.refresh();
             if (root.catalog.categories.some(c => c.id === category)) root.select(category);
         }
         function status(): string {
