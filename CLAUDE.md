@@ -217,17 +217,29 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`, `clock`. `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` is the one preference that is legitimately empty: empty means "no preference", and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
-### Agent CLI status lines (`claude/`, `codex/`)
+### AI agent harness (`claude/`, `codex/`)
 
-Both agent CLIs keep their config outside `~/.config` and write machine state
-into it, so neither config file is tracked. `claude/statusline.sh` is the Claude
-Code status line; `~/.claude/settings.json` points `statusLine.command` at it
-(the exact entry is in the script's header). `codex/statusline.toml` holds only
-the Codex `[tui]` status-bar keys, and `codex/apply-config.sh` merges every
-`codex/*.toml` fragment into `~/.codex/config.toml` key by key — idempotent,
-single-line values only, a no-op without Codex. Edit the fragment, then run the
-script; never track `config.toml` itself, which Codex rewrites with project
-trust entries and hook hashes.
+The repo tracks only what was authored here for Claude Code and Codex: the
+delegation skills (`claude/skills/`, with `_shared/handoff.md` as the contract
+and `test-codex-model.sh` as its suite), one hook, the global instructions
+(`claude/CLAUDE.global.md`, `codex/AGENTS.global.md` — named so neither is
+auto-loaded as a nested project file), and curated settings. Logins, history,
+memory, caches, plugin checkouts and anything a tool writes into its own config
+(Herdr's agent-state hooks, project trust entries, auto-mode text) are never
+tracked, so a fresh machine stays fresh and the public repo carries no machine
+state. `scripts/agents/setup.sh` wires it in and skips any tool that is absent:
+it symlinks each skill directory, the hook and the global instructions, runs
+`claude/apply-settings.sh` and `codex/apply-config.sh`, installs the Claude
+plugins the tracked settings list, and lets `herdr integration install` own the
+Herdr hooks. `install.sh` calls it.
+
+Neither live settings file is a symlink, because the tools rewrite them.
+`claude/apply-settings.sh` merges `claude/settings.json` into
+`~/.claude/settings.json` (objects key by key; a tracked hook group replaces any
+live group running the same script file). `codex/apply-config.sh` merges every
+`codex/*.toml` fragment into `~/.codex/config.toml` key by key — single-line
+values only. Edit the tracked file, then run the script. `claude/statusline.sh`
+is the Claude Code status line.
 
 ### Scripts (`scripts/`)
 

@@ -18,7 +18,7 @@
 #
 # WHAT IS DELIBERATELY NOT SCANNED:
 #
-#   *.md — README.md and QUICKSTART.md carry connector names as deliberate
+#   *.md — README.md and docs/guide.md carry connector names as deliberate
 #   examples of what a value looks like. This is the same reasoning that
 #   already excludes docs/ from references.sh's literal-path scan.
 #

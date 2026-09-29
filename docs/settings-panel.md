@@ -153,7 +153,7 @@ A `Process` with `stdinEnabled: true` that calls `write()` in `onStarted` delive
 the probe printed `got:{"op":"read"}`.
 
 ### Waybar include
-Waybar 0.15 expands `~` in `include` (`Found config file: /home/pwnjack/.local/state/...`) and
+Waybar 0.15 expands `~` in `include` (`Found config file: /home/you/.local/state/...`) and
 merges key by key: with `"format": "MAIN"` in the main file, the trace says
 `Option format is already set; ignoring value "PROBE ..."`, while the include's `interval`
 was taken. A main `clock` object without `format` therefore takes the include's format.

@@ -2,6 +2,27 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-09-29] - Public-Ready Cleanup and Agent Harness
+
+### Added
+
+- The AI agent harness now lives in the repo (`claude/`, `codex/`) and is wired
+  in by `scripts/agents/setup.sh`, which `install.sh` runs. Only authored files
+  are tracked; tool-written state, logins and memory stay out.
+- Codex delegations name a model by codename (`sol`, `luna`, …), resolved at
+  launch to the newest listed version; `astra` and Claude `fable` run only on
+  explicit request.
+- `docs/guide.md` holds the technical material; `LICENSE` (MIT).
+
+### Changed
+
+- README reduced to what the repo is, screenshots and a minimal install.
+
+### Removed
+
+- `QUICKSTART.md` (folded into the guide), the AI-session planning documents
+  under `docs/superpowers/`, and leftover Paneflow and Orca configuration.
+
 ## [2026-09-20] - Idle Efficiency and Repository Finalization
 
 ### Changed
