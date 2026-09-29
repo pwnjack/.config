@@ -15,6 +15,7 @@ Item {
         property string category: "appearance"
         property string mainMonitor: ""
         property var monitors: []
+        property var network: null
         property color background: "#05090c"
         property color foreground: "#cfddde"
         property color accent: "#6097a1"
@@ -26,7 +27,7 @@ Item {
         property bool keepPendingOnRevert: false
         function keepDisplay() { calls = calls.concat([{op:"displayKeep"}]); }
         function revertDisplay() { if (!keepPendingOnRevert) pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
-        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}], rows: [
+        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
@@ -34,10 +35,11 @@ Item {
             {id:"theme",category:"appearance",title:"Theme",description:"GTK",kind:"select",choices:"gtk-themes"},
             {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
-            {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"}
+            {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
+            {id:"wifi-radio",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}})
-        readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category)
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"wifi-radio":{value:true}})
+        readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
         function change(id,value) { calls = calls.concat([{id:id,value:value}]); }
@@ -54,7 +56,8 @@ Item {
             controller.calls = []; controller.busy = false; controller.interacting = "";
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62}});
+            controller.network = null;
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"wifi-radio":{value:true}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -320,6 +323,68 @@ Item {
             tryVerify(() => controller.calls.length === 1 && controller.calls[0].op === "displayRevert", 3000);
             wait(600);
             compare(controller.calls.length,1);
+        }
+        function networkFixture() {
+            return {running: true,
+                wifi: {enabled: true, available: true, networks: [
+                    {ssid: "Home", signal: 84, bars: 4, security: "psk", known: true, active: true},
+                    {ssid: "Cafe", signal: 60, bars: 3, security: "open", known: false, active: false},
+                    {ssid: "Neighbour", signal: 40, bars: 2, security: "psk", known: false, active: false},
+                    {ssid: "Office", signal: 30, bars: 2, security: "unsupported", known: false, active: false}]},
+                wired: [{iface: "eno1", carrier: true, speed: 1000, ip4: "192.168.1.10/24", gateway: "192.168.1.1"}],
+                vpn: [{uuid: "u-proton", name: "ProtonVPN IT#113", state: "activated", iface: "proton0", proton: true, control: "app"},
+                      {uuid: "u-work", name: "Work", state: "off", iface: null, proton: false, control: "switch"}],
+                proton: {mode: "app", active: true}};
+        }
+        function openNetwork() { controller.network = networkFixture(); controller.category = "network"; waitForRendering(view); }
+        function test_network_lists_and_connects() {
+            openNetwork();
+            verify(findChild(view, "wifi-Home")); verify(findChild(view, "wifi-Office"));
+            verify(!findChild(view, "toggle-wifi-radio"), "the radio row is drawn by the view, not the row list");
+            verify(findChild(view, "wifiRadio"));
+            mouseClick(findChild(view, "wifi-Home"));
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Home"});
+            mouseClick(findChild(view, "wifi-Cafe"));
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Cafe"});
+            const before = controller.calls.length;
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            compare(controller.calls.length, before, "a secured unknown network asks for a password first");
+            const field = findChild(view, "psk-Neighbour");
+            verify(field && field.visible);
+            compare(field.echoMode, TextInput.Password);
+            field.forceActiveFocus();
+            for (const c of "secret123") keyClick(c);
+            mouseClick(findChild(view, "connect-Neighbour"));
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Neighbour", psk: "secret123"});
+            compare(field.text, "");
+        }
+        function test_network_enterprise_is_not_connectable() {
+            openNetwork();
+            const before = controller.calls.length;
+            mouseClick(findChild(view, "wifi-Office"));
+            compare(controller.calls.length, before);
+            verify(findChild(view, "advanced-Office"));
+        }
+        function test_network_forget_only_known() {
+            openNetwork();
+            verify(findChild(view, "forget-Home"));
+            verify(!findChild(view, "forget-Cafe"));
+            mouseClick(findChild(view, "forget-Home"));
+            compare(controller.calls[controller.calls.length - 1], {op: "wifiForget", ssid: "Home"});
+        }
+        function test_network_vpn_switch_and_proton_app() {
+            openNetwork();
+            verify(!findChild(view, "vpn-u-proton"), "Proton in app mode has no switch");
+            mouseClick(findChild(view, "protonApp"));
+            compare(controller.calls[controller.calls.length - 1], {action: "protonApp"});
+            mouseClick(findChild(view, "vpn-u-work"));
+            compare(controller.calls[controller.calls.length - 1], {op: "vpn", uuid: "u-work", active: true});
+        }
+        function test_network_down_and_search() {
+            controller.network = {running: false}; controller.category = "network"; waitForRendering(view);
+            verify(findChild(view, "networkDown").visible);
+            controller.query = "wi-fi"; waitForRendering(view);
+            verify(findChild(view, "toggle-wifi-radio"), "search still finds the radio row");
         }
         function test_many_categories_stay_inside_the_panel() {
             const saved = controller.catalog;

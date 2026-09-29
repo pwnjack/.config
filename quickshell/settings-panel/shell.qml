@@ -19,6 +19,8 @@ ShellRoot {
     property string query: ""
     property var values: ({})
     property var monitors: []
+    property var network: null
+    readonly property string initialPage: Quickshell.env("SETTINGS_PAGE") || ""
     property string mainMonitor: ""
     property var pendingDisplay: null
     property var stagedDisplays: ({})
@@ -36,7 +38,14 @@ ShellRoot {
     readonly property var liveTags: {
         const tags = new Set(visibleRows.map(row => row.live).filter(Boolean));
         if (category === "monitors" && !query.trim()) tags.add("displays");
+        if (category === "network" && !query.trim()) tags.add("network");
         return [...tags];
+    }
+    property var shownTags: []
+    onLiveTagsChanged: {
+        const added = liveTags.filter(tag => !shownTags.includes(tag));
+        shownTags = liveTags;
+        if (added.includes("network") && opened && !busy) { liveDirty = Object.assign({}, liveDirty, {network: true}); readLive(); }
     }
     property var queue: []
     property string readReply: ""
@@ -54,7 +63,7 @@ ShellRoot {
     readonly property var visibleRows: {
         const words = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
         return catalog.rows.filter(row => {
-            if (!words.length) return row.category === category;
+            if (!words.length) return row.category === category && !row.inView;
             const title = catalog.categories.find(c => c.id === row.category)?.title || "";
             const hay = [row.title, row.description, title].concat(row.keywords || []).join(" ").toLocaleLowerCase();
             return words.every(word => hay.includes(word));
@@ -69,7 +78,7 @@ ShellRoot {
         readReply = "";
         readError = "";
         loading = true;
-        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true})];
+        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network"})];
         reader.running = true;
         // A full read supersedes any live read still waiting on its debounce.
         liveDirty = ({});
@@ -89,7 +98,7 @@ ShellRoot {
         liveReads += 1;
         const ids = catalog.rows.filter(row => tags.includes(row.live)).map(row => row.id);
         liveReply = "";
-        liveReader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: tags.includes("displays")})];
+        liveReader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: tags.includes("displays"), network: tags.includes("network")})];
         liveReader.running = true;
     }
     function select(id) { query = ""; category = id; }
@@ -137,7 +146,11 @@ ShellRoot {
         preload: true
         path: root.configDir + "/quickshell/settings-panel/catalog.json"
         onLoaded: {
-            try { root.catalog = JSON.parse(text()); root.refresh(); }
+            try {
+                root.catalog = JSON.parse(text());
+                if (root.catalog.categories.some(c => c.id === root.initialPage)) root.category = root.initialPage;
+                root.refresh();
+            }
             catch (error) { root.problem = "Could not load settings: " + error; root.loading = false; }
         }
         onLoadFailed: { root.problem = "Could not read the settings catalog."; root.loading = false; }
@@ -151,11 +164,16 @@ ShellRoot {
         function close(): void { root.close(); }
         // Not `show`: qs parses that word as its own `ipc show` subcommand even inside `ipc call`.
         function page(category: string): void { root.select(category); }
+        function open(category: string): void {
+            root.closing = false; root.opened = true;
+            if (root.catalog.categories.some(c => c.id === category)) root.select(category);
+        }
         function status(): string {
             return JSON.stringify({opened: root.opened, loading: root.loading, busy: root.busy,
                 category: root.category, rows: root.visibleRows.length, error: root.problem,
                 frameMs: root.frameMs, readyMs: root.readyMs,
                 liveTags: root.liveTags, liveReads: root.liveReads,
+                network: root.network ? (root.network.running ? "up" : "down") : "none",
                 rowErrors: root.visibleRows.filter(row => root.values[row.id]?.error).map(row => ({id:row.id,error:root.values[row.id].error}))});
         }
     }
@@ -168,6 +186,7 @@ ShellRoot {
                 const result = JSON.parse(root.readReply);
                 if (!result.ok) throw new Error(result.error);
                 root.values = Object.assign({}, root.values, result.values);
+                if (result.network) root.network = result.network;
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
@@ -214,6 +233,25 @@ ShellRoot {
         // `sink-input #3` must not count as `sink`; clients and streams are noise.
         stdout: SplitParser { onRead: line => { if (/ on (sink|source|card|server)( #|$)/.test(line)) root.markLive("audio"); } }
     }
+    Process {
+        id: networkEvents
+        running: root.opened && root.liveTags.includes("network")
+        command: ["nmcli", "monitor"]
+        stdout: SplitParser { onRead: _line => root.markLive("network") }
+    }
+    // Scans only while the page is on screen; NM's own background scanning is untouched.
+    Timer {
+        interval: 20000; repeat: true; triggeredOnStart: true
+        running: root.opened && root.liveTags.includes("network")
+        onTriggered: { if (!root.busy && !scanner.running) scanner.running = true; }
+    }
+    Process {
+        id: scanner
+        command: ["bash", root.configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "networkScan"})]
+        onExited: scanSettle.restart()
+    }
+    // A scan completes a few seconds later, and `nmcli monitor` may not report it (Task 1).
+    Timer { id: scanSettle; interval: 5000; onTriggered: root.markLive("network") }
     Connections {
         target: Hyprland
         enabled: root.opened && root.liveTags.includes("displays")
@@ -232,6 +270,7 @@ ShellRoot {
                 // Never move a control under the user's hand.
                 delete values[root.interacting];
                 root.values = Object.assign({}, root.values, values);
+                if (result.network) root.network = result.network;
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;

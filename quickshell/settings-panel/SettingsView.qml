@@ -167,6 +167,12 @@ FocusScope {
                             PanelButton { objectName: "editDisplaysFile"; theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
                             PanelButton { objectName: "automaticMainDisplay"; theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
                         }
+                        NetworkView {
+                            visible: view.controller.category === "network" && !view.controller.query.trim()
+                            Layout.fillWidth: true
+                            controller: view.controller
+                            theme: view
+                        }
                         Label { visible: !view.controller.visibleRows.length && !view.controller.loading; text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24 }
                         Repeater {
                             model: view.controller.visibleRows

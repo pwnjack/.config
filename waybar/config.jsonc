@@ -327,7 +327,7 @@
     "tooltip-format-ethernet": "󰈀 {ifname}\n\nIP: {ipaddr}\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
     "tooltip-format-disconnected": "Disconnected",
     "max-length": 50,
-    "on-click": "nm-connection-editor",
+    "on-click": "~/.config/scripts/hyprland/settings-panel.sh network",
   },
 
   // Battery — every battery on the machine, system or peripheral.
