@@ -161,13 +161,22 @@ Decision: **include at `~/.local/state/waybar/clock.jsonc`**. The screenshot che
 to plan Task 7 (the session was locked during the probe).
 
 ### Proton VPN
-**Not probed yet**: it needs the user present (it drops the tunnel). Until then the safe
-default applies. Decision: `PROTON_MODE = "app"` (provisional).
+Probed 2026-09-29 with the user present. `nmcli connection down "ProtonVPN IT#113"` deactivated
+the tunnel, and the Proton app then **deleted** both the WireGuard profile and the
+`pvpn-killswitch-ipv6` dummy, so there is nothing for `nmcli connection up` to bring back. Traffic
+kept flowing over the real IP (the kill switch is not in permanent mode). The app showed a clean
+"Disconnected", and reconnecting from the app created a new profile named after the new server
+("ProtonVPN IT#116"). Decision: **`PROTON_MODE = "app"`**: the panel shows the state and opens the
+Proton app, and never switches Proton's profile itself.
 
 ### Polkit dialog versus the overlay
-**Not probed yet**: it needs the user present to cancel the dialog. Until then the safe
-default applies. Decision: `AUTH_HIDES_PANEL = true` (provisional). The cancel error text is
-still unknown; `dbus.js` matches the documented polkit/D-Bus refusal names.
+Probed 2026-09-29 with the user present: with a panel-shaped Overlay surface up (keyboard focus
+None), an interactive `SetTimezone` opened hyprpolkitagent's dialog (Waybar's title read
+"Authentication Required") but the dialog was completely hidden behind the overlay and could not
+be clicked. Decision: **`AUTH_HIDES_PANEL = true`**: the panel hides while a prompt is open.
+A dismissed dialog returns `org.freedesktop.DBus.Error.AccessDenied: Permission denied`, which
+`authError.mjs` maps to "Authentication was cancelled; nothing changed." (checked: the time zone
+stayed Europe/Rome).
 
 ### Per-user locale
 The systemd user manager already has `LANG=en_US.UTF-8` and `LC_TIME=it_IT.UTF-8`, and
