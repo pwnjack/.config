@@ -15,8 +15,44 @@ export function parseEntry(text) {
     }
     return entry
 }
+const trueValues = ["1", "yes", "y", "true", "t", "on"]
 const list = value => (value || "").split(";").map(s => s.trim()).filter(Boolean)
-export function execBinary(entry) { return firstExecWord(entry.TryExec || entry.Exec || "") }
+// Desktop-entry string escapes the generator accepts (xdg_unescape_string); any
+// other backslash sequence fails the parse and systemd then hides the entry.
+const escapes = { s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\", ";": ";" }
+const unescape = value => (value || "").replace(/\\(.)/g, (_, char) => escapes[char] ?? char)
+const parsedStringKeys = ["Name", "Exec", "TryExec", "Type", "Path", "OnlyShowIn", "NotShowIn"]
+const booleanKeys = ["Hidden", "X-systemd-skip"]
+const falseValues = ["0", "no", "n", "false", "f", "off"]
+// Escapes are read in pairs: a backslash consumes the character after it.
+function hasBadEscape(value) {
+    for (let index = 0; index < value.length; ++index) {
+        if (value[index] !== "\\") continue
+        if (!Object.prototype.hasOwnProperty.call(escapes, value[index + 1] ?? "")) return true
+        ++index
+    }
+    return false
+}
+// Why systemd would refuse to parse this file (it then treats the entry as hidden), or "".
+export function entryProblem(text) {
+    let main = false
+    const seen = new Set()
+    for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim()
+        if (line.startsWith("[")) { main = line === "[Desktop Entry]"; continue }
+        if (!main || !line || line.startsWith("#")) continue
+        const eq = line.indexOf("=")
+        if (eq < 0) continue
+        const key = line.slice(0, eq).trim(), value = line.slice(eq + 1).trim()
+        if (booleanKeys.includes(key) && !trueValues.includes(value.toLowerCase()) && !falseValues.includes(value.toLowerCase())) return `${key}=${value} is not a boolean`
+        if (parsedStringKeys.includes(key) && !seen.has(key)) {
+            seen.add(key)
+            if (hasBadEscape(value)) return `${key} has an escape systemd rejects`
+        }
+    }
+    return ""
+}
+export function execBinary(entry) { return entry.TryExec ? unescape(entry.TryExec) : firstExecWord(unescape(entry.Exec)) }
 function firstExecWord(command) {
     let word = "", quote = "", started = false
     for (let index = 0; index < command.length; ++index) {
@@ -31,11 +67,10 @@ function firstExecWord(command) {
     }
     return word
 }
-const trueValues = ["1", "yes", "y", "true", "t", "on"]
 function isTrue(value) { return trueValues.includes((value || "").toLowerCase()) }
 function scopeOf(entry, desktops) {
     if (entry.Type !== "Application") return "Not an application entry"
-    if (!firstExecWord(entry.Exec || "")) return "No command to run"
+    if (!firstExecWord(unescape(entry.Exec))) return "No command to run"
     if (isTrue(entry["X-systemd-skip"])) return "Skipped by systemd"
     const only = list(entry.OnlyShowIn), not = list(entry.NotShowIn)
     if (only.length && !only.some(d => desktops.includes(d))) return `Only for ${only.join(", ")}`
@@ -51,15 +86,18 @@ export function autostartEntries({ system, user, desktops, onPath }) {
         const effective = parseEntry(own ?? base)
         // A minimal override carries no Exec of its own: describe the file it masks.
         const described = own !== undefined && base !== undefined && isMinimalOverride(own) ? parseEntry(base) : effective
-        const tryBinary = described.TryExec ? firstExecWord(described.TryExec) : ""
-        const commandBinary = firstExecWord(described.Exec || "")
+        const problem = entryProblem(own ?? base)
+        // TryExec is looked up verbatim (after unescaping), never split like a command line.
+        const tryBinary = described.TryExec ? unescape(described.TryExec) : ""
+        const commandBinary = firstExecWord(unescape(described.Exec))
         const binary = tryBinary && !onPath(tryBinary) ? tryBinary : commandBinary || tryBinary
         return {
             id, name: described.Name || id.replace(/\.desktop$/, ""),
             origin: base === undefined ? "user" : own === undefined ? "system" : "override",
-            enabled: !isTrue(effective.Hidden),
+            enabled: !problem && !isTrue(effective.Hidden),
+            invalid: problem,
             ignoredGnomeFlag: (effective["X-GNOME-Autostart-enabled"] || "").toLowerCase() === "false",
-            scope: scopeOf(described, desktops), binary,
+            scope: problem ? `Ignored by systemd: ${problem}` : scopeOf(described, desktops), binary,
             installed: Boolean(commandBinary) && (!tryBinary || onPath(tryBinary)) && onPath(commandBinary), unit: unitName(id),
         }
     }).sort((a, b) => (b.enabled && !b.scope) - (a.enabled && !a.scope) || a.name.localeCompare(b.name))
@@ -111,20 +149,28 @@ export function isMinimalOverride(text) {
 }
 // Only [Desktop Entry]'s Hidden (and on enable the GNOME flag) changes; every other line is kept.
 export function setHidden(text, hidden) {
+    // Each line keeps its own ending, so files with mixed CRLF/LF survive untouched.
+    const parts = text.split(/(\r?\n)/)
+    const lines = []
+    for (let index = 0; index < parts.length; index += 2) lines.push({ text: parts[index], end: parts[index + 1] ?? "" })
     const out = []
-    const newline = text.includes("\r\n") ? "\r\n" : "\n"
     let main = false, foundMain = false, lastMain = -1
-    for (const line of text.split(newline)) {
-        const trimmed = line.trim()
+    for (const line of lines) {
+        const trimmed = line.text.trim()
         if (trimmed.startsWith("[")) { main = trimmed === "[Desktop Entry]"; out.push(line); if (main) { foundMain = true; lastMain = out.length - 1 } continue }
         if (main && /^Hidden\s*=/.test(trimmed)) continue
-        if (main && !hidden && /^X-GNOME-Autostart-enabled\s*=\s*false$/.test(trimmed)) continue
+        if (main && !hidden && /^X-GNOME-Autostart-enabled\s*=\s*false$/i.test(trimmed)) continue
         out.push(line)
         if (main && trimmed) lastMain = out.length - 1
     }
     if (!foundMain) throw new Error("Not a desktop entry")
-    if (hidden) out.splice(lastMain + 1, 0, "Hidden=true")
-    return out.join(newline)
+    if (hidden) {
+        const anchor = out[lastMain]
+        const end = anchor.end || (text.includes("\r\n") ? "\r\n" : "\n")
+        if (!anchor.end) anchor.end = end
+        out.splice(lastMain + 1, 0, { text: "Hidden=true", end })
+    }
+    return out.map(line => line.text + line.end).join("")
 }
 
 export function sessionCommands(lua) {

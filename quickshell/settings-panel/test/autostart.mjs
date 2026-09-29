@@ -116,3 +116,39 @@ assert.ok(commands.includes('wl-paste --type text --watch cliphist store'))
 assert.deepEqual(autostart.sessionCommands('-- hl.exec_cmd("commented")\nhl.exec_cmd("a \\"q\\"")'), ['a "q"'])
 assert.deepEqual(autostart.sessionCommands('--[[ hl.exec_cmd("blocked")\n]]\nhl.exec_cmd("live") -- hl.exec_cmd("trailing")'), ['live'])
 console.log('ok: session commands parsed from autostart.lua')
+
+{
+    // Mixed line endings: every line keeps its own ending and nothing after Hidden= is lost.
+    assert.equal(autostart.setHidden('[Desktop Entry]\r\nHidden=true\nName=Keep\nExec=keep --me\n', false), '[Desktop Entry]\r\nName=Keep\nExec=keep --me\n')
+    assert.equal(autostart.setHidden('[Desktop Entry]\nName=Keep\nExec=keep\nHidden=true\r\n', false), '[Desktop Entry]\nName=Keep\nExec=keep\n')
+    assert.equal(autostart.setHidden('[Desktop Entry]\r\nName=K\r\nExec=k', true), '[Desktop Entry]\r\nName=K\r\nExec=k\r\nHidden=true\r\n')
+}
+console.log('ok: setHidden keeps mixed line endings intact')
+
+{
+    // systemd hides a file it cannot parse: invalid booleans and undefined escapes.
+    assert.match(autostart.entryProblem('[Desktop Entry]\nHidden=maybe\n'), /not a boolean/)
+    assert.match(autostart.entryProblem('[Desktop Entry]\nX-systemd-skip=perhaps\n'), /not a boolean/)
+    assert.match(autostart.entryProblem('[Desktop Entry]\nExec=sh -c "echo \\"hi\\""\n'), /escape/)
+    assert.match(autostart.entryProblem('[Desktop Entry]\nExec=sh -c "echo \\$HOME"\n'), /escape/)
+    assert.equal(autostart.entryProblem('[Desktop Entry]\nExec=a\\sb\;c\\\\d\nHidden=Yes\n'), '')
+    const [bad] = autostart.autostartEntries({system: [], user: [{id: 'bad.desktop', text: '[Desktop Entry]\nType=Application\nName=Bad\nExec=sh -c "echo \\$HOME"\n'}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(bad.enabled, false)
+    assert.match(bad.scope, /^Ignored by systemd/)
+    assert.equal(autostart.withStatus([bad], [])[0].status.state, 'none')
+}
+console.log('ok: files systemd cannot parse are reported as ignored, not enabled')
+
+{
+    // TryExec is looked up verbatim, never split or unquoted.
+    const onPath = binary => ['tool', 'sh', '/opt/My App/run'].includes(binary)
+    const entries = autostart.autostartEntries({system: [], user: [
+        {id: 'split.desktop', text: '[Desktop Entry]\nType=Application\nName=Split\nExec=tool\nTryExec=tool extra\n'},
+        {id: 'spaced.desktop', text: '[Desktop Entry]\nType=Application\nName=Spaced\nExec=sh\nTryExec=/opt/My App/run\n'},
+    ], desktops: ['Hyprland'], onPath})
+    const byId = Object.fromEntries(entries.map(e => [e.id, e]))
+    assert.equal(byId['split.desktop'].installed, false)
+    assert.equal(byId['split.desktop'].binary, 'tool extra')
+    assert.equal(byId['spaced.desktop'].installed, true)
+}
+console.log('ok: TryExec is checked verbatim')
