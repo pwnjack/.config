@@ -63,7 +63,7 @@ Item {
             compare(Autostart.unitName("nm-applet.desktop"), "app-nm\\x2dapplet@autostart.service");
             compare(Autostart.setHidden("[Desktop Entry]\nName=X\n", true), "[Desktop Entry]\nName=X\nHidden=true\n");
             compare(Autostart.sessionCommands('hl.exec_cmd("waybar")')[0], "waybar");
-            verify(Autostart.isMinimalOverride(Autostart.minimalOverride("X")));
+            verify(Autostart.isMinimalOverride(Autostart.minimalOverride("X"), "X"));
             const snap = {connections:[],accessPoints:[{ssid:"Cafe",strength:80,flags:0,wpaFlags:0,rsnFlags:0}]};
             compare(Network.wifiNetworks(snap)[0].ssid, "Cafe");
             compare(Network.securityOf(snap.accessPoints[0]), "open");

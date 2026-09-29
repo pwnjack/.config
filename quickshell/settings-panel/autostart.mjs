@@ -11,7 +11,10 @@ export function parseEntry(text) {
         const eq = line.indexOf("=")
         if (eq < 0) continue
         const key = line.slice(0, eq).trim()
-        if (!(key in entry) || key === "Hidden" || key === "X-systemd-skip") entry[key] = line.slice(eq + 1).trim()
+        const value = line.slice(eq + 1).trim()
+        // systemd discards a show-in list with a bad escape and accepts a later one.
+        if ((key === "OnlyShowIn" || key === "NotShowIn") && hasBadEscape(value)) continue
+        if (!(key in entry) || key === "Hidden" || key === "X-systemd-skip") entry[key] = value
     }
     return entry
 }
@@ -23,7 +26,7 @@ const escapes = { s: " ", n: "\n", t: "\t", r: "\r", "\\": "\\", ";": ";" }
 const unescape = value => (value || "").replace(/\\(.)/g, (_, char) => escapes[char] ?? char)
 // A bad escape in these fails the whole file. In OnlyShowIn/NotShowIn systemd only
 // discards that list and still starts the entry (see scopeOf).
-const parsedStringKeys = ["Name", "Exec", "TryExec", "Type", "Path"]
+const parsedStringKeys = ["Name", "Exec", "TryExec", "Type", "Path", "AutostartCondition", "X-KDE-autostart-condition", "X-GNOME-Autostart-Phase"]
 const booleanKeys = ["Hidden", "X-systemd-skip"]
 const falseValues = ["0", "no", "n", "false", "f", "off"]
 // Escapes are read in pairs: a backslash consumes the character after it.
@@ -74,8 +77,7 @@ function scopeOf(entry, desktops) {
     if (entry.Type !== "Application") return "Not an application entry"
     if (!firstExecWord(unescape(entry.Exec))) return "No command to run"
     if (isTrue(entry["X-systemd-skip"])) return "Skipped by systemd"
-    const showList = value => hasBadEscape(value || "") ? [] : list(value)
-    const only = showList(entry.OnlyShowIn), not = showList(entry.NotShowIn)
+    const only = list(entry.OnlyShowIn), not = list(entry.NotShowIn)
     if (only.length && !only.some(d => desktops.includes(d))) return `Only for ${only.join(", ")}`
     const excluded = not.filter(d => desktops.includes(d))
     if (excluded.length) return `Not for ${excluded.join(", ")}`
@@ -88,7 +90,7 @@ export function autostartEntries({ system, user, desktops, onPath }) {
         const own = usr.get(id), base = sys.get(id)
         const effective = parseEntry(own ?? base)
         // A minimal override carries no Exec of its own: describe the file it masks.
-        const described = own !== undefined && base !== undefined && isMinimalOverride(own, parseEntry(base).Name) ? parseEntry(base) : effective
+        const described = own !== undefined && base !== undefined && isMinimalOverride(own, overrideName(id, base)) ? parseEntry(base) : effective
         const problem = entryProblem(own ?? base)
         // TryExec is looked up verbatim (after unescaping), never split like a command line.
         const tryBinary = described.TryExec ? unescape(described.TryExec) : ""
@@ -145,14 +147,16 @@ export function withStatus(entries, units) {
 }
 
 export const minimalOverride = name => `[Desktop Entry]\nType=Application\nName=${name.replace(/[\r\n]+/g, " ")}\nHidden=true\n`
-// Exactly what minimalOverride writes, in that order (comments and blank lines aside).
-// Given the masked entry's name, the Name line must match it too: anything else was
-// written by hand and must never be deleted as "ours".
+// The Name minimalOverride writes for an entry: the masked file's Name, else its id.
+export const overrideName = (id, systemText) => parseEntry(systemText).Name || id.replace(/\.desktop$/, "")
+// Exactly what minimalOverride(name) writes, in that order (comments and blank lines
+// aside). Anything else was written by hand and must never be deleted as "ours".
 export function isMinimalOverride(text, name) {
+    if (typeof name !== "string") throw new Error("isMinimalOverride needs the expected name")
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"))
     return lines.length === 4 && lines[0] === "[Desktop Entry]" && lines[1] === "Type=Application"
         && lines[2].startsWith("Name=") && lines[3] === "Hidden=true"
-        && (name === undefined || lines[2] === "Name=" + name.replace(/[\r\n]+/g, " "))
+        && lines[2] === "Name=" + name.replace(/[\r\n]+/g, " ")
 }
 // Only [Desktop Entry]'s Hidden (and on enable the GNOME flag) changes; every other line is kept.
 export function setHidden(text, hidden) {

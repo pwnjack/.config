@@ -70,10 +70,10 @@ assert.deepEqual(status['gnome-only.desktop'], {state: 'none', label: ''})
 console.log('ok: status from list-units, missing binaries first')
 
 assert.equal(autostart.minimalOverride('Blueman\nApplet'), '[Desktop Entry]\nType=Application\nName=Blueman Applet\nHidden=true\n')
-assert.equal(autostart.isMinimalOverride(user[0].text), true)
-assert.equal(autostart.isMinimalOverride('# note\n\n' + user[0].text), true)
-assert.equal(autostart.isMinimalOverride(user[0].text + 'Comment=mine\n'), false)
-assert.equal(autostart.isMinimalOverride(user[1].text), false)
+assert.equal(autostart.isMinimalOverride(user[0].text, 'Blueman Applet'), true)
+assert.equal(autostart.isMinimalOverride('# note\n\n' + user[0].text, 'Blueman Applet'), true)
+assert.equal(autostart.isMinimalOverride(user[0].text + 'Comment=mine\n', 'Blueman Applet'), false)
+assert.equal(autostart.isMinimalOverride(user[1].text, 'Arch-Update Systray Applet'), false)
 console.log('ok: minimal override text and recognition')
 
 const full = '# keep\n[Desktop Entry]\nName=X\nExec=x\nX-GNOME-Autostart-enabled=false\n\n[Desktop Action new]\nHidden=true\nExec=x --new\n'
@@ -165,8 +165,25 @@ console.log('ok: a bad escape in a show-in list drops only that list')
 {
     // Only the exact canonical form with the masked entry's name is "ours".
     assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Original'), 'Original'), true)
-    assert.equal(autostart.isMinimalOverride('[Desktop Entry]\nName=Custom\nHidden=true\nType=Application\n'), false)
+    assert.equal(autostart.isMinimalOverride('[Desktop Entry]\nName=Custom\nHidden=true\nType=Application\n', 'Custom'), false)
+    assert.throws(() => autostart.isMinimalOverride(autostart.minimalOverride('X')), /expected name/)
     assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Custom'), 'Original'), false)
     assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Original').replace(/\n/g, '\r\n'), 'Original'), true)
 }
 console.log('ok: a reordered or renamed override is never treated as the minimal one')
+
+{
+    // A later valid show-in list wins over an invalid earlier one.
+    const [entry] = autostart.autostartEntries({system: [], user: [{id: 'y.desktop', text: '[Desktop Entry]\nType=Application\nName=Y\nExec=true\nOnlyShowIn=Hypr\\land;\nOnlyShowIn=GNOME;\n'}], desktops: ['Hyprland'], onPath: () => true})
+    assert.match(entry.scope, /Only for GNOME/)
+    // More keys whose bad escape hides the whole file.
+    for (const key of ['AutostartCondition', 'X-KDE-autostart-condition', 'X-GNOME-Autostart-Phase'])
+        assert.match(autostart.entryProblem(`[Desktop Entry]\n${key}=foo\\q\n`), /escape/)
+    // A nameless system entry: the override must carry the id-based name to count as ours.
+    const sys = '[Desktop Entry]\nType=Application\nExec=/usr/bin/true\n'
+    assert.equal(autostart.overrideName('nameless.desktop', sys), 'nameless')
+    assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Personal choice'), autostart.overrideName('nameless.desktop', sys)), false)
+    const [masked] = autostart.autostartEntries({system: [{id: 'nameless.desktop', text: sys}], user: [{id: 'nameless.desktop', text: autostart.minimalOverride('Personal choice')}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(masked.name, 'Personal choice', 'a hand-named override is described by itself, not as the masked entry')
+}
+console.log('ok: later show-in lists, condition keys and nameless system entries')
