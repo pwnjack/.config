@@ -2320,6 +2320,12 @@ git commit -m "feat(settings): pure XDG autostart rules for the Startup page"
 
 ### Task 9: Startup page (backend and view)
 
+> **Updated after the Task 8 review (systemd 262 generator verified against fixtures).** Apply these on top of the code below:
+> - List files with `autostart.isAutostartFileName(name)`, not only `.endsWith(".desktop")` (dotfiles and backup files are skipped by the generator).
+> - `desktops` and `onPath` must use the **systemd user manager's** environment, not the helper's: read `systemctl --user show-environment` once per read and take `XDG_CURRENT_DESKTOP` (split on `:`) and `PATH` from it; resolve a bare binary by searching that PATH (absolute paths: `exists`).
+> - Enabling deletes the user file only when `entry.origin === "override"` and it is exactly the minimal override; a minimal-looking file that is the only copy (`origin === "user"`) is edited in place instead, never deleted.
+> - Entries now carry `ignoredGnomeFlag` (systemd ignores `X-GNOME-Autostart-enabled=false`); the view shows "X-GNOME-Autostart-enabled has no effect under systemd" in that entry's status line. Entries with a `scope` (wrong desktop, not an Application, no Exec, skipped) get no switch.
+
 **Goal:** The Startup page lists Hyprland's own session commands (read-only), then the XDG autostart apps with status, enable/disable, remove and add, then the three existing option rows.
 
 **Files:**
