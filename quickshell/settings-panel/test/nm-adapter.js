@@ -327,6 +327,20 @@ console.log("ok: addAndActivate rejects when no AP for the SSID is compatible wi
 }
 console.log("ok: addAndActivate treats a PSK+SAE transition-mode AP as SAE-compatible")
 
+for (const [label, ssid, strong, weak, keyMgmt] of [
+    // The group's live security matches the plan, but the strongest BSS is incompatible with it.
+    ["sae group", "MixSae", fakeAp("MixSae", 90, "/ap/strong-psk", { rsnFlags: 0x100 }), fakeAp("MixSae", 20, "/ap/weak-sae", { rsnFlags: 0x400 }), "sae"],
+    ["psk group", "MixPsk", fakeAp("MixPsk", 90, "/ap/strong-open", { flags: 0 }), fakeAp("MixPsk", 20, "/ap/weak-psk", { rsnFlags: 0x100 }), "wpa-psk"],
+]) {
+    client.devices = [fakeWifiDevice("wlan0", [strong, weak])]
+    client.connections = new Map()
+    let chosenPath = null
+    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid, psk: "hunter2222", keyMgmt })
+    assertEqual(chosenPath, weak.get_path(), `${label}: the strongest compatible AP must win over a stronger incompatible one`)
+}
+console.log("ok: addAndActivate picks the strongest compatible AP, not the strongest overall")
+
 // --- addAndActivate: owe/open/sae-only selection branches -----------------
 {
     client.devices = [fakeWifiDevice("wlan0", [fakeAp("OweNet", 60, "/ap/owe", { rsnFlags: 0x800 })])]
