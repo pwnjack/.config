@@ -25,7 +25,15 @@ hl.window_rule({ name = "float-blueman", match = { title = "^(blueman-manager)$"
 hl.window_rule({ name = "float-network-editor", match = { class = "^(nm-connection-editor)$" }, float = true })
 hl.window_rule({ name = "float-waypaper", match = { class = "^(waypaper)$" }, float = true })
 hl.window_rule({ name = "resources", match = { class = "^(net.nokyan.Resources)$" }, float = true, size = "1150 600" })
-hl.window_rule({ name = "float-calculator", match = { class = "^(Calculator)$" }, float = true })
+-- Calculator (Super+K): a small centred popup over the current workspace, not
+-- a tile. GNOME Calculator's class is the app id, not its "Calculator" title.
+hl.window_rule({
+    name = "float-calculator",
+    match = { class = "^(org[.]gnome[.]Calculator)$" },
+    float = true,
+    size = "380 620",
+    center = true,
+})
 
 -- GTK file pickers
 hl.window_rule({
