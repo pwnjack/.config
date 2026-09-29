@@ -181,6 +181,12 @@ FocusScope {
                             controller: view.controller
                             theme: view
                         }
+                        StartupView {
+                            visible: view.controller.category === "startup" && !view.controller.query.trim()
+                            Layout.fillWidth: true
+                            controller: view.controller
+                            theme: view
+                        }
                         Label {
                             objectName: "noSettingsMatch"
                             // Never under a custom view (Network, Displays): its rows are

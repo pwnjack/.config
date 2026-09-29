@@ -8,6 +8,7 @@ import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 import * as displays from "./displays.mjs"
 import { nmSnapshot, setWifiEnabled, requestScan, activate, addAndActivate, deactivate, removeConnections } from "./nm.js"
 import * as network from "./network.mjs"
+import * as autostart from "./autostart.mjs"
 import { regionValue, regionEnumerators, setRegion } from "./region.js"
 
 const configDir = GLib.get_home_dir() + "/.config"
@@ -55,6 +56,78 @@ function children(path) {
     for (let info; (info = enumerator.next_file(null));) names.push(info.get_name())
     enumerator.close(null)
     return names
+}
+const autostartUser = `${configDir}/autostart`
+const autostartSystem = "/etc/xdg/autostart"
+// The generator skips dotfiles and backups; a file that cannot be read is skipped like systemd would.
+function desktopFiles(dir) {
+    const files = []
+    for (const id of children(dir)) {
+        if (!autostart.isAutostartFileName(id) || /[\r\n/]/.test(id)) continue
+        try { files.push({ id, text: read(`${dir}/${id}`) }) } catch (_) { /* Unreadable, so systemd ignores it too. */ }
+    }
+    return files
+}
+// The generator runs inside the systemd user manager, so its environment decides
+// which desktop applies and where a binary is found, not this helper's.
+async function userManagerEnvironment() {
+    const values = {}
+    try {
+        for (const line of (await execAsync(["systemctl", "--user", "show-environment"])).split("\n")) {
+            const eq = line.indexOf("=")
+            if (eq > 0) values[line.slice(0, eq)] = line.slice(eq + 1)
+        }
+    } catch (_) { /* Fall back to this process's own values. */ }
+    return {
+        desktops: (values.XDG_CURRENT_DESKTOP || GLib.getenv("XDG_CURRENT_DESKTOP") || "Hyprland").split(":"),
+        path: (values.PATH || GLib.getenv("PATH") || "/usr/bin").split(":").filter(Boolean),
+    }
+}
+const onPathIn = path => binary => binary.startsWith("/") ? exists(binary) : path.some(dir => exists(`${dir}/${binary}`))
+
+async function startupState() {
+    const { desktops, path } = await userManagerEnvironment()
+    const system = desktopFiles(autostartSystem), user = desktopFiles(autostartUser)
+    const entries = autostart.autostartEntries({ system, user, desktops, onPath: onPathIn(path) })
+    let units = []
+    // Unit state is informative only; a systemd hiccup must not blank the page.
+    try { units = JSON.parse(await execAsync(["systemctl", "--user", "list-units", "--all", "--output=json", "app-*@autostart.service"])) } catch (_) {}
+    const present = new Set(entries.map(e => e.id))
+    return {
+        session: autostart.sessionCommands(read(configDir + "/hypr/config/setup/autostart.lua")),
+        apps: autostart.withStatus(entries, units),
+        available: Gio.AppInfo.get_all().filter(app => app.should_show() && !present.has(app.get_id()))
+            .map(app => ({ id: app.get_id(), name: app.get_name() })).sort((a, b) => a.name.localeCompare(b.name)),
+    }
+}
+async function autostartChange(request) {
+    if (!["enable", "disable", "remove"].includes(request.action)) throw new Error("Unknown startup action")
+    const entry = (await startupState()).apps.find(app => app.id === request.id)
+    if (!entry) throw new Error("That startup app no longer exists")
+    const path = `${autostartUser}/${entry.id}`
+    if (request.action === "remove") {
+        if (entry.origin !== "user") throw new Error("Only apps you added can be removed")
+        return remove(path)
+    }
+    if (request.action === "disable") {
+        if (entry.origin === "system") { makeParent(path); return write(path, autostart.minimalOverride(entry.name)) }
+        return write(path, autostart.setHidden(read(path), true))
+    }
+    if (entry.origin === "system") return
+    const text = read(path)
+    // Only the exact file disable wrote is ours to delete; a lone user file is edited in place.
+    if (entry.origin === "override" && autostart.isMinimalOverride(text, autostart.overrideName(entry.id, read(`${autostartSystem}/${entry.id}`)))) return remove(path)
+    // Without Exec the override would mask the system entry with nothing to run.
+    if (!autostart.parseEntry(text).Exec) throw new Error(`~/.config/autostart/${entry.id} was edited by hand; remove it there to restore the system entry`)
+    return write(path, autostart.setHidden(text, false))
+}
+function autostartAdd(request) {
+    const app = Gio.AppInfo.get_all().find(candidate => candidate.get_id() === request.app && candidate.should_show())
+    if (!app || !app.get_filename()) throw new Error("That application is not installed")
+    const path = `${autostartUser}/${app.get_id()}`
+    if (exists(path) || exists(`${autostartSystem}/${app.get_id()}`)) throw new Error("Already in startup apps")
+    makeParent(path)
+    writeBytes(path, readBytes(app.get_filename()))
 }
 const home = GLib.get_home_dir()
 const themeDirs = kind => [`${home}/.local/share/${kind}`, `${home}/.${kind}`, `/usr/share/${kind}`]
@@ -312,6 +385,7 @@ async function snapshot(ids, includeMonitors, views = {}) {
         result.displayPending = exists(pendingPath) && await guardArmed() ? JSON.parse(read(pendingPath)) : null
     }
     if (views.network) result.network = networkPage(await once("nm", nmSnapshot))
+    if (views.startup) result.startup = await startupState()
     return result
 }
 
@@ -646,7 +720,13 @@ export async function dispatch(request) {
         if (plan.active) await activate(plan.uuid); else await deactivate(plan.uuid)
         return {}
     }
+    if (request.op === "autostart") { await autostartChange(request); return {} }
+    if (request.op === "autostartAdd") { autostartAdd(request); return {} }
     if (request.op === "action") {
+        if (request.id === "autostart-file") {
+            detached([readOption("terminal") || "ghostty", "-e", ...(readOption("editor") || "nvim").split(/\s+/), configDir + "/hypr/config/setup/autostart.lua"])
+            return {}
+        }
         if (request.id === "reload") { await persistReload(); return {} }
         if (request.id === "displays-file") {
             if (!exists(displayStatePath)) { makeParent(displayStatePath); write(displayStatePath, displays.STATE_HEADER) }

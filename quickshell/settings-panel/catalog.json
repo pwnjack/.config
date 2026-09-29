@@ -58,7 +58,7 @@
     {
       "id": "startup",
       "title": "Startup",
-      "description": "What happens when Hyprland starts"
+      "description": "Apps started at login, and what Hyprland itself starts"
     },
     {
       "id": "apps",

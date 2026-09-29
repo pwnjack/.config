@@ -52,6 +52,17 @@ const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 files.set(base+'/options/clock','24h\n')
+files.set(base+'/hypr/config/setup/autostart.lua', 'return function(apps)\n    hl.exec_cmd("waybar")\n    hl.exec_cmd("systemctl --user start " .. apps.polkitAgent)\nend\n')
+files.set('/etc/xdg/autostart/nm-applet.desktop', '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n')
+files.set('/etc/xdg/autostart/blueman.desktop', '[Desktop Entry]\nType=Application\nName=Blueman Applet\nExec=blueman-applet\n')
+files.set('/etc/xdg/autostart/manual.desktop', '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual\n')
+files.set(base + '/autostart/arch-update-tray.desktop', '[Desktop Entry]\nType=Application\nName=Arch-Update Systray Applet\nExec=arch-update --tray\n')
+files.set(base + '/autostart/manual.desktop', '[Desktop Entry]\nName=Manual\nHidden=true\nComment=written by hand\n')
+files.set('/usr/share/applications/firefox.desktop', '[Desktop Entry]\nName=Firefox\nExec=firefox %u\n')
+// Binaries the user manager's PATH resolves; arch-update is deliberately absent.
+for (const name of ['nm-applet','blueman-applet','manual']) files.set('/usr/bin/'+name, '')
+dirs.set('/etc/xdg/autostart', ['nm-applet.desktop', 'blueman.desktop', 'manual.desktop'])
+dirs.set(base + '/autostart', ['arch-update-tray.desktop', 'manual.desktop'])
 let events = [], failingPath = '', failingReadPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
@@ -151,7 +162,7 @@ globalThis.settingsMocks = {
         },
         getenv: name => mockEnv[name] ?? null,
         get_user_runtime_dir: () => '/run/user/1000',
-        find_program_in_path: name => name === 'missing-app' ? null : name,
+        find_program_in_path: name => name === 'missing-app' || name === 'arch-update' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
         spawn_async: (...args) => {
             events.push(['spawn',args[1]])
@@ -161,7 +172,11 @@ globalThis.settingsMocks = {
         timeout_add: (_priority,_ms,fn) => { setImmediate(fn); },
     },
     Gio: {
-        AppInfo: { get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
+        AppInfo: {
+            get_all: () => [
+                {get_id: () => 'firefox.desktop', get_name: () => 'Firefox', should_show: () => true, get_filename: () => '/usr/share/applications/firefox.desktop'},
+                {get_id: () => 'nm-applet.desktop', get_name: () => 'Network', should_show: () => false, get_filename: () => '/etc/xdg/autostart/nm-applet.desktop'}],
+            get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
         content_type_is_a: (mime, parent) => mime === parent || (mime === 'text/markdown' && parent === 'text/plain') || (parent === 'application/octet-stream' && !mime.startsWith('inode/')),
         FileCreateFlags:{NONE:0},
         FileQueryInfoFlags:{NONE:0},
@@ -208,6 +223,8 @@ globalThis.settingsMocks = {
             files.set(base+'/mimeapps.list',(files.get(base+'/mimeapps.list') || '[Default Applications]\n') + `${args[3]}=${args[2]}\n`)
             return ''
         }
+        if (args[0] === 'systemctl' && args[2] === 'show-environment') return 'XDG_CURRENT_DESKTOP=Hyprland\nPATH=/usr/local/bin:/usr/bin\n'
+        if (args[0] === 'systemctl' && args[2] === 'list-units') return JSON.stringify([{unit:'app-nm\\x2dapplet@autostart.service',active:'active',sub:'running'}])
         if (args[0] === 'fc-list') return 'FiraCode Nerd Font,FiraCode Nerd Font Med\nAdwaita Sans\n'
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
         if (args[0] === 'pgrep') { if (!running.has(args[2])) throw new Error('not running'); return '123'; }
@@ -1002,3 +1019,45 @@ dbusDeny = true
 await assert.rejects(dispatch({op:'set',id:'region.ntp',value:true}), {message: 'Authentication was cancelled; nothing changed.'})
 dbusDeny = false
 console.log('ok: region writes are interactive, merge locale keys, and report a cancelled prompt')
+
+events = []
+result = await dispatch({op:'read',ids:[],startup:true})
+const apps = Object.fromEntries(result.startup.apps.map(a => [a.id, a]))
+assert.deepEqual(result.startup.session, ['waybar', 'systemctl --user start …'])
+assert.equal(apps['nm-applet.desktop'].status.state, 'running')
+assert.equal(apps['arch-update-tray.desktop'].status.label, 'Not installed: arch-update')
+assert.equal(apps['manual.desktop'].origin, 'override')
+assert.deepEqual(result.startup.available, [{id:'firefox.desktop', name:'Firefox'}])
+assert.equal(events.some(e => e[0] === 'write' || e[0] === 'delete'), false)
+console.log('ok: startup read lists session, apps with status, and addable apps')
+
+await dispatch({op:'autostart',action:'disable',id:'blueman.desktop'})
+assert.equal(files.get(base+'/autostart/blueman.desktop'), '[Desktop Entry]\nType=Application\nName=Blueman Applet\nHidden=true\n')
+dirs.get(base+'/autostart').push('blueman.desktop')
+await dispatch({op:'autostart',action:'enable',id:'blueman.desktop'})
+assert.equal(files.has(base+'/autostart/blueman.desktop'), false)
+dirs.set(base+'/autostart', dirs.get(base+'/autostart').filter(n => n !== 'blueman.desktop'))
+console.log('ok: disabling a system entry writes the minimal override; enabling deletes it')
+
+const manualBefore = files.get(base+'/autostart/manual.desktop')
+events = []
+await assert.rejects(dispatch({op:'autostart',action:'enable',id:'manual.desktop'}), /~\/\.config\/autostart\/manual\.desktop/)
+assert.equal(files.get(base+'/autostart/manual.desktop'), manualBefore)
+await assert.rejects(dispatch({op:'autostart',action:'remove',id:'nm-applet.desktop'}), /Only apps you added/)
+await assert.rejects(dispatch({op:'autostart',action:'disable',id:'../../etc/passwd'}), /no longer exists/)
+await assert.rejects(dispatch({op:'autostart',action:'explode',id:'nm-applet.desktop'}), /Unknown startup action/)
+assert.equal(events.some(e => e[0] === 'write' || e[0] === 'delete'), false)
+files.set(base+'/autostart/manual.desktop', '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual\nHidden=true\n')
+await dispatch({op:'autostart',action:'enable',id:'manual.desktop'})
+assert.equal(files.get(base+'/autostart/manual.desktop'), '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual\n')
+files.set(base+'/autostart/manual.desktop', manualBefore)
+console.log('ok: hand-edited overrides, system removals, unknown ids and actions are refused')
+
+await dispatch({op:'autostartAdd',app:'firefox.desktop'})
+assert.equal(files.get(base+'/autostart/firefox.desktop'), files.get('/usr/share/applications/firefox.desktop'))
+dirs.get(base+'/autostart').push('firefox.desktop')
+await assert.rejects(dispatch({op:'autostartAdd',app:'firefox.desktop'}), /Already in startup apps/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'nm-applet.desktop'}), /not installed/)
+await dispatch({op:'autostart',action:'remove',id:'firefox.desktop'})
+assert.equal(files.has(base+'/autostart/firefox.desktop'), false)
+console.log('ok: add copies the desktop file; remove deletes only user entries')

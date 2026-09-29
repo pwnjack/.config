@@ -25,6 +25,7 @@ ShellRoot {
     property var values: ({})
     property var monitors: []
     property var network: null
+    property var startup: null
     readonly property string initialPage: Quickshell.env("SETTINGS_PAGE") || ""
     property string mainMonitor: ""
     property var pendingDisplay: null
@@ -35,6 +36,7 @@ ShellRoot {
     property bool networkSkipped: false
     // Whether the full read in flight asked for the network view.
     property bool readerNetwork: false
+    property bool readerStartup: false
     onInteractingChanged: {
         if (interacting !== "network.psk" && networkSkipped) {
             networkSkipped = false;
@@ -115,7 +117,8 @@ ShellRoot {
         readError = "";
         loading = true;
         readerNetwork = category === "network";
-        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network"})];
+        readerStartup = category === "startup";
+        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network", startup: category === "startup"})];
         reader.running = true;
         // A full read supersedes any live read still waiting on its debounce.
         liveDirty = ({});
@@ -138,7 +141,11 @@ ShellRoot {
         liveReader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: tags.includes("displays"), network: tags.includes("network")})];
         liveReader.running = true;
     }
-    function select(id) { query = ""; category = id; }
+    function select(id) {
+        query = ""; category = id;
+        // A page's own data is read when the page is first shown, and after every edit.
+        if ((id === "startup" && !startup) || (id === "network" && !network)) refresh();
+    }
     function change(id, value) {
         submit({op: "set", id: id, value: value}, catalog.rows.find(row => row.id === id)?.auth === true);
     }
@@ -235,6 +242,7 @@ ShellRoot {
                 // A password mid-edit keeps its own network snapshot: replacing it here
                 // would recreate the Wi-Fi list's delegates under the user's hands.
                 if (result.network) { if (root.interacting !== "network.psk") root.network = result.network; else root.networkSkipped = true; }
+                if (result.startup) root.startup = result.startup;
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
@@ -245,6 +253,8 @@ ShellRoot {
             root.loading = false;
             root.loaded = true;
             if (root.queue.length || root.closing) root.drain();
+            // The page was opened while this read was in flight and did not ask for its data.
+            else if (root.category === "startup" && !root.readerStartup && !root.startup && !root.problem) root.refresh();
         }
     }
     Process {

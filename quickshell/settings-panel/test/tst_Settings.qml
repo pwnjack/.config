@@ -19,6 +19,7 @@ Item {
         property string mainMonitor: ""
         property var monitors: []
         property var network: null
+        property var startup: null
         property color background: "#05090c"
         property color foreground: "#cfddde"
         property color accent: "#6097a1"
@@ -30,7 +31,7 @@ Item {
         property bool keepPendingOnRevert: false
         function keepDisplay() { calls = calls.concat([{op:"displayKeep"}]); }
         function revertDisplay() { if (!keepPendingOnRevert) pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
-        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}], rows: [
+        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}, {id:"startup",title:"Startup",description:"Login"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
@@ -41,9 +42,10 @@ Item {
             {id:"ntp",category:"input",title:"NTP",description:"Sync",kind:"toggle",auth:true},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
             {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
-            {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
+            {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true},
+            {id:"opt-lock",category:"startup",title:"Lock",description:"Lock on autologin",kind:"toggle"}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true},"opt-lock":{value:false}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -56,6 +58,40 @@ Item {
     TestCase {
         name: "Settings"
         when: windowShown
+        function startupFixture() {
+            return {session: ["waybar", "systemctl --user start …"],
+                apps: [
+                    {id: "nm-applet.desktop", name: "Network", origin: "system", enabled: true, scope: "", installed: true, status: {state: "running", label: "Running"}},
+                    {id: "mine.desktop", name: "Mine", origin: "user", enabled: true, scope: "", installed: true, status: {state: "none", label: "Not started this session"}},
+                    {id: "kde.desktop", name: "KDE thing", origin: "system", enabled: true, scope: "Not for Hyprland", installed: true, status: {state: "none", label: ""}},
+                    {id: "gnome.desktop", name: "Gnome flag", origin: "system", enabled: true, ignoredGnomeFlag: true, scope: "", installed: true, status: {state: "none", label: ""}},
+                    {id: "arch-update-tray.desktop", name: "Arch-Update", origin: "user", enabled: true, scope: "", installed: false, status: {state: "missing", label: "Not installed: arch-update"}}],
+                available: [{id: "firefox.desktop", name: "Firefox"}]};
+        }
+        function test_startup_view() {
+            controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
+            compare(findChild(view, "session-0").text, "waybar");
+            verify(findChild(view, "startup-nm-applet.desktop"));
+            verify(!findChild(view, "startupSwitch-kde.desktop"), "an entry that does not apply to Hyprland has no switch");
+            verify(!findChild(view, "startupRemove-nm-applet.desktop"), "system entries cannot be removed");
+            verify(findChild(view, "startupStatus-gnome.desktop").text.indexOf("X-GNOME-Autostart-enabled has no effect under systemd") >= 0);
+            mouseClick(findChild(view, "startupSwitch-nm-applet.desktop"));
+            compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "disable", id: "nm-applet.desktop"});
+            mouseClick(findChild(view, "startupRemove-mine.desktop"));
+            compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "remove", id: "mine.desktop"});
+            verify(findChild(view, "startupStatus-arch-update-tray.desktop").text.indexOf("arch-update") >= 0);
+            verify(findChild(view, "toggle-opt-lock"), "the option rows still render below the view");
+        }
+        function test_startup_add() {
+            controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
+            const combo = findChild(view, "select-startupAdd");
+            combo.forceActiveFocus();
+            mouseClick(combo);
+            tryCompare(combo.popup, "visible", true);
+            keyClick(Qt.Key_Down); keyClick(Qt.Key_Return);
+            tryCompare(combo.popup, "visible", false);
+            compare(controller.calls[controller.calls.length - 1], {op: "autostartAdd", app: "firefox.desktop"});
+        }
         function test_pure_modules_load_in_qml() {
             const entries = Autostart.autostartEntries({system:[{id:"nm-applet.desktop",text:"[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n"}],user:[],desktops:["Hyprland"],onPath:function() { return true; }});
             compare(entries.length, 1);
@@ -75,8 +111,8 @@ Item {
             controller.authPending = false;
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
-            controller.network = null;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
+            controller.network = null; controller.startup = null;
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true},"opt-lock":{value:false}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
