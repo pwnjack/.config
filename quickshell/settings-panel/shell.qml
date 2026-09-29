@@ -25,7 +25,15 @@ ShellRoot {
     property var pendingDisplay: null
     property var stagedDisplays: ({})
     property bool displaysSkipped: false
+    // A network snapshot that arrived while a password was being typed was held
+    // back so the list stayed still; replay it once the field closes.
+    property bool networkSkipped: false
     onInteractingChanged: {
+        if (interacting !== "network.psk" && networkSkipped) {
+            networkSkipped = false;
+            liveDirty = Object.assign({}, liveDirty, {network: true});
+            liveTimer.restart();
+        }
         if (interacting.startsWith("display:") || !displaysSkipped) return;
         displaysSkipped = false;
         markLive("displays");
@@ -50,10 +58,14 @@ ShellRoot {
         const added = liveTags.filter(tag => !previous.includes(tag));
         const removed = previous.filter(tag => !liveTags.includes(tag));
         shownTags = liveTags;
-        // Skipped while a full read is already in flight or has never happened
-        // (loaded false): that read already carries the network view data, so an
-        // immediate extra live read here would just race it at launch.
-        if (added.includes("network") && opened && !busy && loaded && !reader.running) { liveDirty = Object.assign({}, liveDirty, {network: true}); readLive(); }
+        // Before the first full read (loaded false) that read already asks for the
+        // network view. A full read already in flight may not (it was started on
+        // another page), so the live read is deferred behind it, never dropped.
+        if (added.includes("network") && opened && !busy && loaded) {
+            liveDirty = Object.assign({}, liveDirty, {network: true});
+            if (reader.running) liveTimer.restart();
+            else readLive();
+        }
         if (removed.includes("network")) { scanner.running = false; scanSettle.stop(); }
     }
     // Covers the third way the network tag "goes away": closing the panel while
@@ -201,7 +213,7 @@ ShellRoot {
                 root.values = Object.assign({}, root.values, result.values);
                 // A password mid-edit keeps its own network snapshot: replacing it here
                 // would recreate the Wi-Fi list's delegates under the user's hands.
-                if (result.network && root.interacting !== "network.psk") root.network = result.network;
+                if (result.network) { if (root.interacting !== "network.psk") root.network = result.network; else root.networkSkipped = true; }
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
@@ -287,7 +299,7 @@ ShellRoot {
                 // Never move a control under the user's hand.
                 delete values[root.interacting];
                 root.values = Object.assign({}, root.values, values);
-                if (result.network && root.interacting !== "network.psk") root.network = result.network;
+                if (result.network) { if (root.interacting !== "network.psk") root.network = result.network; else root.networkSkipped = true; }
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;

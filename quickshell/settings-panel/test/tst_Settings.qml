@@ -421,6 +421,21 @@ Item {
             field = findChild(view, "psk-Neighbour");
             compare(field.text, "", "a typed password must not survive a collapse");
         }
+        function test_network_click_on_disabled_connect_keeps_row_open() {
+            openNetwork();
+            mouseClick(findChild(view, "wifi-Neighbour"));
+            const field = findChild(view, "psk-Neighbour");
+            field.forceActiveFocus();
+            for (const c of "abc") keyClick(c);
+            const connect = findChild(view, "connect-Neighbour");
+            verify(!connect.enabled, "three characters are not a valid WPA2 password");
+            const before = controller.calls.length;
+            mouseClick(connect);
+            wait(20);
+            verify(field.visible, "a click on the disabled Connect button must not collapse the row");
+            compare(field.text, "abc");
+            compare(controller.calls.length, before);
+        }
         function test_network_password_clears_on_category_change() {
             openNetwork();
             mouseClick(findChild(view, "wifi-Neighbour"));

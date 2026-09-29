@@ -128,38 +128,46 @@ ColumnLayout {
                         }
                     }
                 }
-                RowLayout {
+                Item {
                     visible: entry.askPassword
+                    Layout.fillWidth: true
+                    implicitWidth: pskRow.implicitWidth
+                    implicitHeight: pskRow.implicitHeight
                     // Swallows clicks inside the password row (including a disabled Connect
                     // button, which is transparent to input) so they cannot fall through to
                     // the entry's own MouseArea and collapse the row out from under the user.
-                    MouseArea { anchors.fill: parent; onClicked: {} }
-                    TextField {
-                        id: psk
-                        objectName: "psk-" + entry.modelData.ssid
-                        Layout.fillWidth: true
-                        echoMode: TextInput.Password
-                        placeholderText: "Password"
-                        color: page.theme.foreground
-                        text: page.pskText
-                        Accessible.name: "Password for " + entry.modelData.ssid
-                        onTextEdited: page.pskText = text
-                        onActiveFocusChanged: page.pskFocused = activeFocus
-                        Component.onCompleted: if (page.pskFocused) forceActiveFocus()
-                        onAccepted: { if (connectButton.enabled) connectButton.clicked(); }
-                    }
-                    PanelButton {
-                        id: connectButton
-                        objectName: "connect-" + entry.modelData.ssid
-                        theme: page.theme; text: "Connect"
-                        Accessible.name: "Connect " + entry.modelData.ssid
-                        // WPA2 needs 8–63 characters (or 64 hex digits); WPA3-SAE accepts any
-                        // non-empty password without line breaks (network.mjs validates both authoritatively).
-                        enabled: (entry.modelData.security === "sae" ? page.validSae(page.pskText) : page.validPsk(page.pskText)) && !page.controller.busy
-                        onClicked: {
-                            page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid, psk: page.pskText});
-                            page.pskText = "";
-                            page.expanded = "";
+                    // A sibling of the RowLayout, not its child: anchors inside a layout are undefined.
+                    MouseArea { objectName: "pskShield-" + entry.modelData.ssid; anchors.fill: parent; onClicked: {} }
+                    RowLayout {
+                        id: pskRow
+                        anchors.left: parent.left; anchors.right: parent.right
+                        TextField {
+                            id: psk
+                            objectName: "psk-" + entry.modelData.ssid
+                            Layout.fillWidth: true
+                            echoMode: TextInput.Password
+                            placeholderText: "Password"
+                            color: page.theme.foreground
+                            text: page.pskText
+                            Accessible.name: "Password for " + entry.modelData.ssid
+                            onTextEdited: page.pskText = text
+                            onActiveFocusChanged: page.pskFocused = activeFocus
+                            Component.onCompleted: if (page.pskFocused) forceActiveFocus()
+                            onAccepted: { if (connectButton.enabled) connectButton.clicked(); }
+                        }
+                        PanelButton {
+                            id: connectButton
+                            objectName: "connect-" + entry.modelData.ssid
+                            theme: page.theme; text: "Connect"
+                            Accessible.name: "Connect " + entry.modelData.ssid
+                            // WPA2 needs 8–63 characters (or 64 hex digits); WPA3-SAE accepts any
+                            // non-empty password without line breaks (network.mjs validates both authoritatively).
+                            enabled: (entry.modelData.security === "sae" ? page.validSae(page.pskText) : page.validPsk(page.pskText)) && !page.controller.busy
+                            onClicked: {
+                                page.controller.submit({op: "wifiConnect", ssid: entry.modelData.ssid, psk: page.pskText});
+                                page.pskText = "";
+                                page.expanded = "";
+                            }
                         }
                     }
                 }
