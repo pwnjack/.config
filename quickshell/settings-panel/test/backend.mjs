@@ -116,11 +116,14 @@ const nmMock = {
     deactivate: async uuid => { nmCalls.push(['deactivate', uuid]) },
     removeConnections: async uuids => {
         nmCalls.push(['remove', ...uuids])
+        // Mirrors nm.js's real contract: an already-gone uuid is reported
+        // structurally, never thrown.
+        const missing = []
         for (const uuid of uuids) {
-            // Matches nm.js's own wording for an already-gone connection.
-            if (nmMissingRemove.has(uuid)) throw new Error('That connection no longer exists')
+            if (nmMissingRemove.has(uuid)) { missing.push(uuid); continue }
             if (nmFailRemove.has(uuid)) throw new Error(`Cannot remove ${uuid}`)
         }
+        return { missing }
     },
 }
 globalThis.settingsMocks = {

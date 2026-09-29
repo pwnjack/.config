@@ -22,7 +22,29 @@ export function securityOf(ap) {
     return ap.flags & PRIVACY ? "unsupported" : "open"
 }
 const savedWifi = snap => snap.connections.filter(c => c.type === WIFI && c.ssid)
-const securityRank = {unsupported: 0, owe: 1, open: 2, sae: 3, psk: 4}
+
+// Fail-closed, strongest-wins: a single weaker BSS sharing the SSID must never
+// downgrade the connection. unsupported (802.1X/WEP) always wins because it is
+// not encrypted here; otherwise any BSS advertising SAE (a PSK+SAE transition
+// BSS included) beats plain PSK, which beats OWE, which beats open.
+function groupSecurity(bsses) {
+    if (bsses.some(ap => securityOf(ap) === "unsupported")) return "unsupported"
+    if (bsses.some(ap => (ap.wpaFlags | ap.rsnFlags) & SAE)) return "sae"
+    if (bsses.some(ap => securityOf(ap) === "psk")) return "psk"
+    if (bsses.some(ap => (ap.wpaFlags | ap.rsnFlags) & (OWE | OWE_TM))) return "owe"
+    return "open"
+}
+// Whether a single BSS is actually compatible with a group's chosen security —
+// used both to pick which BSS's signal to report here and, in nm.js, to pick
+// which BSS to connect to. A transition (PSK+SAE) BSS satisfies "sae".
+export function apSupports(ap, security) {
+    const all = ap.wpaFlags | ap.rsnFlags
+    if (security === "unsupported") return securityOf(ap) === "unsupported"
+    if (security === "sae") return Boolean(all & SAE)
+    if (security === "psk") return securityOf(ap) === "psk"
+    if (security === "owe") return Boolean(all & (OWE | OWE_TM))
+    return securityOf(ap) === "open"
+}
 
 export function wifiNetworks(snap) {
     const saved = savedWifi(snap)
@@ -36,17 +58,12 @@ export function wifiNetworks(snap) {
         grouped.get(ap.ssid).push(ap)
     }
     return [...grouped.entries()].map(([ssid, bsses]) => {
-        // Group security is the best rank seen for this SSID across every BSS,
-        // but signal/bars come from the strongest BSS that actually offers that
-        // security — the strongest BSS overall can be a weaker-security sighting
-        // (e.g. an SAE-only AP next to a stronger open one), which would be the
-        // wrong one to connect to.
-        let security = securityOf(bsses[0])
-        for (const ap of bsses) {
-            const s = securityOf(ap)
-            if (securityRank[s] > securityRank[security]) security = s
-        }
-        const best = bsses.filter(ap => securityOf(ap) === security).reduce((a, b) => b.strength > a.strength ? b : a)
+        // Signal/bars come from the strongest BSS that actually offers the
+        // group's security — the strongest BSS overall can be a weaker-security
+        // sighting (e.g. an SAE-only AP next to a stronger open one), which
+        // would be the wrong one to connect to.
+        const security = groupSecurity(bsses)
+        const best = bsses.filter(ap => apSupports(ap, security)).reduce((a, b) => b.strength > a.strength ? b : a)
         return {
             ssid, signal: best.strength, bars: Math.max(1, Math.min(4, Math.ceil(best.strength / 25))),
             security, known: known.has(ssid), active: active.has(ssid), activating: activating.has(ssid),

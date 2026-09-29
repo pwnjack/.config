@@ -49,23 +49,61 @@ for (const [ap, expected] of [
 ]) assert.equal(network.securityOf(ap), expected)
 console.log('ok: security precedence covers PSK, SAE, 802.1X, WPA1, OWE, WEP, and open')
 
-// The group's security is the best rank across BSSs (psk beats sae here), but
-// the strongest BSS overall (90, sae-only) does not offer that security — the
-// weaker BSS (20) that actually offers psk must be the one reported/connected to.
-const mixed = network.wifiNetworks({...snap, connections: [], accessPoints: [
-    {ssid: 'Mixed', strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x400},
-    {ssid: 'Mixed', strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x100},
-]})[0]
-assert.equal(mixed.security, 'psk')
-assert.equal(mixed.signal, 20)
-assert.equal(mixed.bars, 1)
-// When the strongest BSS does offer the group's chosen security, it still wins.
-const mixedCompatible = network.wifiNetworks({...snap, connections: [], accessPoints: [
-    {ssid: 'MixedOk', strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x100},
-    {ssid: 'MixedOk', strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x400},
-]})[0]
-assert.equal(mixedCompatible.security, 'psk')
-assert.equal(mixedCompatible.signal, 90)
+// Fail-closed, strongest-wins: a weaker BSS sharing the SSID must never
+// downgrade the connection away from the strongest security any BSS
+// advertises — PSK next to SAE is the WPA3 transition downgrade, open next to
+// OWE/802.1X/WEP is an unauthenticated downgrade. Signal/bars come from the
+// strongest BSS that is actually compatible with the chosen security, which
+// can be a weaker BSS than the strongest sighting overall.
+for (const [label, aps, expectedSecurity, expectedSignal] of [
+    ['PSK+SAE-only', [
+        {strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x400}, // SAE-only, strongest and compatible
+        {strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x100}, // PSK-only
+    ], 'sae', 90],
+    ['PSK + transition', [
+        {strength: 90, flags: 1, wpaFlags: 0, rsnFlags: 0x100}, // PSK-only, strongest but not SAE-compatible
+        {strength: 20, flags: 1, wpaFlags: 0, rsnFlags: 0x500}, // PSK+SAE transition, weaker but compatible
+    ], 'sae', 20],
+    ['open + OWE', [
+        {strength: 90, flags: 0, wpaFlags: 0, rsnFlags: 0}, // open, strongest but not OWE-compatible
+        {strength: 10, flags: 1, wpaFlags: 0, rsnFlags: 0x800}, // OWE, weaker but compatible
+    ], 'owe', 10],
+    ['open + OWE transition-mode', [
+        {strength: 90, flags: 0, wpaFlags: 0, rsnFlags: 0},
+        {strength: 10, flags: 1, wpaFlags: 0, rsnFlags: 0x1000},
+    ], 'owe', 10],
+    ['open + 802.1X', [
+        {strength: 90, flags: 0, wpaFlags: 0, rsnFlags: 0},
+        {strength: 5, flags: 1, wpaFlags: 0, rsnFlags: 0x200},
+    ], 'unsupported', 5],
+    ['open + WEP', [
+        {strength: 90, flags: 0, wpaFlags: 0, rsnFlags: 0},
+        {strength: 5, flags: 1, wpaFlags: 0, rsnFlags: 0},
+    ], 'unsupported', 5],
+]) {
+    const net = network.wifiNetworks({...snap, connections: [], accessPoints: aps.map(ap => ({ssid: label, ...ap}))})[0]
+    assert.equal(net.security, expectedSecurity, `${label}: security must fail closed to the strongest`)
+    assert.equal(net.signal, expectedSignal, `${label}: signal must come from the compatible BSS`)
+}
+console.log('ok: mixed-BSS security fails closed to the strongest security across an SSID, signal from the compatible BSS')
+
+for (const [ap, security, expected] of [
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x400}, 'sae', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x500}, 'sae', true], // transition satisfies sae too
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x100}, 'sae', false],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x100}, 'psk', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x400}, 'psk', false],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x800}, 'owe', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x1000}, 'owe', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x100}, 'owe', false],
+    [{flags: 0, wpaFlags: 0, rsnFlags: 0}, 'open', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0}, 'open', false],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x200}, 'unsupported', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0}, 'unsupported', true],
+    [{flags: 1, wpaFlags: 0, rsnFlags: 0x100}, 'unsupported', false],
+]) assert.equal(network.apSupports(ap, security), expected)
+console.log('ok: apSupports matches a BSS against a group security, transition BSSs included for sae')
+
 const edgeBars = network.wifiNetworks({...snap, connections: [], accessPoints: [
     {ssid: 'Zero', strength: 0, flags: 0, wpaFlags: 0, rsnFlags: 0},
     {ssid: 'Full', strength: 100, flags: 0, wpaFlags: 0, rsnFlags: 0},
@@ -89,7 +127,7 @@ const progressOrder = network.wifiNetworks({...snap, accessPoints: [
 assert.deepEqual(progressOrder.map(n => n.ssid), ['Active', 'Starting', 'Known', 'Unknown'])
 assert.equal(progressOrder[0].activating, false)
 assert.equal(progressOrder[1].activating, true)
-console.log('ok: mixed-BSS security, signal bars, name tiebreak, and connection progress order')
+console.log('ok: signal bars, name tiebreak, and connection progress order')
 
 assert.deepEqual(network.vpnConnections(snap, 'app').map(v => [v.name, v.state, v.control]),
     [['ProtonVPN IT#113', 'activated', 'app'], ['Work', 'off', 'switch']])
@@ -130,9 +168,11 @@ const savedOpenSnap = {...snap,
     connections: [{uuid: 'u-saved-open', id: 'SavedOpen', type: '802-11-wireless', ssid: 'SavedOpen', state: null}],
 }
 assert.deepEqual(network.connectPlan(savedOpenSnap, {ssid: 'SavedOpen'}), {kind: 'activate', uuid: 'u-saved-open'})
+// A lone PSK+SAE transition BSS still advertises SAE, so the group (and the
+// connect plan) prefers the stronger method even with no competing BSS.
 const transitionSnap = {...snap, connections: [], accessPoints: [{ssid: 'Transition', strength: 55, flags: 1, wpaFlags: 0, rsnFlags: 0x500}]}
 assert.deepEqual(network.connectPlan(transitionSnap, {ssid: 'Transition', psk: 'transition pass'}),
-    {kind: 'add', ssid: 'Transition', psk: 'transition pass', keyMgmt: 'wpa-psk', replace: []})
+    {kind: 'add', ssid: 'Transition', psk: 'transition pass', keyMgmt: 'sae', replace: []})
 const utf8Ssid = 'é'.repeat(16)
 assert.deepEqual(network.connectPlan({...snap, connections: [], accessPoints: [{ssid: utf8Ssid, strength: 50, flags: 0, wpaFlags: 0, rsnFlags: 0}]}, {ssid: utf8Ssid}),
     {kind: 'add', ssid: utf8Ssid, psk: null, keyMgmt: null, replace: []})

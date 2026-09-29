@@ -611,13 +611,12 @@ export async function dispatch(request) {
             // One of them being already gone (a race with something else removing it)
             // is not a failure at all.
             if (plan.replace.length) {
+                // removeConnections reports an already-gone uuid structurally
+                // (never throws for it), so any thrown error here is real.
                 let firstError = null
                 for (const uuid of plan.replace) {
                     try { await removeConnections([uuid]) }
-                    catch (error) {
-                        if (error.message === "That connection no longer exists") continue
-                        firstError ??= error
-                    }
+                    catch (error) { firstError ??= error }
                 }
                 if (firstError) throw new Error(`Connected, but an old saved profile for this network could not be removed: ${firstError.message}`)
             }

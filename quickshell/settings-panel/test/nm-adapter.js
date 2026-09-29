@@ -63,6 +63,16 @@ function fakeAp(ssid, strength, path, { flags = 0, wpaFlags = 0, rsnFlags = 0 } 
 function fakeConnection(uuid, { deleteImpl = async () => {} } = {}) {
     return { get_uuid: () => uuid, delete_async: deleteImpl }
 }
+// Stands in for what get_connections() returns: nmSnapshot() reads only
+// get_uuid/get_id/get_connection_type/get_setting_wireless off each one.
+function fakeSavedConnection(uuid, { id = uuid, type = "802-11-wireless", ssid = null } = {}) {
+    return {
+        get_uuid: () => uuid,
+        get_id: () => id,
+        get_connection_type: () => type,
+        get_setting_wireless: () => ssid === null ? null : { get_ssid: () => new GLib.Bytes(new TextEncoder().encode(ssid)) },
+    }
+}
 function fakeClient() {
     const calls = []
     const client = signalable({
@@ -157,12 +167,27 @@ console.log("ok: settled ignores a removal signal for a different active connect
 console.log("ok: settled treats UNKNOWN after ACTIVATING as a failure")
 
 {
+    // A freshly created ActiveConnection is already registered in the
+    // client's active list even while its own state property still briefly
+    // reads UNKNOWN - that is the normal init race, not a failure.
     const active = fakeActive({ state: NM.ActiveConnectionState.UNKNOWN })
+    client.activeConnections = [active]
     soon(() => active.setState(NM.ActiveConnectionState.ACTIVATING))
     GLib.timeout_add(GLib.PRIORITY_DEFAULT, 30, () => { active.setState(NM.ActiveConnectionState.ACTIVATED); return GLib.SOURCE_REMOVE })
     await checkedSettled(active, 1000)
+    client.activeConnections = []
 }
-console.log("ok: settled does not treat UNKNOWN before any ACTIVATING as a failure")
+console.log("ok: settled does not treat UNKNOWN before any ACTIVATING as a failure when the client already knows about it")
+
+{
+    // UNKNOWN *and* absent from the client's active list at attach time means
+    // NM never attached it (or already tore it down): fail immediately rather
+    // than wait out the timeout for a connection that will never arrive.
+    const active = fakeActive({ state: NM.ActiveConnectionState.UNKNOWN })
+    client.activeConnections = []
+    await assertRejects(checkedSettled(active, 1000), /connection was removed/)
+}
+console.log("ok: settled fails immediately, not after the timeout, when attaching to an ActiveConnection that is UNKNOWN and already gone from NM.Client")
 
 // --- addAndActivate: no device / out of range ---------------------------
 client.devices = []
@@ -265,6 +290,94 @@ console.log("ok: addAndActivate rejects when no AP for the SSID is compatible wi
 }
 console.log("ok: addAndActivate treats a PSK+SAE transition-mode AP as SAE-compatible")
 
+// --- addAndActivate: owe/open/sae-only selection branches -----------------
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("OweNet", 60, "/ap/owe", { rsnFlags: 0x800 })])]
+    client.connections = new Map()
+    let chosenPath = null
+    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "OweNet", psk: null, keyMgmt: "owe" })
+    assertEqual(chosenPath, "/ap/owe", "an owe request must match an OWE-flagged AP")
+}
+console.log("ok: addAndActivate matches an owe request to an OWE-flagged AP")
+
+{
+    // An OWE transition-mode AP (the paired open BSSID advertising OWE_TM) is
+    // not itself open: an open request must not connect to it.
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("OweTm", 60, "/ap/owetm", { rsnFlags: 0x1000 })])]
+    client.connections = new Map()
+    await assertRejects(nm.addAndActivate({ ssid: "OweTm", psk: null, keyMgmt: null }), /no longer in range/)
+}
+console.log("ok: addAndActivate excludes an OWE transition-mode AP from an open (null keyMgmt) request")
+
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("SaeOnlyPick", 60, "/ap/saeonlypick", { rsnFlags: 0x400 })])]
+    client.connections = new Map()
+    let chosenPath = null
+    client.addAndActivateImpl = async (connection, device, apPath) => { chosenPath = apPath; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "SaeOnlyPick", psk: "hunter2222", keyMgmt: "sae" })
+    assertEqual(chosenPath, "/ap/saeonlypick", "an sae request must match a pure SAE-only AP")
+}
+console.log("ok: addAndActivate matches an sae request to a pure SAE-only AP")
+
+// --- addAndActivate: the built NM.SimpleConnection's settings -------------
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("Built", 60, "/ap/built", { rsnFlags: 0x100 })])]
+    client.connections = new Map()
+    let captured = null, deletedUuid = null
+    client.addAndActivateImpl = async connection => {
+        captured = connection
+        const uuid = connection.get_uuid()
+        client.connections.set(uuid, fakeConnection(uuid, { deleteImpl: async () => { deletedUuid = uuid } }))
+        const active = fakeActive({ state: NM.ActiveConnectionState.ACTIVATING })
+        soon(() => active.setState(NM.ActiveConnectionState.DEACTIVATED, NM.ActiveConnectionStateReason.NO_SECRETS))
+        return active
+    }
+    await assertRejects(nm.addAndActivate({ ssid: "Built", psk: "hunter2222", keyMgmt: "wpa-psk" }), /Wrong password/)
+    const conn = captured.get_setting_connection()
+    assertEqual(conn.get_id(), "Built", "SettingConnection id must be the ssid")
+    assertEqual(conn.get_connection_type(), "802-11-wireless", "SettingConnection type must be Wi-Fi")
+    assertEqual(conn.get_uuid(), deletedUuid, "SettingConnection uuid must be the same uuid deleted on failure")
+    const security = captured.get_setting_wireless_security()
+    assertEqual(security.get_key_mgmt(), "wpa-psk", "SettingWirelessSecurity key_mgmt must be wpa-psk for a psk connect")
+    assertEqual(security.get_psk(), "hunter2222", "SettingWirelessSecurity psk must carry the password")
+}
+console.log("ok: addAndActivate builds a matching SettingConnection/SettingWirelessSecurity for a psk network")
+
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("BuiltSae", 60, "/ap/builtsae", { rsnFlags: 0x400 })])]
+    client.connections = new Map()
+    let captured = null
+    client.addAndActivateImpl = async connection => { captured = connection; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "BuiltSae", psk: "hunter2222", keyMgmt: "sae" })
+    const security = captured.get_setting_wireless_security()
+    assertEqual(security.get_key_mgmt(), "sae", "SettingWirelessSecurity key_mgmt must be sae for an sae connect")
+    assertEqual(security.get_psk(), "hunter2222", "SettingWirelessSecurity psk must carry the password for sae too")
+}
+console.log("ok: addAndActivate builds a sae SettingWirelessSecurity with the password")
+
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("BuiltOwe", 60, "/ap/builtowe", { rsnFlags: 0x800 })])]
+    client.connections = new Map()
+    let captured = null
+    client.addAndActivateImpl = async connection => { captured = connection; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "BuiltOwe", psk: null, keyMgmt: "owe" })
+    const security = captured.get_setting_wireless_security()
+    assertEqual(security.get_key_mgmt(), "owe", "SettingWirelessSecurity key_mgmt must be owe")
+    assertEqual(security.get_psk(), null, "an owe connection must carry no psk")
+}
+console.log("ok: addAndActivate builds an owe SettingWirelessSecurity with no psk")
+
+{
+    client.devices = [fakeWifiDevice("wlan0", [fakeAp("BuiltOpen", 60, "/ap/builtopen")])]
+    client.connections = new Map()
+    let captured = null
+    client.addAndActivateImpl = async connection => { captured = connection; return fakeActive({ state: NM.ActiveConnectionState.ACTIVATED }) }
+    await nm.addAndActivate({ ssid: "BuiltOpen", psk: null, keyMgmt: null })
+    assertEqual(captured.get_setting_wireless_security(), null, "an open connection must add no SettingWirelessSecurity at all")
+}
+console.log("ok: addAndActivate adds no SettingWirelessSecurity for an open network")
+
 // --- addAndActivate: device routing and ssid bytes -----------------------
 {
     const weak = fakeAp("Roam", 30, "/ap/weak")
@@ -343,6 +456,24 @@ console.log("ok: requestScan rethrows a same-wording error that is not actually 
 console.log("ok: activate reaches the client with the remote connection")
 
 {
+    // activate() must deactivate the connection it just failed to bring up,
+    // the same cleanup addAndActivate does for a freshly added one.
+    client.connections = new Map([["u-act-fail", fakeConnection("u-act-fail")]])
+    const active = fakeActive({ uuid: "u-act-fail", state: NM.ActiveConnectionState.ACTIVATING })
+    client.activeConnections = [active]
+    client.activateImpl = async () => {
+        soon(() => active.setState(NM.ActiveConnectionState.DEACTIVATED, NM.ActiveConnectionStateReason.NO_SECRETS))
+        return active
+    }
+    let deactivatedWith = null
+    client.deactivateImpl = async activeArg => { deactivatedWith = activeArg }
+    await assertRejects(nm.activate("u-act-fail"), /Wrong password/)
+    assert(deactivatedWith === active, "activate must deactivate the connection when settled() rejects")
+    client.activeConnections = []
+}
+console.log("ok: activate deactivates the connection when settled() rejects")
+
+{
     const active = fakeActive({ uuid: "u-vpn2", state: NM.ActiveConnectionState.ACTIVATED })
     client.activeConnections = [active]
     let deactivatedWith = null
@@ -365,3 +496,34 @@ console.log("ok: deactivate reaches the client with the matching active connecti
     assertEqual(captured[5], null, "must pass no cancellable")
 }
 console.log("ok: setWifiEnabled reaches the client's dbus property setter with every argument correct")
+
+// --- nmSnapshot: access point and connection-state mapping -----------------
+{
+    client.running = true
+    const ap = fakeAp("Snap", 77, "/ap/snap", { rsnFlags: 0x100 })
+    const device = fakeWifiDevice("wlan0", [ap])
+    client.devices = [device]
+    const activeOne = fakeActive({ uuid: "u-active", state: NM.ActiveConnectionState.ACTIVATED })
+    activeOne.get_devices = () => [device]
+    const activatingOne = fakeActive({ uuid: "u-activating", state: NM.ActiveConnectionState.ACTIVATING })
+    activatingOne.get_devices = () => [device]
+    client.activeConnections = [activeOne, activatingOne]
+    client.connections = new Map([
+        ["u-active", fakeSavedConnection("u-active", { id: "Active", ssid: "Snap" })],
+        ["u-activating", fakeSavedConnection("u-activating", { id: "Activating", ssid: "Snap" })],
+        ["u-idle", fakeSavedConnection("u-idle", { id: "Idle", ssid: "Old" })],
+    ])
+    const snap = nm.nmSnapshot()
+    assert(snap.running, "nmSnapshot must report NM as running")
+    assertEqual(snap.wifiDevices[0].iface, "wlan0", "a wifi device's iface must be surfaced")
+    assertEqual(snap.accessPoints[0].ssid, "Snap", "an AP's ssid bytes must be decoded to text")
+    assertEqual(snap.accessPoints[0].iface, "wlan0", "an AP must carry its owning device's iface")
+    const byUuid = uuid => snap.connections.find(c => c.uuid === uuid)
+    assertEqual(byUuid("u-active").state, "activated", "an ACTIVATED active connection maps to state activated")
+    assertEqual(byUuid("u-active").iface, "wlan0", "an active connection's iface comes from its device")
+    assertEqual(byUuid("u-activating").state, "activating", "an ACTIVATING active connection maps to state activating")
+    assertEqual(byUuid("u-idle").state, null, "a connection with no matching active instance has a null state")
+    assertEqual(byUuid("u-idle").iface, null, "a connection with no matching active instance has a null iface")
+    client.activeConnections = []
+}
+console.log("ok: nmSnapshot maps access points and connection activation state")

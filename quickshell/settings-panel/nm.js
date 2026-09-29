@@ -1,7 +1,7 @@
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import NM from "gi://NM"
-import { failureMessage, securityOf } from "./network.mjs"
+import { failureMessage, apSupports } from "./network.mjs"
 
 // The only libnm user. It returns plain objects so everything else is testable
 // without NetworkManager, and it waits for real activation, not just the D-Bus reply.
@@ -87,7 +87,15 @@ export function settled(active, timeoutMs = 45000) {
             if (removed === active) finish(new Error(failureMessage("CONNECTION_REMOVED")))
         })
         timer = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeoutMs, () => { timer = 0; finish(new Error(failureMessage("CONNECT_TIMEOUT"))); return GLib.SOURCE_REMOVE })
-        check(active.get_state(), active.get_state_reason())
+        const initialState = active.get_state()
+        // A freshly created ActiveConnection can briefly read UNKNOWN before its
+        // state property syncs, but it is already registered in the client's
+        // active-connections list by then. UNKNOWN *and* absent from that list
+        // means NM never attached it (or already tore it down) - waiting out
+        // the timeout would just be a slow way to report the same failure.
+        if (initialState === NM.ActiveConnectionState.UNKNOWN && !nm().get_active_connections().includes(active))
+            finish(new Error(failureMessage("CONNECTION_REMOVED")))
+        else check(initialState, active.get_state_reason())
     })
 }
 function remote(uuid) {
@@ -110,17 +118,13 @@ export async function activate(uuid) {
     try { await settled(active) }
     catch (error) { await deactivate(uuid).catch(() => {}); throw error }
 }
-// libnm NM80211ApSecurityFlags.SAE; a transition-mode AP sets this alongside
-// its PSK bit, so securityOf alone (which ranks PSK above SAE) is not enough
-// to tell whether an AP will accept an SAE connection.
-const AP_SAE_FLAG = 0x400
+// keyMgmt (network.mjs's connectPlan) named by NM.SettingWirelessSecurity's
+// own key-mgmt string; group security (network.mjs's apSupports) named by the
+// page model. The same compatibility test decides both which BSS a group
+// reports here and which BSS addAndActivate actually connects to.
+const keyMgmtSecurity = { "wpa-psk": "psk", sae: "sae", owe: "owe" }
 function apCompatible(ap, keyMgmt) {
-    const wpaFlags = ap.get_wpa_flags(), rsnFlags = ap.get_rsn_flags()
-    const security = securityOf({ flags: ap.get_flags(), wpaFlags, rsnFlags })
-    if (keyMgmt === "wpa-psk") return security === "psk"
-    if (keyMgmt === "sae") return security === "sae" || (security === "psk" && Boolean((wpaFlags | rsnFlags) & AP_SAE_FLAG))
-    if (keyMgmt === "owe") return security === "owe"
-    return security === "open"
+    return apSupports({ flags: ap.get_flags(), wpaFlags: ap.get_wpa_flags(), rsnFlags: ap.get_rsn_flags() }, keyMgmtSecurity[keyMgmt] || "open")
 }
 export async function addAndActivate({ ssid, psk, keyMgmt }) {
     const devices = wifiDevices()
@@ -165,6 +169,26 @@ export async function deactivate(uuid) {
     const active = nm().get_active_connections().find(a => a.get_uuid() === uuid)
     if (active) await nm().deactivate_connection_async(active, null)
 }
+// A profile can vanish between the caller's snapshot and this call (someone
+// else removed it, or NM auto-removed it): get_connection_by_uuid then misses
+// it, or - if it unexports the object mid-call - delete_async itself rejects
+// with an "unknown object" D-Bus error. Both are reported structurally
+// (missing uuids, never thrown), so callers never have to match nm.js's own
+// wording to tell "already gone" from a real failure.
+function isUnknownObject(error) {
+    return error instanceof GLib.Error && Gio.DBusError.is_remote_error(error)
+        && ["org.freedesktop.DBus.Error.UnknownObject", "org.freedesktop.DBus.Error.UnknownMethod"].includes(Gio.DBusError.get_remote_error(error))
+}
 export async function removeConnections(uuids) {
-    for (const uuid of uuids) await remote(uuid).delete_async(null)
+    const missing = []
+    for (const uuid of uuids) {
+        const connection = nm().get_connection_by_uuid(uuid)
+        if (!connection) { missing.push(uuid); continue }
+        try { await connection.delete_async(null) }
+        catch (error) {
+            if (isUnknownObject(error)) { missing.push(uuid); continue }
+            throw error
+        }
+    }
+    return { missing }
 }
