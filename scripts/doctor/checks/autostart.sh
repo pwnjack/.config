@@ -74,6 +74,11 @@ check_autostart() {
     if [ -d "$DOCTOR_AUTOSTART_DIR" ]; then
         while IFS= read -r -d '' file; do
             name="${file##*/}"
+            # systemd follows a symlinked entry, and silently ignores a dangling one.
+            if [ -L "$file" ] && [ ! -e "$file" ]; then
+                warn "$name is a link to a missing file, so systemd ignores it" "rm $(doctor_q "$file")"
+                continue
+            fi
             if _as_hidden "$file"; then
                 if _as_minimal "$file" && [ ! -e "$DOCTOR_AUTOSTART_SYSTEM/$name" ]; then
                     note "$name hides a system autostart entry that no longer exists" "rm $(doctor_q "$file")"
@@ -90,7 +95,7 @@ check_autostart() {
             if [ -n "$missing" ]; then
                 warn "$name starts $missing, which is not installed, so it never runs" "install the program, or rm $(doctor_q "$file")"
             fi
-        done < <(find "$DOCTOR_AUTOSTART_DIR" -maxdepth 1 -type f -name '*.desktop' ! -name '.*' -print0 | sort -z)
+        done < <(find "$DOCTOR_AUTOSTART_DIR" -maxdepth 1 \( -type f -o -type l \) -name '*.desktop' ! -name '.*' -print0 | sort -z)
     fi
     if [ $((DOCTOR_WARNINGS + DOCTOR_NOTICES)) -eq "$before" ]; then ok "Every per-user autostart entry resolves"; fi
 }

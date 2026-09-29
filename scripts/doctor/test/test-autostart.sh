@@ -53,6 +53,19 @@ assert_not_contains "$as_text" "dot-missing" "autostart: dotfiles are skipped"
 assert_not_contains "$as_text" "backup-missing" "autostart: backup files are skipped"
 assert_not_contains "$as_text" "✓" "autostart: no all-clear with findings"
 
+# Links: systemd follows a live one (so its entry is checked) and ignores a dangling one.
+mkdir -p "$as_root/links"
+printf '[Desktop Entry]\nType=Application\nName=Linked\nExec=linked-target-missing\n' > "$as_root/linked-target.desktop"
+ln -s "$as_root/linked-target.desktop" "$as_root/links/linked.desktop"
+ln -s "$as_root/nowhere.desktop" "$as_root/links/dangling.desktop"
+DOCTOR_AUTOSTART_DIR="$as_root/links"
+doctor_reset
+check_autostart > "$as_out_file" 2>&1
+as_text="$(cat "$as_out_file")"
+assert_eq "$DOCTOR_WARNINGS" "2" "autostart: a broken linked entry and a dangling link both warn"
+assert_contains "$as_text" "linked-target-missing" "autostart: a symlinked entry is checked through the link"
+assert_contains "$as_text" "dangling.desktop is a link to a missing file" "autostart: a dangling link is reported"
+
 DOCTOR_AUTOSTART_DIR="$as_root/absent"
 doctor_reset
 check_autostart > "$as_out_file" 2>&1

@@ -91,7 +91,9 @@ function createNew(path, bytes, taken) {
 }
 // The generator skips dotfiles and backups. A system file it cannot read is skipped
 // like systemd would; a user file it cannot read still masks the system entry, so it
-// is kept (text undefined). A user link is kept whatever it points at.
+// is kept (text undefined). A dangling user link is ignored like systemd ignores it
+// ("stat() failed, ignoring"): the system entry of the same id still starts. Writes stay
+// safe regardless, because new files are created exclusively and refuse any link there.
 function desktopFiles(dir, keepUnreadable) {
     const files = []
     for (const id of children(dir)) {
@@ -100,6 +102,7 @@ function desktopFiles(dir, keepUnreadable) {
         const info = keepUnreadable ? lstat(path) : null
         const link = Boolean(info && info.get_is_symlink())
         if (keepUnreadable && !link && (!info || info.get_file_type() !== Gio.FileType.REGULAR)) continue
+        if (link && !exists(path)) continue
         try { files.push({ id, text: read(path), link }) } catch (_) {
             if (keepUnreadable) files.push({ id, text: undefined, link })
         }
