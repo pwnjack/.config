@@ -2889,6 +2889,17 @@ ipc close >/dev/null; sleep 1
 if pgrep -af '^nmcli monitor$|settings-panel/shell.qml'; then echo 'Something survived close' >&2; exit 1; fi
 echo 'Network page: one monitor while visible, none after leaving or closing.'
 
+# Page entry while another read is in flight must still load the network view
+# (shell.qml readerNetwork/liveTimer path; SettingsView tests use a mock controller).
+bash "$config_dir/scripts/hyprland/settings-panel.sh"
+ipc page network >/dev/null
+for ((attempt=0; attempt<60; attempt++)); do
+    [[ $(ipc status | jq -r .network) == up ]] && break
+    sleep 0.05
+done
+[[ $(ipc status | jq -r .network) == up ]] || { echo 'Network page entered during the first read never loaded' >&2; exit 1; }
+ipc close >/dev/null; sleep 1
+
 median() { sort -n | sed -n 3p; }
 time_request() { for _ in 1 2 3 4 5; do s=$(date +%s%N); bash "$config_dir/scripts/settings/panel-request.sh" "$1" >/dev/null; echo $(( ($(date +%s%N)-s)/1000000 )); done | median; }
 empty=$(time_request '{"op":"read","ids":[]}')
