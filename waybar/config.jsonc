@@ -4,6 +4,10 @@
 //
 
 {
+  // The clock's format lives here (options/clock, rendered by
+  // scripts/waybar/clock-format.sh). Waybar's own default is {:%H:%M}.
+  "include": ["~/.local/state/waybar/clock.jsonc"],
+
   // General Settings
   "layer": "bottom",
   "margin-top": 8,
@@ -221,7 +225,6 @@
 
   // Clock
   "clock": {
-    "format": "{:%H:%M}",
     "format-alt": "{:%d-%m-%Y}",
     "tooltip": true,
     "tooltip-format": "<tt><small>{calendar}</small></tt>",

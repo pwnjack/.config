@@ -400,6 +400,7 @@ async function change(request) {
         const text = row.kind === "toggle" ? (value ? "enabled" : "disabled") : value.trim()
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
+            if (row.key === "clock") await execAsync(["bash", configDir + "/scripts/waybar/clock-format.sh"])
             // hypr/config/apptype.lua reads these at parse time.
             if (row.reload) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])))

@@ -239,6 +239,10 @@ if ! execute "$CONFIG_DIR/scripts/theming/apply-wal.sh"; then
     warning "Some theme components failed; run scripts/theming/apply-wal.sh to retry"
 fi
 
+if ! execute bash "$CONFIG_DIR/scripts/waybar/clock-format.sh" --no-reload; then
+    warning "Could not render the Waybar clock format"
+fi
+
 # Seed waypaper config
 if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
     execute cp "$CONFIG_DIR/waypaper/config.ini.template" "$HOME/.cache/waypaper-config.ini"

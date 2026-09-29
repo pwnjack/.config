@@ -51,6 +51,7 @@ const supportedTypes = {
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
+files.set(base+'/options/clock','24h\n')
 let events = [], failingPath = '', failingReadPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
@@ -317,6 +318,13 @@ await dispatch({op:'set',id:'apps.browser',value:text})
 assert.equal(files.get(base+'/options/browser'),text+'\n')
 assert.equal(events.some(e=>e[0]==='bash'),false)
 console.log('ok: option text remains data, never shell code')
+
+events = []
+await dispatch({op:'set',id:'region.clock',value:'12h'})
+assert.equal(files.get(base+'/options/clock'), '12h\n')
+assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scripts/waybar/clock-format.sh')).length, 1)
+await assert.rejects(dispatch({op:'set',id:'region.clock',value:'13h'}), /Unknown choice/)
+console.log('ok: clock row renders the Waybar include')
 
 await dispatch({op:'set',id:'anim.windows',value:8})
 assert.match(files.get(base+'/hypr/config/overrides.lua'),/speed = 8/)

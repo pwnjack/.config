@@ -1143,6 +1143,17 @@
     },
     {
       "category": "region",
+      "id": "region.clock",
+      "title": "Clock Format",
+      "description": "Bar and lock screen clock",
+      "keywords": ["12", "24", "hour", "am", "pm", "time"],
+      "source": "option",
+      "key": "clock",
+      "kind": "select",
+      "items": [{ "label": "24-hour (20:30)", "value": "24h" }, { "label": "12-hour (8:30 PM)", "value": "12h" }]
+    },
+    {
+      "category": "region",
       "id": "region.language",
       "title": "Language",
       "description": "System language (LANG). Applies to programs started after your next login.",
