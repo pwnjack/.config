@@ -28,6 +28,8 @@ ShellRoot {
     // A network snapshot that arrived while a password was being typed was held
     // back so the list stayed still; replay it once the field closes.
     property bool networkSkipped: false
+    // Whether the full read in flight asked for the network view.
+    property bool readerNetwork: false
     onInteractingChanged: {
         if (interacting !== "network.psk" && networkSkipped) {
             networkSkipped = false;
@@ -61,7 +63,11 @@ ShellRoot {
         // Before the first full read (loaded false) that read already asks for the
         // network view. A full read already in flight may not (it was started on
         // another page), so the live read is deferred behind it, never dropped.
-        if (added.includes("network") && opened && !busy && loaded) {
+        // A full read in flight that already asks for the network view makes a live
+        // read redundant; one started on another page does not, so the live read is
+        // deferred behind it. Before any read has started, refresh() is about to run
+        // with the network flag set.
+        if (added.includes("network") && opened && !busy && (reader.running || loaded) && !(reader.running && readerNetwork)) {
             liveDirty = Object.assign({}, liveDirty, {network: true});
             if (reader.running) liveTimer.restart();
             else readLive();
@@ -103,6 +109,7 @@ ShellRoot {
         readReply = "";
         readError = "";
         loading = true;
+        readerNetwork = category === "network";
         reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network"})];
         reader.running = true;
         // A full read supersedes any live read still waiting on its debounce.

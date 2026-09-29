@@ -22,7 +22,16 @@ ColumnLayout {
     readonly property var bars: ["", String.fromCodePoint(0xF091F), String.fromCodePoint(0xF0922), String.fromCodePoint(0xF0925), String.fromCodePoint(0xF0928)]
     readonly property string lock: String.fromCodePoint(0xF033E)
     function validPsk(text) { return /^[\x20-\x7e]{8,63}$/.test(text) || /^[0-9a-fA-F]{64}$/.test(text) }
-    function validSae(text) { return text.length > 0 && !/[\0\r\n]/.test(text) }
+    // UTF-8 length without TextEncoder (absent in QML's engine); network.mjs caps SAE at 256 bytes.
+    function utf8Length(text) {
+        let bytes = 0;
+        for (const char of text) {
+            const code = char.codePointAt(0);
+            bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
+        }
+        return bytes;
+    }
+    function validSae(text) { return text.length > 0 && !/[\0\r\n]/.test(text) && utf8Length(text) <= 256 }
 
     onExpandedChanged: {
         pskText = "";
@@ -93,6 +102,7 @@ ColumnLayout {
             Keys.onReturnPressed: entry.activate()
             Keys.onEnterPressed: entry.activate()
             Keys.onSpacePressed: entry.activate()
+            Accessible.onPressAction: entry.activate()
             MouseArea {
                 anchors.fill: parent
                 enabled: !page.controller.busy && !entry.modelData.activating && (entry.modelData.security !== "unsupported" || entry.modelData.known)

@@ -436,6 +436,20 @@ Item {
             compare(field.text, "abc");
             compare(controller.calls.length, before);
         }
+        function test_network_sae_connect_mirrors_the_byte_limit() {
+            const data = networkFixture();
+            data.wifi.networks.push({ssid: "Wpa3", signal: 50, bars: 2, security: "sae", known: false, active: false, activating: false});
+            controller.network = data; controller.category = "network"; waitForRendering(view);
+            mouseClick(findChild(view, "wifi-Wpa3"));
+            let text = "";
+            for (let i = 0; i < 128; i++) text += "é";
+            const field = findChild(view, "psk-Wpa3");
+            field.forceActiveFocus();
+            field.text = text; field.textEdited();
+            verify(findChild(view, "connect-Wpa3").enabled, "128 two-byte characters are exactly 256 bytes");
+            field.text = text + "é"; field.textEdited();
+            verify(!findChild(view, "connect-Wpa3").enabled, "257 bytes is over the SAE limit");
+        }
         function test_network_password_clears_on_category_change() {
             openNetwork();
             mouseClick(findChild(view, "wifi-Neighbour"));
