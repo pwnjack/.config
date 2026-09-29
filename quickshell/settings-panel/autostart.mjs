@@ -101,7 +101,9 @@ export function autostartEntries({ system, user, desktops, onPath }) {
             return {
                 id, name: masked.Name || id.replace(/\.desktop$/, ""), origin, enabled: false, invalid: "", ignoredGnomeFlag: false,
                 scope: unreadableScope, binary: firstExecWord(unescape(masked.Exec)), installed: false, unit: unitName(id),
-                link, staleOverride: false, removable: true,
+                // Deletable only when nothing else is at stake: an unreadable override may be a
+                // hand-made file the page cannot even show, so it is left for the user to handle.
+                link, staleOverride: false, removable: origin === "user",
             }
         }
         const effective = parseEntry(own ?? base)

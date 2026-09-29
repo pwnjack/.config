@@ -75,18 +75,28 @@ function isExecutableFile(path) {
     } catch (_) { return false }
 }
 // Creates the file only if nothing (file or link) is there; `taken` is the refusal otherwise.
-function createNew(path, bytes, taken) {
+// The bytes go to a hidden temporary file first (the generator ignores dotfiles), which is
+// then published with a hard link: link(2) never overwrites, so publishing stays exclusive,
+// and a crash leaves at most the ignored temporary file, never a partial entry.
+async function createNew(path, bytes, taken) {
+    if (lexists(path)) throw new Error(taken)
+    const dir = path.slice(0, path.lastIndexOf("/"))
+    const temp = `${dir}/.${path.slice(dir.length + 1)}.${Math.random().toString(36).slice(2)}.tmp`
     let stream
-    try { stream = Gio.File.new_for_path(path).create(Gio.FileCreateFlags.NONE, null) }
-    catch (error) {
-        if (error.matches && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) throw new Error(taken)
-        throw error
-    }
-    try { stream.write_all(bytes, null); stream.close(null) }
-    catch (error) {
-        try { stream.close(null) } catch (_) {}
-        try { remove(path) } catch (_) {}
-        throw error
+    try {
+        stream = Gio.File.new_for_path(temp).create(Gio.FileCreateFlags.PRIVATE, null)
+        stream.write_all(bytes, null)
+        stream.close(null)
+        stream = null
+        try { await execAsync(["env", "LC_ALL=C", "ln", "--", temp, path]) }
+        catch (error) {
+            // EEXIST: something appeared at the destination after the check above.
+            if (lexists(path) || /File exists/.test(error.message)) throw new Error(taken)
+            throw error
+        }
+    } finally {
+        if (stream) { try { stream.close(null) } catch (_) {} }
+        try { remove(temp) } catch (_) {}
     }
 }
 // The generator skips dotfiles and backups. A system file it cannot read is skipped
@@ -195,7 +205,7 @@ async function autostartAdd(request) {
     if (scope) throw new Error(`Would not start at login: ${scope}`)
     const bytes = readBytes(app.get_filename())
     makeParent(path)
-    createNew(path, bytes, `~/.config/autostart/${id} already exists`)
+    await createNew(path, bytes, `~/.config/autostart/${id} already exists`)
 }
 const home = GLib.get_home_dir()
 const themeDirs = kind => [`${home}/.local/share/${kind}`, `${home}/.${kind}`, `/usr/share/${kind}`]

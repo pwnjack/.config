@@ -228,11 +228,11 @@ globalThis.settingsMocks = {
             },
             create: () => {
                 if (files.has(path) || dirs.has(path) || links.has(path) || raceOnce.delete(path)) throw gioError(2, 'File exists: '+path)
-                events.push(['create',path])
+                if (!/\/\.[^/]*\.tmp$/.test(path)) events.push(['create',path])
                 return {write_all: bytes => { files.set(path,new TextDecoder('utf-8',{ignoreBOM:true}).decode(bytes)); return [true,bytes.length] }, close: () => true}
             },
             delete: () => {
-                events.push(['delete',path])
+                if (!/\/\.[^/]*\.tmp$/.test(path)) events.push(['delete',path])
                 links.delete(path)
                 files.delete(path)
                 return true
@@ -255,6 +255,14 @@ globalThis.settingsMocks = {
             if (args[3] === failMime) throw new Error('xdg-mime failed')
             mimeDefaults[args[3]] = args[2]
             files.set(base+'/mimeapps.list',(files.get(base+'/mimeapps.list') || '[Default Applications]\n') + `${args[3]}=${args[2]}\n`)
+            return ''
+        }
+        if (args[0] === 'env' && args[2] === 'ln') {
+            // link(2): never overwrites; the published file is a complete copy of the temporary one.
+            const [, , , , from, to] = args
+            if (files.has(to) || links.has(to) || raceOnce.delete(to)) throw new Error(`ln: failed to create hard link '${to}': File exists`)
+            events.push(['create', to])
+            files.set(to, files.get(from))
             return ''
         }
         if (args[0] === 'systemctl' && args[2] === 'show-environment') return showEnvironment
@@ -1260,3 +1268,6 @@ await assert.rejects(dispatch({op:'autostartAdd',app:'firefox.desktop'}), /Alrea
 await dispatch({op:'autostart',action:'remove',id:'firefox.desktop'})
 assert.equal(files.has(mine('firefox.desktop')), false)
 console.log('ok: add copies the desktop file; remove deletes only user entries')
+
+assert.deepEqual([...files.keys()].filter(path => /\/\.[^/]*\.tmp$/.test(path)), [], 'no temporary autostart file is ever left behind')
+console.log('ok: new autostart files are published whole; no temporary file is left behind')

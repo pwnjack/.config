@@ -249,3 +249,14 @@ console.log("ok: show-environment $'...' quoting is undone")
     assert.equal(stale.scope, '')
 }
 console.log('ok: customised overrides are not removable; a broken override names its file')
+
+{
+    // Unreadable files: removable only when they add an app, never when they mask a system entry.
+    const sys = [{id: 'x.desktop', text: '[Desktop Entry]\nType=Application\nName=X\nExec=true\n'}]
+    const [masking] = autostart.autostartEntries({system: sys, user: [{id: 'x.desktop', text: undefined, link: false}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(masking.origin, 'override')
+    assert.equal(masking.removable, false)
+    const [alone] = autostart.autostartEntries({system: [], user: [{id: 'y.desktop', text: undefined, link: false}], desktops: ['Hyprland'], onPath: () => true})
+    assert.equal(alone.removable, true)
+}
+console.log('ok: an unreadable override is never offered for removal')
