@@ -10,7 +10,7 @@ catalog.rows.push({id:'test.gtk-raw',source:'gtk',key:'gtk-theme',ini:{key:'gtk-
 const files = new Map([
     [base + '/quickshell/settings-panel/catalog.json', JSON.stringify(catalog)],
     [base + '/hypr/config/overrides.lua', ''],
-    [base + '/hypr/hypridle.conf', '# Keep this comment\ngeneral { ignore_dbus_inhibit = false }\nlistener {\n timeout = 305\n on-timeout = hyprlock\n}\nlistener {\n timeout = 600\n on-timeout = hyprctl dispatch \'hl.dsp.dpms({action = "off"})\'\n}\n'],
+    [base + '/hypr/hypridle.conf', '# Keep this comment\ngeneral { ignore_dbus_inhibit = false }\nlistener {\n timeout = 305\n on-timeout = loginctl lock-session\n}\nlistener {\n timeout = 600\n on-timeout = hyprctl dispatch \'hl.dsp.dpms({action = "off"})\'\n}\n'],
     [base + '/hypr/hyprsunset.conf', '# Keep this comment\nmax-gamma = 100\nprofile {\n time = 07:00\n temperature = 6000\n}\nprofile {\n time = 20:00\n temperature = 4000\n}\n'],
     [base + '/swaync/config.json', JSON.stringify({timeout:5,unrelated:{keep:true}})],
     [base + '/hypr/config/hardware/primary.conf', '$monitor =\n'],
@@ -1271,3 +1271,15 @@ console.log('ok: add copies the desktop file; remove deletes only user entries')
 
 assert.deepEqual([...files.keys()].filter(path => /\/\.[^/]*\.tmp$/.test(path)), [], 'no temporary autostart file is ever left behind')
 console.log('ok: new autostart files are published whole; no temporary file is left behind')
+
+{
+    // The older direct-hyprlock lock listener still parses.
+    const idle = base + '/hypr/hypridle.conf', before = files.get(idle)
+    const current = (await dispatch({op:'read', ids:['power.lock']})).values['power.lock'].value
+    assert.equal(typeof current, 'number')
+    files.set(idle, before.replace('on-timeout = loginctl lock-session', 'on-timeout = hyprlock'))
+    const result = await dispatch({op:'read', ids:['power.lock']})
+    assert.equal(result.values['power.lock'].value, current)
+    files.set(idle, before)
+}
+console.log('ok: the lock listener is found whether it runs hyprlock or loginctl lock-session')

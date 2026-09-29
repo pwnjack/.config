@@ -255,12 +255,14 @@ function requiredSnapshot() {
     if (!snap.running) throw new Error("NetworkManager is not running")
     return snap
 }
+// The lock listener runs hyprlock directly or through loginctl (which honours hypridle's lock_cmd).
+const isLockListener = block => /hyprlock|loginctl\s+lock-session/.test(block)
 function idleValues(text) {
     const values = {}
     for (const block of text.match(/listener\s*\{[^}]*\}/g) || []) {
         const timeout = block.match(/\btimeout\s*=\s*(\d+)/)
         if (!timeout) continue
-        if (block.includes("hyprlock")) values.lock = Number(timeout[1])
+        if (isLockListener(block)) values.lock = Number(timeout[1])
         if (/dpms/.test(block) && /off/.test(block)) values.dpms = Number(timeout[1])
         if (/systemctl suspend/.test(block)) values.suspend = Number(timeout[1])
     }
@@ -577,7 +579,7 @@ async function change(request) {
         idleValues(before)
         if (row.key === "suspend") return saveAndApply(idlePath, withSuspend(before, value), () => restart("hypridle"))
         const text = before.replace(/listener\s*\{[^}]*\}/g, block => {
-            const match = row.key === "lock" ? block.includes("hyprlock") : /dpms/.test(block) && /off/.test(block)
+            const match = row.key === "lock" ? isLockListener(block) : /dpms/.test(block) && /off/.test(block)
             return match ? block.replace(/(\btimeout\s*=\s*)\d+/, `$1${value}`) : block
         })
         return saveAndApply(idlePath, text, () => restart("hypridle"))
