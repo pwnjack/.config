@@ -59,10 +59,26 @@ files.set('/etc/xdg/autostart/manual.desktop', '[Desktop Entry]\nType=Applicatio
 files.set(base + '/autostart/arch-update-tray.desktop', '[Desktop Entry]\nType=Application\nName=Arch-Update Systray Applet\nExec=arch-update --tray\n')
 files.set(base + '/autostart/manual.desktop', '[Desktop Entry]\nName=Manual\nHidden=true\nComment=written by hand\n')
 files.set('/usr/share/applications/firefox.desktop', '[Desktop Entry]\nName=Firefox\nExec=firefox %u\n')
+// Installed applications: [id, name, should_show, desktop-file fields]. The last four
+// are never offered: no Exec, wrong desktop, hidden from menus, already an XDG entry.
+const appInfos = [
+    ['firefox.desktop', 'Firefox', true, {Exec: 'firefox %u'}],
+    ['nm-applet.desktop', 'Network', true, {Exec: 'nm-applet'}],
+    ['noexec.desktop', 'No Exec', true, {}],
+    ['kdeonly.desktop', 'KDE only', true, {Exec: 'kdeonly', OnlyShowIn: 'KDE;'}],
+    ['notonhypr.desktop', 'Not on Hyprland', true, {Exec: 'notonhypr', NotShowIn: 'Hyprland;'}],
+    ['hidden-app.desktop', 'Hidden app', false, {Exec: 'hidden-app'}]]
 // Binaries the user manager's PATH resolves; arch-update is deliberately absent.
-for (const name of ['nm-applet','blueman-applet','manual']) files.set('/usr/bin/'+name, '')
+const execs = new Set()
+for (const name of ['nm-applet','blueman-applet','manual']) { files.set('/usr/bin/'+name, ''); execs.add('/usr/bin/'+name) }
+// Symbolic links by path: a target string, or null when dangling. Gio follows them like the real thing.
+const links = new Map()
+const resolveLink = path => { let at = path; for (let depth = 0; links.has(at) && depth < 8; ++depth) { at = links.get(at); if (at === null) return null } return at }
+const gioError = (code, message) => Object.assign(new Error(message), {matches: (_domain, wanted) => wanted === code})
 dirs.set('/etc/xdg/autostart', ['nm-applet.desktop', 'blueman.desktop', 'manual.desktop'])
 dirs.set(base + '/autostart', ['arch-update-tray.desktop', 'manual.desktop'])
+let showEnvironment = 'XDG_CURRENT_DESKTOP=Hyprland\nPATH=/usr/local/bin:/usr/bin\n'
+const raceOnce = new Set()
 let events = [], failingPath = '', failingReadPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
@@ -173,15 +189,23 @@ globalThis.settingsMocks = {
     },
     Gio: {
         AppInfo: {
-            get_all: () => [
-                {get_id: () => 'firefox.desktop', get_name: () => 'Firefox', should_show: () => true, get_filename: () => '/usr/share/applications/firefox.desktop'},
-                {get_id: () => 'nm-applet.desktop', get_name: () => 'Network', should_show: () => false, get_filename: () => '/etc/xdg/autostart/nm-applet.desktop'}],
+            get_all: () => appInfos.map(([id, name, show, fields]) => ({get_id: () => id, get_name: () => name, should_show: () => show, get_filename: () => '/usr/share/applications/' + id, get_string: key => fields[key] ?? null})),
             get_all_for_type: type => (appsForType[type] || []).map(([id,name]) => ({get_id: () => id, get_name: () => name})) },
         content_type_is_a: (mime, parent) => mime === parent || (mime === 'text/markdown' && parent === 'text/plain') || (parent === 'application/octet-stream' && !mime.startsWith('inode/')),
         FileCreateFlags:{NONE:0},
-        FileQueryInfoFlags:{NONE:0},
+        FileQueryInfoFlags:{NONE:0,NOFOLLOW_SYMLINKS:1},
+        FileType:{REGULAR:1,DIRECTORY:2,SYMBOLIC_LINK:3},
+        IOErrorEnum:{EXISTS:2,NOT_FOUND:1},
+        io_error_quark: () => 'g-io-error-quark',
         File:{new_for_path: path => ({
-            query_exists: () => files.has(path) || dirs.has(path),
+            query_exists: () => { const at = resolveLink(path); return at !== null && (files.has(at) || dirs.has(at)) },
+            query_info: (attrs, flags) => {
+                const nofollow = flags === 1
+                if (nofollow && links.has(path)) return {get_is_symlink: () => true, get_file_type: () => 3}
+                const at = resolveLink(path)
+                if (at === null || !(files.has(at) || dirs.has(at))) throw gioError(1, 'No such file: '+path)
+                return {get_is_symlink: () => links.has(path), get_file_type: () => files.has(at) ? 1 : 2, get_attribute_boolean: () => files.has(at) && execs.has(at)}
+            },
             enumerate_children: () => {
                 if (!dirs.has(path)) throw new Error('No such directory: '+path)
                 const names = [...dirs.get(path)]
@@ -189,17 +213,25 @@ globalThis.settingsMocks = {
             },
             load_contents: () => {
                 if (path === failingReadPath) throw new Error('Permission denied: '+path)
-                if (!files.has(path)) throw new Error('Missing fixture: '+path)
-                return [true,encoder.encode(files.get(path))]
+                const at = resolveLink(path)
+                if (at === null || !files.has(at)) throw new Error('Missing fixture: '+path)
+                const content = files.get(at)
+                return [true, typeof content === 'string' ? encoder.encode(content) : content]
             },
             replace_contents: bytes => {
                 events.push(['write',path])
                 if (path === failingPath) throw new Error('disk full')
-                files.set(path,new TextDecoder().decode(bytes))
+                files.set(resolveLink(path) ?? links.get(path),new TextDecoder('utf-8',{ignoreBOM:true}).decode(bytes))
                 return [true,'etag']
+            },
+            create: () => {
+                if (files.has(path) || dirs.has(path) || links.has(path) || raceOnce.delete(path)) throw gioError(2, 'File exists: '+path)
+                events.push(['create',path])
+                return {write_all: bytes => { files.set(path,new TextDecoder('utf-8',{ignoreBOM:true}).decode(bytes)); return [true,bytes.length] }, close: () => true}
             },
             delete: () => {
                 events.push(['delete',path])
+                links.delete(path)
                 files.delete(path)
                 return true
             },
@@ -223,7 +255,7 @@ globalThis.settingsMocks = {
             files.set(base+'/mimeapps.list',(files.get(base+'/mimeapps.list') || '[Default Applications]\n') + `${args[3]}=${args[2]}\n`)
             return ''
         }
-        if (args[0] === 'systemctl' && args[2] === 'show-environment') return 'XDG_CURRENT_DESKTOP=Hyprland\nPATH=/usr/local/bin:/usr/bin\n'
+        if (args[0] === 'systemctl' && args[2] === 'show-environment') return showEnvironment
         if (args[0] === 'systemctl' && args[2] === 'list-units') return JSON.stringify([{unit:'app-nm\\x2dapplet@autostart.service',active:'active',sub:'running'}])
         if (args[0] === 'fc-list') return 'FiraCode Nerd Font,FiraCode Nerd Font Med\nAdwaita Sans\n'
         if (args[0] === 'pkill') { running.delete(args[2]); return ''; }
@@ -1020,6 +1052,13 @@ await assert.rejects(dispatch({op:'set',id:'region.ntp',value:true}), {message: 
 dbusDeny = false
 console.log('ok: region writes are interactive, merge locale keys, and report a cancelled prompt')
 
+const mutations = () => events.filter(e => ['write', 'create', 'delete'].includes(e[0]))
+const mine = id => `${base}/autostart/${id}`
+const theirs = id => `/etc/xdg/autostart/${id}`
+const put = (path, content) => { files.set(path, content); const dir = path.slice(0, path.lastIndexOf('/')); if (dirs.has(dir) && !dirs.get(dir).includes(path.slice(dir.length + 1))) dirs.get(dir).push(path.slice(dir.length + 1)) }
+const drop = path => { files.delete(path); links.delete(path); const dir = path.slice(0, path.lastIndexOf('/')); if (dirs.has(dir)) dirs.set(dir, dirs.get(dir).filter(name => name !== path.slice(dir.length + 1))) }
+const link = (path, target) => { links.set(path, target); const dir = path.slice(0, path.lastIndexOf('/')); if (dirs.has(dir)) dirs.get(dir).push(path.slice(dir.length + 1)) }
+const startupApps = async () => Object.fromEntries((await dispatch({op:'read',ids:[],startup:true})).startup.apps.map(a => [a.id, a]))
 events = []
 result = await dispatch({op:'read',ids:[],startup:true})
 const apps = Object.fromEntries(result.startup.apps.map(a => [a.id, a]))
@@ -1028,7 +1067,7 @@ assert.equal(apps['nm-applet.desktop'].status.state, 'running')
 assert.equal(apps['arch-update-tray.desktop'].status.label, 'Not installed: arch-update')
 assert.equal(apps['manual.desktop'].origin, 'override')
 assert.deepEqual(result.startup.available, [{id:'firefox.desktop', name:'Firefox'}])
-assert.equal(events.some(e => e[0] === 'write' || e[0] === 'delete'), false)
+assert.equal(mutations().length, 0)
 console.log('ok: startup read lists session, apps with status, and addable apps')
 
 await dispatch({op:'autostart',action:'disable',id:'blueman.desktop'})
@@ -1039,25 +1078,171 @@ assert.equal(files.has(base+'/autostart/blueman.desktop'), false)
 dirs.set(base+'/autostart', dirs.get(base+'/autostart').filter(n => n !== 'blueman.desktop'))
 console.log('ok: disabling a system entry writes the minimal override; enabling deletes it')
 
+
 const manualBefore = files.get(base+'/autostart/manual.desktop')
 events = []
-await assert.rejects(dispatch({op:'autostart',action:'enable',id:'manual.desktop'}), /~\/\.config\/autostart\/manual\.desktop/)
+await assert.rejects(dispatch({op:'autostart',action:'enable',id:'manual.desktop'}), /Not an application entry/)
 assert.equal(files.get(base+'/autostart/manual.desktop'), manualBefore)
 await assert.rejects(dispatch({op:'autostart',action:'remove',id:'nm-applet.desktop'}), /Only apps you added/)
 await assert.rejects(dispatch({op:'autostart',action:'disable',id:'../../etc/passwd'}), /no longer exists/)
 await assert.rejects(dispatch({op:'autostart',action:'explode',id:'nm-applet.desktop'}), /Unknown startup action/)
-assert.equal(events.some(e => e[0] === 'write' || e[0] === 'delete'), false)
+assert.equal(mutations().length, 0)
 files.set(base+'/autostart/manual.desktop', '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual\nHidden=true\n')
 await dispatch({op:'autostart',action:'enable',id:'manual.desktop'})
 assert.equal(files.get(base+'/autostart/manual.desktop'), '[Desktop Entry]\nType=Application\nName=Manual\nExec=manual\n')
 files.set(base+'/autostart/manual.desktop', manualBefore)
 console.log('ok: hand-edited overrides, system removals, unknown ids and actions are refused')
 
+// --- Startup page safety: links, exclusive creation, encodings, scopes ------------------
+put('/elsewhere/target.desktop', '[Desktop Entry]\nType=Application\nName=Target\nExec=manual\n')
+link(mine('linked.desktop'), '/elsewhere/target.desktop')
+link(mine('dangling.desktop'), '/elsewhere/nowhere.desktop')
+link(mine('blueman.desktop'), '/elsewhere/nowhere.desktop')
+events = []
+let linkApps = await startupApps()
+assert.equal(linkApps['linked.desktop'].link, true)
+assert.equal(linkApps['linked.desktop'].name, 'Target')
+assert.equal(linkApps['dangling.desktop'].link, true)
+assert.equal(linkApps['dangling.desktop'].scope, 'Unreadable file in ~/.config/autostart')
+// An unreadable user file still masks the system entry of the same id.
+assert.equal(linkApps['blueman.desktop'].origin, 'override')
+assert.equal(linkApps['blueman.desktop'].scope, 'Unreadable file in ~/.config/autostart')
+assert.equal(linkApps['blueman.desktop'].name, 'Blueman Applet')
+for (const id of ['linked.desktop', 'dangling.desktop', 'blueman.desktop'])
+    for (const action of ['enable', 'disable', 'remove'])
+        await assert.rejects(dispatch({op:'autostart',action,id}), new RegExp(`~/\\.config/autostart/${id.replace('.', '\\.')} is a link; edit it by hand`))
+link(mine('firefox.desktop'), '/elsewhere/nowhere.desktop')
+await assert.rejects(dispatch({op:'autostartAdd',app:'firefox.desktop'}), /Already in startup apps/)
+assert.equal(mutations().length, 0)
+assert.equal(files.has('/elsewhere/nowhere.desktop'), false)
+assert.equal(files.get('/elsewhere/target.desktop'), '[Desktop Entry]\nType=Application\nName=Target\nExec=manual\n')
+for (const id of ['linked.desktop', 'dangling.desktop', 'blueman.desktop', 'firefox.desktop']) drop(mine(id))
+console.log('ok: live and dangling links are never written through, and still mask the system entry')
+
+raceOnce.add(mine('blueman.desktop'))
+await assert.rejects(dispatch({op:'autostart',action:'disable',id:'blueman.desktop'}), /~\/\.config\/autostart\/blueman\.desktop already exists/)
+raceOnce.add(mine('firefox.desktop'))
+await assert.rejects(dispatch({op:'autostartAdd',app:'firefox.desktop'}), /~\/\.config\/autostart\/firefox\.desktop already exists/)
+assert.equal(files.has(mine('blueman.desktop')) || files.has(mine('firefox.desktop')), false)
+console.log('ok: disabling a system entry and adding an app create the file exclusively')
+
+put(theirs('hiddensys.desktop'), '[Desktop Entry]\nType=Application\nName=Hidden sys\nExec=manual\nHidden=true\nComment=keep\n')
+linkApps = await startupApps()
+assert.equal(linkApps['hiddensys.desktop'].enabled, false)
+assert.equal(linkApps['hiddensys.desktop'].scope, '')
+events = []
+await dispatch({op:'autostart',action:'enable',id:'hiddensys.desktop'})
+assert.deepEqual(mutations(), [['create', mine('hiddensys.desktop')]])
+dirs.get(base+'/autostart').push('hiddensys.desktop')
+assert.equal(files.get(mine('hiddensys.desktop')), '[Desktop Entry]\nType=Application\nName=Hidden sys\nExec=manual\nComment=keep\n')
+assert.equal((await startupApps())['hiddensys.desktop'].enabled, true)
+drop(mine('hiddensys.desktop')); drop(theirs('hiddensys.desktop'))
+put(theirs('latinsys.desktop'), Buffer.from('[Desktop Entry]\nType=Application\nName=Caf\xe9\nExec=manual\nHidden=true\n', 'latin1'))
+events = []
+await assert.rejects(dispatch({op:'autostart',action:'enable',id:'latinsys.desktop'}), /\/etc\/xdg\/autostart\/latinsys\.desktop is not UTF-8; edit it by hand/)
+assert.equal(mutations().length, 0)
+drop(theirs('latinsys.desktop'))
+console.log('ok: enabling a Hidden system entry writes an override without Hidden')
+
+put(theirs('renamed.desktop'), '[Desktop Entry]\nType=Application\nName=New Name\nExec=manual\n')
+put(mine('renamed.desktop'), '[Desktop Entry]\nType=Application\nName=Old Name\nHidden=true\n')
+linkApps = await startupApps()
+assert.equal(linkApps['renamed.desktop'].name, 'New Name')
+assert.equal(linkApps['renamed.desktop'].binary, 'manual')
+assert.equal(linkApps['renamed.desktop'].scope, '')
+assert.equal(linkApps['renamed.desktop'].enabled, false)
+assert.equal(linkApps['renamed.desktop'].status.label, 'Hidden by ~/.config/autostart/renamed.desktop')
+assert.equal(linkApps['renamed.desktop'].removable, true)
+assert.equal(linkApps['nm-applet.desktop'].removable, false)
+events = []
+await assert.rejects(dispatch({op:'autostart',action:'enable',id:'renamed.desktop'}), /~\/\.config\/autostart\/renamed\.desktop was written by hand; remove it there to restore the system entry/)
+assert.equal(mutations().length, 0)
+await dispatch({op:'autostart',action:'remove',id:'renamed.desktop'})
+assert.deepEqual(mutations(), [['delete', mine('renamed.desktop')]])
+assert.equal(files.has(theirs('renamed.desktop')), true)
+drop(theirs('renamed.desktop'))
+console.log('ok: a vendor-renamed override is described by the system file, refused on enable, and removable')
+
+put(mine('latin.desktop'), Buffer.from('[Desktop Entry]\nType=Application\nName=Caf\xe9\nExec=manual\n', 'latin1'))
+const latin = files.get(mine('latin.desktop'))
+events = []
+await assert.rejects(dispatch({op:'autostart',action:'disable',id:'latin.desktop'}), /~\/\.config\/autostart\/latin\.desktop is not UTF-8; edit it by hand/)
+assert.equal(mutations().length, 0)
+assert.equal(files.get(mine('latin.desktop')), latin)
+drop(mine('latin.desktop'))
+put(mine('bom.desktop'), '﻿[Desktop Entry]\nType=Application\nName=Bom\nExec=manual\n')
+await dispatch({op:'autostart',action:'disable',id:'bom.desktop'})
+assert.equal(files.get(mine('bom.desktop')), '﻿[Desktop Entry]\nType=Application\nName=Bom\nExec=manual\nHidden=true\n')
+await dispatch({op:'autostart',action:'enable',id:'bom.desktop'})
+assert.equal(files.get(mine('bom.desktop')), '﻿[Desktop Entry]\nType=Application\nName=Bom\nExec=manual\n')
+drop(mine('bom.desktop'))
+console.log('ok: edits refuse non-UTF-8 files and keep a leading BOM')
+
+put(theirs('kde.desktop'), '[Desktop Entry]\nType=Application\nName=KDE thing\nExec=manual\nNotShowIn=Hyprland;\n')
+put(mine('perm.desktop'), '[Desktop Entry]\nType=Application\nName=Perm\nExec=manual\n')
+failingReadPath = mine('perm.desktop')
+linkApps = await startupApps()
+assert.equal(linkApps['perm.desktop'].scope, 'Unreadable file in ~/.config/autostart')
+assert.equal(linkApps['perm.desktop'].link, false)
+events = []
+for (const action of ['enable', 'disable']) {
+    await assert.rejects(dispatch({op:'autostart',action,id:'kde.desktop'}), /Not for Hyprland/)
+    await assert.rejects(dispatch({op:'autostart',action,id:'perm.desktop'}), /Unreadable file in ~\/\.config\/autostart/)
+    await assert.rejects(dispatch({op:'autostart',action,id:'manual.desktop'}), /Not an application entry/)
+}
+assert.equal(mutations().length, 0)
+await dispatch({op:'autostart',action:'remove',id:'perm.desktop'})
+assert.deepEqual(mutations(), [['delete', mine('perm.desktop')]])
+failingReadPath = ''
+drop(theirs('kde.desktop'))
+console.log('ok: entries with a scope refuse enable and disable server-side; remove stays allowed')
+
+put(theirs('plain.desktop'), '[Desktop Entry]\nType=Application\nName=Plain\nExec=plainbin\n')
+put(theirs('viaLink.desktop'), '[Desktop Entry]\nType=Application\nName=Via link\nExec=linkbin\n')
+put(theirs('absolute.desktop'), '[Desktop Entry]\nType=Application\nName=Absolute\nExec=/usr/bin/plainbin\n')
+put('/usr/bin/plainbin', '')
+link('/usr/bin/linkbin', '/usr/bin/manual')
+linkApps = await startupApps()
+assert.equal(linkApps['plain.desktop'].installed, false)
+assert.equal(linkApps['plain.desktop'].status.label, 'Not installed: plainbin')
+assert.equal(linkApps['absolute.desktop'].installed, false)
+assert.equal(linkApps['viaLink.desktop'].installed, true)
+for (const id of ['plain', 'viaLink', 'absolute']) drop(theirs(id + '.desktop'))
+drop('/usr/bin/plainbin'); links.delete('/usr/bin/linkbin')
+console.log('ok: a binary on PATH must be an executable regular file')
+
+put(theirs('quotedpath.desktop'), '[Desktop Entry]\nType=Application\nName=Quoted path\nExec=toolx\nOnlyShowIn=Hyprland;\n')
+put("/opt/it's/bin/toolx", ''); execs.add("/opt/it's/bin/toolx")
+showEnvironment = "XDG_CURRENT_DESKTOP=$'Hypr\\x6cand'\nPATH=$'/opt/it\\'s/bin:/usr/bin'\n"
+linkApps = await startupApps()
+assert.equal(linkApps['quotedpath.desktop'].scope, '')
+assert.equal(linkApps['quotedpath.desktop'].installed, true)
+showEnvironment = 'XDG_CURRENT_DESKTOP=Hyprland\nPATH=/usr/local/bin:/usr/bin\n'
+drop(theirs('quotedpath.desktop')); drop("/opt/it's/bin/toolx"); execs.delete("/opt/it's/bin/toolx")
+console.log("ok: show-environment $'...' values are unquoted")
+
+failingReadPath = base + '/hypr/config/setup/autostart.lua'
+result = await dispatch({op:'read',ids:['appearance.blur','power.lock'],startup:true})
+assert.match(result.startup.error, /Permission denied/)
+assert.equal(typeof result.values['appearance.blur'].value, 'boolean')
+assert.equal(result.values['power.lock'].error, undefined)
+failingReadPath = ''
+console.log("ok: a failing startup read degrades to an error on the Startup view only")
+
+events = []
+await assert.rejects(dispatch({op:'autostartAdd',app:'nm-applet.desktop'}), /Already in startup apps/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'hidden-app.desktop'}), /Not shown in menus/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'noexec.desktop'}), /Would not start at login: No command to run/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'kdeonly.desktop'}), /Only for KDE/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'notonhypr.desktop'}), /Not for Hyprland/)
+await assert.rejects(dispatch({op:'autostartAdd',app:'ghost.desktop'}), /not installed/)
+assert.equal(mutations().length, 0)
+console.log('ok: add refuses present, hidden, commandless and inapplicable apps')
+
 await dispatch({op:'autostartAdd',app:'firefox.desktop'})
-assert.equal(files.get(base+'/autostart/firefox.desktop'), files.get('/usr/share/applications/firefox.desktop'))
+assert.equal(files.get(mine('firefox.desktop')), files.get('/usr/share/applications/firefox.desktop'))
 dirs.get(base+'/autostart').push('firefox.desktop')
 await assert.rejects(dispatch({op:'autostartAdd',app:'firefox.desktop'}), /Already in startup apps/)
-await assert.rejects(dispatch({op:'autostartAdd',app:'nm-applet.desktop'}), /not installed/)
 await dispatch({op:'autostart',action:'remove',id:'firefox.desktop'})
-assert.equal(files.has(base+'/autostart/firefox.desktop'), false)
+assert.equal(files.has(mine('firefox.desktop')), false)
 console.log('ok: add copies the desktop file; remove deletes only user entries')

@@ -62,10 +62,12 @@ Item {
             return {session: ["waybar", "systemctl --user start …"],
                 apps: [
                     {id: "nm-applet.desktop", name: "Network", origin: "system", enabled: true, scope: "", installed: true, status: {state: "running", label: "Running"}},
-                    {id: "mine.desktop", name: "Mine", origin: "user", enabled: true, scope: "", installed: true, status: {state: "none", label: "Not started this session"}},
+                    {id: "mine.desktop", name: "Mine", origin: "user", removable: true, enabled: true, scope: "", installed: true, status: {state: "none", label: "Not started this session"}},
                     {id: "kde.desktop", name: "KDE thing", origin: "system", enabled: true, scope: "Not for Hyprland", installed: true, status: {state: "none", label: ""}},
                     {id: "gnome.desktop", name: "Gnome flag", origin: "system", enabled: true, ignoredGnomeFlag: true, scope: "", installed: true, status: {state: "none", label: ""}},
-                    {id: "arch-update-tray.desktop", name: "Arch-Update", origin: "user", enabled: true, scope: "", installed: false, status: {state: "missing", label: "Not installed: arch-update"}}],
+                    {id: "arch-update-tray.desktop", name: "Arch-Update", origin: "user", removable: true, enabled: true, scope: "", installed: false, status: {state: "missing", label: "Not installed: arch-update"}},
+                    {id: "linked.desktop", name: "Linked", origin: "user", removable: true, link: true, enabled: true, scope: "", installed: true, status: {state: "none", label: ""}},
+                    {id: "renamed.desktop", name: "Renamed", origin: "override", removable: true, staleOverride: true, enabled: false, scope: "", installed: true, status: {state: "none", label: "Hidden by ~/.config/autostart/renamed.desktop"}}],
                 available: [{id: "firefox.desktop", name: "Firefox"}]};
         }
         function test_startup_view() {
@@ -77,14 +79,64 @@ Item {
             verify(findChild(view, "startupStatus-gnome.desktop").text.indexOf("X-GNOME-Autostart-enabled has no effect under systemd") >= 0);
             mouseClick(findChild(view, "startupSwitch-nm-applet.desktop"));
             compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "disable", id: "nm-applet.desktop"});
-            mouseClick(findChild(view, "startupRemove-mine.desktop"));
-            compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "remove", id: "mine.desktop"});
             verify(findChild(view, "startupStatus-arch-update-tray.desktop").text.indexOf("arch-update") >= 0);
+            compare(findChild(view, "startupStatus-mine.desktop").text.indexOf("Added by you"), -1);
+            verify(findChild(view, "startupStatus-mine.desktop").text.indexOf("In ~/.config/autostart") >= 0);
+            verify(findChild(view, "toggle-opt-lock"), "the option rows still render below the view");
+        }
+        function test_startup_remove_asks_twice() {
+            controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
+            const remove = findChild(view, "startupRemove-mine.desktop");
+            compare(remove.text, "Remove");
+            mouseClick(remove);
+            compare(remove.text, "Confirm remove");
+            compare(controller.calls.length, 0, "the first click deletes nothing");
+            mouseClick(remove);
+            compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "remove", id: "mine.desktop"});
+            compare(remove.text, "Remove");
+            // Any other action cancels the pending confirmation.
+            controller.calls = [];
+            mouseClick(remove);
+            compare(remove.text, "Confirm remove");
+            mouseClick(findChild(view, "startupSwitch-nm-applet.desktop"));
+            compare(remove.text, "Remove");
+            mouseClick(remove);
+            compare(controller.calls.length, 1, "the switch was the only call; the next click asks again");
+            // Another row's Remove moves the confirmation; 5 s of nothing drops it.
+            const other = findChild(view, "startupRemove-arch-update-tray.desktop");
+            mouseClick(other);
+            compare(remove.text, "Remove");
+            compare(other.text, "Confirm remove");
+            findChild(view, "startupView").confirmMs = 50;
+            mouseClick(remove);
+            compare(remove.text, "Confirm remove");
+            tryCompare(remove, "text", "Remove");
+            compare(controller.calls.length, 1);
+        }
+        function test_startup_stale_override_and_links() {
+            controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
+            verify(findChild(view, "startupRemove-renamed.desktop"), "a stale override can be removed");
+            verify(findChild(view, "startupStatus-renamed.desktop").text.indexOf("Hidden by ~/.config/autostart/renamed.desktop") >= 0);
+            verify(findChild(view, "startupSwitch-renamed.desktop"));
+            verify(!findChild(view, "startupRemove-linked.desktop"), "a link is never removed from here");
+            verify(!findChild(view, "startupSwitch-linked.desktop"), "a link is never switched from here");
+            verify(findChild(view, "startupStatus-linked.desktop").text.indexOf("link") >= 0);
+        }
+        function test_startup_error_only_on_its_view() {
+            controller.startup = {error: "Permission denied: autostart.lua"}; controller.category = "startup"; waitForRendering(view);
+            verify(findChild(view, "startupError").visible);
+            verify(findChild(view, "startupError").text.indexOf("Permission denied") >= 0);
+            verify(!findChild(view, "startup-nm-applet.desktop"));
+            verify(!findChild(view, "select-startupAdd").visible);
             verify(findChild(view, "toggle-opt-lock"), "the option rows still render below the view");
         }
         function test_startup_add() {
             controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
             const combo = findChild(view, "select-startupAdd");
+            // The longer list pushes the combo below the fold.
+            const flick = findChild(view, "settingsScroll").contentItem;
+            flick.contentY = Math.max(0, combo.mapToItem(flick.contentItem, 0, 0).y - 200);
+            waitForRendering(view);
             combo.forceActiveFocus();
             mouseClick(combo);
             tryCompare(combo.popup, "visible", true);
@@ -100,6 +152,9 @@ Item {
             compare(Autostart.setHidden("[Desktop Entry]\nName=X\n", true), "[Desktop Entry]\nName=X\nHidden=true\n");
             compare(Autostart.sessionCommands('hl.exec_cmd("waybar")')[0], "waybar");
             verify(Autostart.isMinimalOverride(Autostart.minimalOverride("X"), "X"));
+            verify(Autostart.isMinimalShape(Autostart.minimalOverride("Y")));
+            compare(Autostart.parseEnvironment("PATH=$'/a\\'b:/c'\n").PATH, "/a'b:/c");
+            compare(Autostart.appScope({Exec: "x"}, ["Hyprland"]), "");
             const snap = {connections:[],accessPoints:[{ssid:"Cafe",strength:80,flags:0,wpaFlags:0,rsnFlags:0}]};
             compare(Network.wifiNetworks(snap)[0].ssid, "Cafe");
             compare(Network.securityOf(snap.accessPoints[0]), "open");

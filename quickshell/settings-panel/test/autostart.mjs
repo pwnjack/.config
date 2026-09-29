@@ -184,6 +184,52 @@ console.log('ok: a reordered or renamed override is never treated as the minimal
     assert.equal(autostart.overrideName('nameless.desktop', sys), 'nameless')
     assert.equal(autostart.isMinimalOverride(autostart.minimalOverride('Personal choice'), autostart.overrideName('nameless.desktop', sys)), false)
     const [masked] = autostart.autostartEntries({system: [{id: 'nameless.desktop', text: sys}], user: [{id: 'nameless.desktop', text: autostart.minimalOverride('Personal choice')}], desktops: ['Hyprland'], onPath: () => true})
-    assert.equal(masked.name, 'Personal choice', 'a hand-named override is described by itself, not as the masked entry')
+    // Its Name says nothing about the entry: describe the system file, and flag the override as stale.
+    assert.equal(masked.name, 'nameless')
+    assert.equal(masked.staleOverride, true)
 }
 console.log('ok: later show-in lists, condition keys and nameless system entries')
+
+{
+    // A canonical Hidden override whose Name no longer matches: described by the system file it masks.
+    const sys = '[Desktop Entry]\nType=Application\nName=New Name\nExec=tool --flag\n'
+    const files = {system: [{id: 'r.desktop', text: sys}, {id: 'ok.desktop', text: sys}], desktops: ['Hyprland'], onPath: () => true}
+    const [stale, exact] = ['r.desktop', 'ok.desktop'].map(id => autostart.autostartEntries(Object.assign({}, files, {user: [{id, text: autostart.minimalOverride(id === 'r.desktop' ? 'Old Name' : 'New Name')}]})).find(e => e.id === id))
+    assert.deepEqual([stale.name, stale.binary, stale.scope, stale.enabled, stale.origin, stale.staleOverride, stale.removable], ['New Name', 'tool', '', false, 'override', true, true])
+    assert.deepEqual([exact.name, exact.staleOverride, exact.removable], ['New Name', false, false])
+    assert.equal(autostart.withStatus([stale], [])[0].status.label, 'Hidden by ~/.config/autostart/r.desktop')
+    assert.equal(autostart.withStatus([exact], [])[0].status.label, '')
+    assert.equal(autostart.isMinimalShape(autostart.minimalOverride('Whatever')), true)
+    assert.equal(autostart.isMinimalShape(autostart.minimalOverride('Whatever') + 'Exec=x\n'), false)
+}
+console.log('ok: a renamed minimal override is described by the system file and offered for removal')
+
+{
+    // An unreadable or dangling user file still masks the system entry; a link is flagged.
+    const sys = [{id: 'm.desktop', text: '[Desktop Entry]\nType=Application\nName=Masked\nExec=tool\n'}]
+    const list = autostart.autostartEntries({system: sys, user: [{id: 'm.desktop', text: undefined, link: true}, {id: 'only.desktop', text: undefined, link: false}, {id: 'l.desktop', text: '[Desktop Entry]\nType=Application\nName=L\nExec=tool\n', link: true}], desktops: ['Hyprland'], onPath: () => true})
+    const byId = Object.fromEntries(list.map(e => [e.id, e]))
+    assert.deepEqual([byId['m.desktop'].origin, byId['m.desktop'].scope, byId['m.desktop'].name, byId['m.desktop'].link, byId['m.desktop'].enabled], ['override', autostart.unreadableScope, 'Masked', true, false])
+    assert.deepEqual([byId['only.desktop'].origin, byId['only.desktop'].scope, byId['only.desktop'].name, byId['only.desktop'].removable], ['user', autostart.unreadableScope, 'only', true])
+    assert.deepEqual([byId['l.desktop'].link, byId['l.desktop'].scope, byId['l.desktop'].origin], [true, '', 'user'])
+    assert.equal(autostart.withStatus([byId['m.desktop']], [])[0].status.state, 'none')
+}
+console.log('ok: unreadable user files mask the system entry and links are flagged')
+
+{
+    assert.equal(autostart.appScope({Exec: 'tool %u'}, ['Hyprland']), '')
+    assert.match(autostart.appScope({}, ['Hyprland']), /No command to run/)
+    assert.match(autostart.appScope({Exec: 'tool', OnlyShowIn: 'KDE;'}, ['Hyprland']), /Only for KDE/)
+    assert.match(autostart.appScope({Exec: 'tool', NotShowIn: 'Hyprland;'}, ['Sway', 'Hyprland']), /Not for Hyprland/)
+}
+console.log('ok: appScope applies the generator rules to an installed application')
+
+{
+    const env = autostart.parseEnvironment("A=plain\nPATH=$'/opt/it\\'s/bin:/usr/bin'\nX=$'tab\\there\\nnew\\\\slash \\x41\\x7a \\xc3\\xa9'\nEMPTY=\nBROKEN=$'\nnoequals\n")
+    assert.equal(env.A, 'plain')
+    assert.equal(env.PATH, "/opt/it's/bin:/usr/bin")
+    assert.equal(env.X, 'tab\there\nnew\\slash Az é')
+    assert.equal(env.EMPTY, '')
+    assert.equal(env.BROKEN, "$'")
+}
+console.log("ok: show-environment $'...' quoting is undone")

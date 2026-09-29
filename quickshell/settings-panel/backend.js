@@ -59,36 +59,83 @@ function children(path) {
 }
 const autostartUser = `${configDir}/autostart`
 const autostartSystem = "/etc/xdg/autostart"
-// The generator skips dotfiles and backups; a file that cannot be read is skipped like systemd would.
-function desktopFiles(dir) {
+const noFollow = Gio.FileQueryInfoFlags.NOFOLLOW_SYMLINKS
+// The file itself, never its target: null when nothing (not even a dangling link) is there.
+function lstat(path) {
+    try { return Gio.File.new_for_path(path).query_info("standard::type,standard::is-symlink", noFollow, null) } catch (_) { return null }
+}
+// Gio's replace follows links (a live one rewrites its target, a dangling one creates
+// it), so the page never writes to a link and refuses instead.
+const lexists = path => lstat(path) !== null
+// A file that is really executable, as the generator's TryExec/Exec lookup requires.
+function isExecutableFile(path) {
+    try {
+        const info = Gio.File.new_for_path(path).query_info("standard::type,access::can-execute", Gio.FileQueryInfoFlags.NONE, null)
+        return info.get_file_type() === Gio.FileType.REGULAR && info.get_attribute_boolean("access::can-execute")
+    } catch (_) { return false }
+}
+// Creates the file only if nothing (file or link) is there; `taken` is the refusal otherwise.
+function createNew(path, bytes, taken) {
+    let stream
+    try { stream = Gio.File.new_for_path(path).create(Gio.FileCreateFlags.NONE, null) }
+    catch (error) {
+        if (error.matches && error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.EXISTS)) throw new Error(taken)
+        throw error
+    }
+    try { stream.write_all(bytes, null); stream.close(null) }
+    catch (error) {
+        try { stream.close(null) } catch (_) {}
+        try { remove(path) } catch (_) {}
+        throw error
+    }
+}
+// The generator skips dotfiles and backups. A system file it cannot read is skipped
+// like systemd would; a user file it cannot read still masks the system entry, so it
+// is kept (text undefined). A user link is kept whatever it points at.
+function desktopFiles(dir, keepUnreadable) {
     const files = []
     for (const id of children(dir)) {
         if (!autostart.isAutostartFileName(id) || /[\r\n/]/.test(id)) continue
-        try { files.push({ id, text: read(`${dir}/${id}`) }) } catch (_) { /* Unreadable, so systemd ignores it too. */ }
+        const path = `${dir}/${id}`
+        const info = keepUnreadable ? lstat(path) : null
+        const link = Boolean(info && info.get_is_symlink())
+        if (keepUnreadable && !link && (!info || info.get_file_type() !== Gio.FileType.REGULAR)) continue
+        try { files.push({ id, text: read(path), link }) } catch (_) {
+            if (keepUnreadable) files.push({ id, text: undefined, link })
+        }
     }
     return files
+}
+// Editing in place must never alter bytes it does not mean to: strict UTF-8, BOM kept.
+function readEditable(path, shown) {
+    const bytes = readBytes(path)
+    const bom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
+    try { return (bom ? "\ufeff" : "") + new TextDecoder("utf-8", { fatal: true }).decode(bom ? bytes.subarray(3) : bytes) }
+    catch (_) { throw new Error(`${shown} is not UTF-8; edit it by hand`) }
 }
 // The generator runs inside the systemd user manager, so its environment decides
 // which desktop applies and where a binary is found, not this helper's.
 async function userManagerEnvironment() {
-    const values = {}
-    try {
-        for (const line of (await execAsync(["systemctl", "--user", "show-environment"])).split("\n")) {
-            const eq = line.indexOf("=")
-            if (eq > 0) values[line.slice(0, eq)] = line.slice(eq + 1)
-        }
-    } catch (_) { /* Fall back to this process's own values. */ }
+    let values = {}
+    try { values = autostart.parseEnvironment(await execAsync(["systemctl", "--user", "show-environment"])) } catch (_) { /* Fall back to this process's own values. */ }
     return {
         desktops: (values.XDG_CURRENT_DESKTOP || GLib.getenv("XDG_CURRENT_DESKTOP") || "Hyprland").split(":"),
         path: (values.PATH || GLib.getenv("PATH") || "/usr/bin").split(":").filter(Boolean),
     }
 }
-const onPathIn = path => binary => binary.startsWith("/") ? exists(binary) : path.some(dir => exists(`${dir}/${binary}`))
+const onPathIn = path => binary => binary.startsWith("/") ? isExecutableFile(binary) : path.some(dir => isExecutableFile(`${dir}/${binary}`))
+// What the generator would read from an installed application's desktop file.
+const appFields = app => typeof app.get_string === "function"
+    ? { Exec: app.get_string("Exec") || "", OnlyShowIn: app.get_string("OnlyShowIn") || "", NotShowIn: app.get_string("NotShowIn") || "" }
+    : { Exec: "" }
 
-async function startupState() {
+async function startupEntries() {
     const { desktops, path } = await userManagerEnvironment()
-    const system = desktopFiles(autostartSystem), user = desktopFiles(autostartUser)
-    const entries = autostart.autostartEntries({ system, user, desktops, onPath: onPathIn(path) })
+    const system = desktopFiles(autostartSystem, false), user = desktopFiles(autostartUser, true)
+    return { desktops, entries: autostart.autostartEntries({ system, user, desktops, onPath: onPathIn(path) }) }
+}
+async function startupState() {
+    const { desktops, entries } = await startupEntries()
     let units = []
     // Unit state is informative only; a systemd hiccup must not blank the page.
     try { units = JSON.parse(await execAsync(["systemctl", "--user", "list-units", "--all", "--output=json", "app-*@autostart.service"])) } catch (_) {}
@@ -96,38 +143,56 @@ async function startupState() {
     return {
         session: autostart.sessionCommands(read(configDir + "/hypr/config/setup/autostart.lua")),
         apps: autostart.withStatus(entries, units),
-        available: Gio.AppInfo.get_all().filter(app => app.should_show() && !present.has(app.get_id()))
+        available: Gio.AppInfo.get_all().filter(app => !present.has(app.get_id()) && app.should_show() && !autostart.appScope(appFields(app), desktops))
             .map(app => ({ id: app.get_id(), name: app.get_name() })).sort((a, b) => a.name.localeCompare(b.name)),
     }
 }
 async function autostartChange(request) {
     if (!["enable", "disable", "remove"].includes(request.action)) throw new Error("Unknown startup action")
-    const entry = (await startupState()).apps.find(app => app.id === request.id)
+    const entry = (await startupEntries()).entries.find(app => app.id === request.id)
     if (!entry) throw new Error("That startup app no longer exists")
-    const path = `${autostartUser}/${entry.id}`
+    const path = `${autostartUser}/${entry.id}`, shown = `~/.config/autostart/${entry.id}`
+    if (entry.link) throw new Error(`${shown} is a link; edit it by hand`)
     if (request.action === "remove") {
-        if (entry.origin !== "user") throw new Error("Only apps you added can be removed")
+        if (entry.origin === "system") throw new Error("Only apps you added can be removed")
         return remove(path)
     }
+    if (entry.scope) throw new Error(`${entry.name} cannot be changed: ${entry.scope}`)
+    const systemPath = `${autostartSystem}/${entry.id}`
     if (request.action === "disable") {
-        if (entry.origin === "system") { makeParent(path); return write(path, autostart.minimalOverride(entry.name)) }
-        return write(path, autostart.setHidden(read(path), true))
+        if (entry.origin === "system") {
+            makeParent(path)
+            return createNew(path, new TextEncoder().encode(autostart.minimalOverride(entry.name)), `${shown} already exists`)
+        }
+        return write(path, autostart.setHidden(readEditable(path, shown), true))
     }
-    if (entry.origin === "system") return
-    const text = read(path)
-    // Only the exact file disable wrote is ours to delete; a lone user file is edited in place.
-    if (entry.origin === "override" && autostart.isMinimalOverride(text, autostart.overrideName(entry.id, read(`${autostartSystem}/${entry.id}`)))) return remove(path)
-    // Without Exec the override would mask the system entry with nothing to run.
-    if (!autostart.parseEntry(text).Exec) throw new Error(`~/.config/autostart/${entry.id} was edited by hand; remove it there to restore the system entry`)
+    if (entry.origin === "system") {
+        if (entry.enabled) return
+        // The system file itself is hidden: a user override without Hidden says otherwise.
+        makeParent(path)
+        return createNew(path, new TextEncoder().encode(autostart.setHidden(readEditable(systemPath, systemPath), false)), `${shown} already exists`)
+    }
+    const text = readEditable(path, shown)
+    if (entry.origin === "override") {
+        // Only the exact file disable wrote is ours to delete; a lone user file is edited in place.
+        if (autostart.isMinimalOverride(text, autostart.overrideName(entry.id, read(systemPath)))) return remove(path)
+        if (autostart.isMinimalShape(text)) throw new Error(`${shown} was written by hand; remove it there to restore the system entry`)
+    }
+    // Accepted: enabling also drops X-GNOME-Autostart-enabled=false (systemd ignores the key),
+    // and deleting a minimal override drops any comments it carried.
     return write(path, autostart.setHidden(text, false))
 }
-function autostartAdd(request) {
-    const app = Gio.AppInfo.get_all().find(candidate => candidate.get_id() === request.app && candidate.should_show())
+async function autostartAdd(request) {
+    const app = Gio.AppInfo.get_all().find(candidate => candidate.get_id() === request.app)
     if (!app || !app.get_filename()) throw new Error("That application is not installed")
-    const path = `${autostartUser}/${app.get_id()}`
-    if (exists(path) || exists(`${autostartSystem}/${app.get_id()}`)) throw new Error("Already in startup apps")
+    const id = app.get_id(), path = `${autostartUser}/${id}`
+    if (lexists(path) || exists(`${autostartSystem}/${id}`)) throw new Error("Already in startup apps")
+    if (!app.should_show()) throw new Error("Not shown in menus")
+    const scope = autostart.appScope(appFields(app), (await userManagerEnvironment()).desktops)
+    if (scope) throw new Error(`Would not start at login: ${scope}`)
+    const bytes = readBytes(app.get_filename())
     makeParent(path)
-    writeBytes(path, readBytes(app.get_filename()))
+    createNew(path, bytes, `~/.config/autostart/${id} already exists`)
 }
 const home = GLib.get_home_dir()
 const themeDirs = kind => [`${home}/.local/share/${kind}`, `${home}/.${kind}`, `/usr/share/${kind}`]
@@ -385,7 +450,10 @@ async function snapshot(ids, includeMonitors, views = {}) {
         result.displayPending = exists(pendingPath) && await guardArmed() ? JSON.parse(read(pendingPath)) : null
     }
     if (views.network) result.network = networkPage(await once("nm", nmSnapshot))
-    if (views.startup) result.startup = await startupState()
+    // A broken startup source must not blank the other pages' values.
+    if (views.startup) {
+        try { result.startup = await startupState() } catch (error) { result.startup = { error: error.message } }
+    }
     return result
 }
 
@@ -721,7 +789,7 @@ export async function dispatch(request) {
         return {}
     }
     if (request.op === "autostart") { await autostartChange(request); return {} }
-    if (request.op === "autostartAdd") { autostartAdd(request); return {} }
+    if (request.op === "autostartAdd") { await autostartAdd(request); return {} }
     if (request.op === "action") {
         if (request.id === "autostart-file") {
             detached([readOption("terminal") || "ghostty", "-e", ...(readOption("editor") || "nvim").split(/\s+/), configDir + "/hypr/config/setup/autostart.lua"])

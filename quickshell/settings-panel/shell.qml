@@ -143,8 +143,10 @@ ShellRoot {
     }
     function select(id) {
         query = ""; category = id;
-        // A page's own data is read when the page is first shown, and after every edit.
-        if ((id === "startup" && !startup) || (id === "network" && !network)) refresh();
+        // The startup list is read on every visit (files change behind the panel's back);
+        // network data only when it is missing. Both are read again after every edit.
+        // refresh() already ignores the call while a read runs; onExited catches up.
+        if (id === "startup" || (id === "network" && !network)) refresh();
     }
     function change(id, value) {
         submit({op: "set", id: id, value: value}, catalog.rows.find(row => row.id === id)?.auth === true);
@@ -254,7 +256,7 @@ ShellRoot {
             root.loaded = true;
             if (root.queue.length || root.closing) root.drain();
             // The page was opened while this read was in flight and did not ask for its data.
-            else if (root.category === "startup" && !root.readerStartup && !root.startup && !root.problem) root.refresh();
+            else if (root.category === "startup" && !root.readerStartup && !root.problem) root.refresh();
         }
     }
     Process {

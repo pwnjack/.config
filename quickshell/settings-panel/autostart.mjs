@@ -83,29 +83,85 @@ function scopeOf(entry, desktops) {
     if (excluded.length) return `Not for ${excluded.join(", ")}`
     return ""
 }
+// The scope shown for a user file systemd sees but this page cannot read (dangling link, permissions).
+export const unreadableScope = "Unreadable file in ~/.config/autostart"
+// `user` files may carry `link` (a symbolic link, never written through) and an
+// undefined `text` (unreadable or dangling): systemd still sees such a file, so it
+// still masks the system entry of the same id.
 export function autostartEntries({ system, user, desktops, onPath }) {
     const sys = new Map(system.map(f => [f.id, f.text]))
-    const usr = new Map(user.map(f => [f.id, f.text]))
+    const usr = new Map(user.map(f => [f.id, f]))
     return [...new Set([...sys.keys(), ...usr.keys()])].map(id => {
-        const own = usr.get(id), base = sys.get(id)
+        const file = usr.get(id), base = sys.get(id)
+        const own = file ? file.text : undefined
+        const origin = base === undefined ? "user" : file === undefined ? "system" : "override"
+        const link = Boolean(file && file.link)
+        if (file && own === undefined) {
+            const masked = base === undefined ? {} : parseEntry(base)
+            return {
+                id, name: masked.Name || id.replace(/\.desktop$/, ""), origin, enabled: false, invalid: "", ignoredGnomeFlag: false,
+                scope: unreadableScope, binary: firstExecWord(unescape(masked.Exec)), installed: false, unit: unitName(id),
+                link, staleOverride: false, removable: true,
+            }
+        }
         const effective = parseEntry(own ?? base)
-        // A minimal override carries no Exec of its own: describe the file it masks.
-        const described = own !== undefined && base !== undefined && isMinimalOverride(own, overrideName(id, base)) ? parseEntry(base) : effective
+        // A minimal override carries no Exec of its own: describe the file it masks,
+        // even when a vendor rename left its Name behind (then it is stale).
+        const shaped = own !== undefined && base !== undefined && isMinimalShape(own)
+        const exact = shaped && isMinimalOverride(own, overrideName(id, base))
+        const described = shaped ? parseEntry(base) : effective
         const problem = entryProblem(own ?? base)
         // TryExec is looked up verbatim (after unescaping), never split like a command line.
         const tryBinary = described.TryExec ? unescape(described.TryExec) : ""
         const commandBinary = firstExecWord(unescape(described.Exec))
         const binary = tryBinary && !onPath(tryBinary) ? tryBinary : commandBinary || tryBinary
         return {
-            id, name: described.Name || id.replace(/\.desktop$/, ""),
-            origin: base === undefined ? "user" : own === undefined ? "system" : "override",
+            id, name: described.Name || id.replace(/\.desktop$/, ""), origin,
             enabled: !problem && !isTrue(effective.Hidden),
             invalid: problem,
             ignoredGnomeFlag: (effective["X-GNOME-Autostart-enabled"] || "").toLowerCase() === "false",
             scope: problem ? `Ignored by systemd: ${problem}` : scopeOf(described, desktops), binary,
             installed: Boolean(commandBinary) && (!tryBinary || onPath(tryBinary)) && onPath(commandBinary), unit: unitName(id),
+            link, staleOverride: shaped && !exact,
+            // A file the page wrote itself is toggled with the switch; any other user file can be removed.
+            removable: origin === "user" || (origin === "override" && !exact),
         }
     }).sort((a, b) => (b.enabled && !b.scope) - (a.enabled && !a.scope) || a.name.localeCompare(b.name))
+}
+// Why a desktop entry (fields as the generator would read them) would not start at login, or "".
+export function appScope(fields, desktops) { return scopeOf(Object.assign({ Type: "Application" }, fields), desktops) }
+
+// `show-environment` prints values that need it as $'...'. Undo the escapes the
+// PATH and XDG_CURRENT_DESKTOP lookups could meet.
+const shellEscapes = { n: "\n", t: "\t", r: "\r", a: "\x07", b: "\b", f: "\f", v: "\v", "\\": "\\", "'": "'", '"': '"' }
+function unquoteShell(value) {
+    if (value.length < 3 || !value.startsWith("$'") || !value.endsWith("'")) return value
+    const body = value.slice(2, -1)
+    let out = "", pending = ""
+    const flush = () => {
+        if (!pending) return
+        try { out += decodeURIComponent(pending) } catch (_) { out += pending.replace(/%([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))) }
+        pending = ""
+    }
+    for (let index = 0; index < body.length; ++index) {
+        const char = body[index]
+        if (char !== "\\" || index + 1 >= body.length) { flush(); out += char; continue }
+        const next = body[++index]
+        const hex = next === "x" ? /^[0-9A-Fa-f]{1,2}/.exec(body.slice(index + 1)) : null
+        if (hex) { pending += "%" + hex[0].padStart(2, "0"); index += hex[0].length; continue }
+        flush()
+        out += Object.prototype.hasOwnProperty.call(shellEscapes, next) ? shellEscapes[next] : next
+    }
+    flush()
+    return out
+}
+export function parseEnvironment(text) {
+    const values = {}
+    for (const line of text.split("\n")) {
+        const eq = line.indexOf("=")
+        if (eq > 0) values[line.slice(0, eq)] = unquoteShell(line.slice(eq + 1))
+    }
+    return values
 }
 
 function utf8Bytes(text) {
@@ -142,6 +198,8 @@ export function withStatus(entries, units) {
         else if (unit.active === "failed") status = { state: "failed", label: "Failed" }
         else if (unit.active === "active" || unit.active === "activating") status = { state: "running", label: "Running" }
         else status = { state: "finished", label: "Finished" }
+        // A stale override hides an entry nothing else describes: say where the file is.
+        if (entry.staleOverride) status.label = [status.label, `Hidden by ~/.config/autostart/${entry.id}`].filter(Boolean).join(" · ")
         return Object.assign({}, entry, { status })
     })
 }
@@ -149,14 +207,18 @@ export function withStatus(entries, units) {
 export const minimalOverride = name => `[Desktop Entry]\nType=Application\nName=${name.replace(/[\r\n]+/g, " ")}\nHidden=true\n`
 // The Name minimalOverride writes for an entry: the masked file's Name, else its id.
 export const overrideName = (id, systemText) => parseEntry(systemText).Name || id.replace(/\.desktop$/, "")
-// Exactly what minimalOverride(name) writes, in that order (comments and blank lines
-// aside). Anything else was written by hand and must never be deleted as "ours".
-export function isMinimalOverride(text, name) {
-    if (typeof name !== "string") throw new Error("isMinimalOverride needs the expected name")
+// The Name in a file shaped exactly like minimalOverride writes it (comments and blank
+// lines aside), or null for anything else; that was written by hand and must never be
+// deleted as "ours".
+function minimalNameOf(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"))
     return lines.length === 4 && lines[0] === "[Desktop Entry]" && lines[1] === "Type=Application"
-        && lines[2].startsWith("Name=") && lines[3] === "Hidden=true"
-        && lines[2] === "Name=" + name.replace(/[\r\n]+/g, " ")
+        && lines[2].startsWith("Name=") && lines[3] === "Hidden=true" ? lines[2] : null
+}
+export const isMinimalShape = text => minimalNameOf(text) !== null
+export function isMinimalOverride(text, name) {
+    if (typeof name !== "string") throw new Error("isMinimalOverride needs the expected name")
+    return minimalNameOf(text) === "Name=" + name.replace(/[\r\n]+/g, " ")
 }
 // Only [Desktop Entry]'s Hidden (and on enable the GNOME flag) changes; every other line is kept.
 export function setHidden(text, hidden) {
