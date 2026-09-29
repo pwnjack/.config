@@ -25,6 +25,7 @@ const files = new Map([
     ['/usr/share/Kvantum/KvArc/KvArc.kvconfig', ''],
     [base + '/Kvantum/kvantum.kvconfig', '[General]\ntheme=Carl\n'],
     [base + '/mimeapps.list', '[Default Applications]\ninode/directory=kitty-open.desktop\n'],
+    ['/etc/locale.conf', 'LANG=en_US.UTF-8\nLC_TIME=it_IT.UTF-8\nLC_NUMERIC=it_IT.UTF-8\nLC_COLLATE=C.UTF-8\n'],
 ])
 const dirs = new Map([
     ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
@@ -126,9 +127,20 @@ const nmMock = {
         return { missing }
     },
 }
+let dbusCalls = [], dbusDeny = false
+const dbusMock = {
+    getProperty: async (_name, _path, _iface, property) => ({NTP: true, NTPSynchronized: false}[property]),
+    callSystem: async (_name, _path, _iface, method, signature, args, options = {}) => {
+        if (method === 'ListTimezones') return [['Europe/Rome', 'America/New_York', 'America/Argentina/Buenos_Aires']]
+        dbusCalls.push([method, signature, args, options.interactive === true])
+        if (dbusDeny) throw new Error('Authentication was cancelled; nothing changed.')
+        return []
+    },
+}
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
+        file_read_link: path => path === '/etc/localtime' ? '/usr/share/zoneinfo/Europe/Rome' : null,
         getenv: name => mockEnv[name] ?? null,
         get_user_runtime_dir: () => '/run/user/1000',
         find_program_in_path: name => name === 'missing-app' ? null : name,
@@ -179,6 +191,7 @@ globalThis.settingsMocks = {
     },
     execAsync: async args => {
         events.push(args)
+        if (args[0] === 'localectl' && args[1] === 'list-locales') return 'C.UTF-8\nen_US.UTF-8\nit_IT.UTF-8\nde_DE.ISO-8859-1'
         if (args[0] === 'xdg-mime' && args[1] === 'query') return (mimeDefaults[args[3]] || '') + '\n'
         if (args[0] === 'xdg-mime' && args[1] === 'default') {
             if (args[3] === failMime) throw new Error('xdg-mime failed')
@@ -227,12 +240,14 @@ globalThis.settingsMocks = {
         return 'ok'
     },
     nm: nmMock,
+    dbus: dbusMock,
 }
 registerHooks({resolve(specifier,context,next) {
     const names = {'gi://GLib':'GLib','gi://Gio':'Gio','gi://GioUnix':'GioUnix'}
     if (names[specifier]) return {url:'data:text/javascript,'+encodeURIComponent(`export default globalThis.settingsMocks.${names[specifier]}`),shortCircuit:true}
     if (specifier === './process.js') return {url:'data:text/javascript,export const execAsync = globalThis.settingsMocks.execAsync',shortCircuit:true}
     if (specifier === './nm.js') return {url:'data:text/javascript,'+encodeURIComponent('const m = () => globalThis.settingsMocks.nm; export const nmSnapshot = (...a) => m().nmSnapshot(...a), setWifiEnabled = (...a) => m().setWifiEnabled(...a), requestScan = (...a) => m().requestScan(...a), activate = (...a) => m().activate(...a), addAndActivate = (...a) => m().addAndActivate(...a), deactivate = (...a) => m().deactivate(...a), removeConnections = (...a) => m().removeConnections(...a)'),shortCircuit:true}
+    if (specifier === './dbus.js') return {url:'data:text/javascript,'+encodeURIComponent('const m = () => globalThis.settingsMocks.dbus; export const callSystem = (...a) => m().callSystem(...a), getProperty = (...a) => m().getProperty(...a); export const CANCELLED = "Authentication was cancelled; nothing changed."'),shortCircuit:true}
     return next(specifier,context)
 }})
 const {dispatch} = await import('../backend.js')
@@ -880,3 +895,33 @@ nmCalls = []
 await dispatch({op:'vpn', uuid:'u-work', active:false})
 assert.deepEqual(nmCalls, [['deactivate','u-work']])
 console.log('ok: vpn activates and deactivates a normal, non-Proton connection')
+
+dbusCalls = []
+result = await dispatch({op:'read',ids:['region.timezone','region.ntp','region.language','region.formats']})
+assert.equal(result.values['region.timezone'].value, 'Europe/Rome')
+assert.deepEqual(result.values['region.timezone'].choices.map(c => c.value), ['America/Argentina/Buenos_Aires','America/New_York','Europe/Rome'])
+assert.equal(result.values['region.timezone'].choices[0].label, 'America / Argentina / Buenos Aires')
+assert.equal(result.values['region.ntp'].value, true)
+assert.equal(result.values['region.ntp'].note, 'Not synchronized yet')
+assert.equal(result.values['region.language'].value, 'en_US.UTF-8')
+assert.equal(result.values['region.formats'].value, 'it_IT.UTF-8')
+assert.deepEqual(result.values['region.formats'].choices.map(c => c.value), ['C.UTF-8','en_US.UTF-8','it_IT.UTF-8'])
+assert.equal(dbusCalls.length, 0)
+console.log('ok: region reads come from files and D-Bus properties, without writes')
+
+await dispatch({op:'set',id:'region.timezone',value:'America/New_York'})
+await dispatch({op:'set',id:'region.ntp',value:false})
+await dispatch({op:'set',id:'region.formats',value:'en_US.UTF-8'})
+await dispatch({op:'set',id:'region.language',value:'it_IT.UTF-8'})
+assert.deepEqual(dbusCalls, [
+    ['SetTimezone','(sb)',['America/New_York',true],true],
+    ['SetNTP','(bb)',[false,true],true],
+    ['SetLocale','(asb)',[['LANG=en_US.UTF-8','LC_TIME=en_US.UTF-8','LC_NUMERIC=en_US.UTF-8','LC_COLLATE=C.UTF-8','LC_MONETARY=en_US.UTF-8','LC_PAPER=en_US.UTF-8','LC_NAME=en_US.UTF-8','LC_ADDRESS=en_US.UTF-8','LC_TELEPHONE=en_US.UTF-8','LC_MEASUREMENT=en_US.UTF-8','LC_IDENTIFICATION=en_US.UTF-8'],true],true],
+    ['SetLocale','(asb)',[['LANG=it_IT.UTF-8','LC_TIME=it_IT.UTF-8','LC_NUMERIC=it_IT.UTF-8','LC_COLLATE=C.UTF-8'],true],true],
+])
+await assert.rejects(dispatch({op:'set',id:'region.timezone',value:'Mars/Olympus'}), /Unknown choice/)
+await assert.rejects(dispatch({op:'set',id:'region.formats',value:'de_DE.ISO-8859-1'}), /Unknown choice/)
+dbusDeny = true
+await assert.rejects(dispatch({op:'set',id:'region.ntp',value:true}), {message: 'Authentication was cancelled; nothing changed.'})
+dbusDeny = false
+console.log('ok: region writes are interactive, merge locale keys, and report a cancelled prompt')

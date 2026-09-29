@@ -8,6 +8,7 @@ Item {
         id: controller
         property bool closed: false
         property bool busy: false
+        property bool authPending: false
         property bool loading: false
         property bool loaded: true
         property string problem: ""
@@ -34,11 +35,13 @@ Item {
             {id:"nickname",category:"appearance",title:"Nickname",description:"Optional label",kind:"text",optional:true},
             {id:"theme",category:"appearance",title:"Theme",description:"GTK",kind:"select",choices:"gtk-themes"},
             {id:"focus",category:"input",title:"Focus",description:"Pointer focus",kind:"select",items:[{label:"Off",value:"0"},{label:"On",value:"1"}]},
+            {id:"zone",category:"input",title:"Zone",description:"Time zone",kind:"select",choices:"timezones",auth:true},
+            {id:"ntp",category:"input",title:"NTP",description:"Sync",kind:"toggle",auth:true},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
             {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
             {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -54,10 +57,11 @@ Item {
         function init() {
             controller.closed = false; controller.query = ""; controller.category = "appearance";
             controller.calls = []; controller.busy = false; controller.interacting = "";
+            controller.authPending = false;
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
             controller.network = null;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -170,6 +174,37 @@ Item {
             tryCompare(combo.popup,"visible",false);
             compare(controller.calls.length,1);
             compare(controller.calls[0].value,"0");
+        }
+        function test_note_replaces_description() {
+            controller.category = "input"; waitForRendering(view);
+            const note = findChild(view, "note-ntp");
+            verify(note);
+            compare(note.text, "Synchronized with a time server");
+        }
+        function test_long_select_filters() {
+            controller.category = "input"; waitForRendering(view);
+            const combo = findChild(view, "select-zone");
+            mouseClick(combo); waitForRendering(view);
+            const filter = findChild(combo.popup.contentItem, "filter-zone");
+            verify(filter && filter.visible);
+            for (const c of "rome") keyClick(c);
+            compare(combo.shown.length, 1);
+            compare(combo.shown[0].value, "Europe/Rome");
+            keyClick(Qt.Key_Down); keyClick(Qt.Key_Return);
+            compare(controller.calls[controller.calls.length - 1], {id: "zone", value: "Europe/Rome"});
+        }
+        function test_short_select_has_no_filter() {
+            controller.category = "input"; waitForRendering(view);
+            const combo = findChild(view, "select-focus");
+            mouseClick(combo); waitForRendering(view);
+            const filter = findChild(combo.popup.contentItem, "filter-focus");
+            verify(!filter || !filter.visible);
+            keyClick(Qt.Key_Escape);
+        }
+        function test_auth_banner_and_disabled_controls() {
+            controller.category = "input"; controller.authPending = true; controller.busy = true; waitForRendering(view);
+            verify(findChild(view, "authPending").visible);
+            verify(!findChild(view, "toggle-ntp").enabled);
         }
         function test_dynamic_choices() {
             const combo = findChild(view,"select-theme");

@@ -33,7 +33,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 4
                 Label { text: control.row.title; color: control.theme.foreground; font.pixelSize: 14; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                Label { text: control.settingState.error || control.row.description; color: control.theme.foreground; opacity: 0.75; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                Label { objectName: control.settingState.note ? "note-" + control.row.id : ""; text: control.settingState.error || control.settingState.note || control.row.description; color: control.theme.foreground; opacity: 0.75; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
             }
             PanelButton {
                 theme: control.theme

@@ -11,6 +11,9 @@ ShellRoot {
     property bool opened: true
     property bool closing: false
     property bool busy: false
+    property bool authPending: false
+    // Task 1: whether hyprpolkitagent's dialog can be seen and used over this Overlay surface.
+    readonly property bool authHidesPanel: true
     property bool loading: true
     property bool loaded: false
     property string problem: ""
@@ -134,7 +137,10 @@ ShellRoot {
         liveReader.running = true;
     }
     function select(id) { query = ""; category = id; }
-    function change(id, value) { submit({op: "set", id: id, value: value}); }
+    function change(id, value) {
+        if (catalog.rows.find(row => row.id === id)?.auth) authPending = true;
+        submit({op: "set", id: id, value: value});
+    }
     function reset(id) { submit({op: "reset", id: id}); }
     function action(id) { submit({op: "action", id: id}); }
     function keepDisplay() { submit({op: "displayKeep"}); }
@@ -241,6 +247,7 @@ ShellRoot {
         stdout: StdioCollector { onStreamFinished: root.writeReply = text }
         stderr: StdioCollector { onStreamFinished: root.writeError = text }
         onExited: code => {
+            root.authPending = false;
             root.writeRequest = "";
             try {
                 const result = JSON.parse(root.writeReply);
@@ -318,14 +325,14 @@ ShellRoot {
     }
     PanelWindow {
         id: overlay
-        visible: root.opened
+        visible: root.opened && !(root.authPending && root.authHidesPanel)
         color: "transparent"
         screen: Quickshell.screens.find(s => s.name === Hyprland.focusedMonitor?.name) || Quickshell.screens[0]
         anchors { top: true; bottom: true; left: true; right: true }
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "settings-panel"
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: root.opened && !root.authPending ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         SettingsView {
             anchors.fill: parent
             controller: root

@@ -51,6 +51,11 @@
       "description": "Idle timeouts, display power and night light"
     },
     {
+      "id": "region",
+      "title": "Date & Region",
+      "description": "Time zone, clock and regional formats. System-wide changes ask for your password."
+    },
+    {
       "id": "startup",
       "title": "Startup",
       "description": "What happens when Hyprland starts"
@@ -1112,6 +1117,53 @@
         "schedule",
         "nightlight"
       ]
+    },
+    {
+      "category": "region",
+      "id": "region.timezone",
+      "title": "Time Zone",
+      "description": "Used by the clock, calendars and logs",
+      "keywords": ["timezone", "time", "zone", "tz"],
+      "source": "region",
+      "key": "timezone",
+      "kind": "select",
+      "choices": "timezones",
+      "auth": true
+    },
+    {
+      "category": "region",
+      "id": "region.ntp",
+      "title": "Set Time Automatically",
+      "description": "Keep the clock in sync with internet time servers",
+      "keywords": ["ntp", "sync", "time"],
+      "source": "region",
+      "key": "ntp",
+      "kind": "toggle",
+      "auth": true
+    },
+    {
+      "category": "region",
+      "id": "region.language",
+      "title": "Language",
+      "description": "System language (LANG). Applies to programs started after your next login.",
+      "keywords": ["locale", "lang"],
+      "source": "region",
+      "key": "language",
+      "kind": "select",
+      "choices": "locales",
+      "auth": true
+    },
+    {
+      "category": "region",
+      "id": "region.formats",
+      "title": "Formats",
+      "description": "Dates, numbers, currency, paper and units. Applies to programs started after your next login.",
+      "keywords": ["locale", "date", "number", "currency", "units", "metric"],
+      "source": "region",
+      "key": "formats",
+      "kind": "select",
+      "choices": "locales",
+      "auth": true
     },
     {
       "category": "startup",

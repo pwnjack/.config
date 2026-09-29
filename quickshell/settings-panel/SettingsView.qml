@@ -123,6 +123,14 @@ FocusScope {
                     Label { id: errorLabel; anchors.fill: parent; anchors.margins: 12; text: view.controller.problem; color: view.foreground; wrapMode: Text.Wrap; Accessible.role: Accessible.AlertMessage }
                 }
                 Rectangle {
+                    objectName: "authPending"
+                    visible: !!view.controller.authPending
+                    Layout.fillWidth: true
+                    implicitHeight: authLabel.implicitHeight + 24
+                    radius: 10; color: view.plate; border.color: view.accent; border.width: 2
+                    Label { id: authLabel; anchors.fill: parent; anchors.margins: 12; text: "Waiting for authentication…"; color: view.foreground; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
+                }
+                Rectangle {
                     id: pendingBanner
                     objectName: "displayPending"
                     visible: !!view.controller.pendingDisplay

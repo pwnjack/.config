@@ -8,6 +8,7 @@ import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 import * as displays from "./displays.mjs"
 import { nmSnapshot, setWifiEnabled, requestScan, activate, addAndActivate, deactivate, removeConnections } from "./nm.js"
 import * as network from "./network.mjs"
+import { regionState, regionValue, regionEnumerators, setRegion } from "./region.js"
 
 const configDir = GLib.get_home_dir() + "/.config"
 const catalog = JSON.parse(read(configDir + "/quickshell/settings-panel/catalog.json"))
@@ -83,6 +84,7 @@ const enumerators = {
         .map(line => line.match(/^\*?\s*([\w-]+):$/)).filter(Boolean)
         .map(([, name]) => ({ label: name.replace(/(^|-)(\w)/g, (_, dash, c) => (dash ? " " : "") + c.toUpperCase()), value: name })),
     ...pulseEnumerators,
+    ...regionEnumerators,
 }
 async function choicesFor(row, current, once = onceCache()) {
     if (row.items) return row.items
@@ -265,7 +267,7 @@ async function snapshot(ids, includeMonitors, views = {}) {
         const row = byId.get(id)
         if (!row) throw new Error("Unknown setting")
         try {
-            let value, reset = false
+            let value, reset = false, note
             switch (row.source) {
             case "keyword": {
                 const data = JSON.parse(await execAsync(["hyprctl", "getoption", row.key, "-j"]))
@@ -296,9 +298,11 @@ async function snapshot(ids, includeMonitors, views = {}) {
             case "mime": value = await mimeDefault(row.mimes[0]); break
             case "pulse": value = pulseValue(row.key, await once("pulse", pulseState)); break
             case "network": value = networkValue(row.key, await once("nm", nmSnapshot)); break
+            case "region": ({ value, note } = regionValue(row.key, await once("region", () => regionState(read)))); break
             }
             if (row.default !== undefined) reset = value !== row.default
-            values[id] = row.choices ? { value, reset, choices: await choicesFor(row, value, once) } : { value, reset }
+            const extra = note ? { note } : {}
+            values[id] = row.choices ? { value, reset, ...extra, choices: await choicesFor(row, value, once) } : { value, reset, ...extra }
         } catch (error) { values[id] = { error: error.message } }
     }))
     const result = { values }
@@ -448,6 +452,7 @@ async function change(request) {
     case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
     case "pulse": return setPulse(row.key, value, await once("pulse", pulseState))
     case "network": requiredSnapshot(); return setWifiEnabled(value)
+    case "region": return setRegion(row.key, value, await once("region", () => regionState(read)))
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])
