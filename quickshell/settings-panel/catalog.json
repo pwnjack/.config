@@ -1150,7 +1150,7 @@
       "source": "option",
       "key": "clock",
       "kind": "select",
-      "items": [{ "label": "24-hour (20:30)", "value": "24h" }, { "label": "12-hour (8:30 PM)", "value": "12h" }]
+      "items": [{ "label": "24-hour (20:30)", "value": "24h" }, { "label": "12-hour (08:30 PM)", "value": "12h" }]
     },
     {
       "category": "region",
