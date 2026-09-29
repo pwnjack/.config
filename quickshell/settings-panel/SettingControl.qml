@@ -39,7 +39,7 @@ Rectangle {
                 theme: control.theme
                 visible: !!control.settingState.reset
                 text: "Reset"
-                enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
+                enabled: control.ready && !control.controller.busy && !control.controller.authPending && !control.controller.pendingDisplay
                 Accessible.name: "Reset " + control.row.title
                 onClicked: control.controller.reset(control.row.id)
             }
@@ -47,7 +47,7 @@ Rectangle {
                 id: toggle
                 objectName: "toggle-" + control.row.id
                 visible: control.row.kind === "toggle"
-                enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
+                enabled: control.ready && !control.controller.busy && !control.controller.authPending && !control.controller.pendingDisplay
                 checked: control.settingState.value === true
                 Accessible.name: control.row.title
                 onToggled: control.controller.change(control.row.id, checked)
@@ -64,7 +64,7 @@ Rectangle {
         Loader {
             Layout.fillWidth: true
             active: control.row.kind !== "toggle"
-            enabled: control.ready && !control.controller.busy && !control.controller.pendingDisplay
+            enabled: control.ready && !control.controller.busy && !control.controller.authPending && !control.controller.pendingDisplay
             sourceComponent: control.row.kind === "slider" ? sliderComponent : control.row.kind === "select" ? selectComponent : textComponent
         }
     }
@@ -106,6 +106,7 @@ Rectangle {
             key: control.row.id
             choices: control.row.items || control.settingState.choices || []
             value: control.settingState.value
+            commitOnArrows: !control.row.auth
             Accessible.name: control.row.title
             onPicked: value => control.controller.change(control.row.id, value)
             onOpenChanged: control.controller.interacting = open ? control.row.id : ""

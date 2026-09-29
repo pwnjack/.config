@@ -8,7 +8,7 @@ import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 import * as displays from "./displays.mjs"
 import { nmSnapshot, setWifiEnabled, requestScan, activate, addAndActivate, deactivate, removeConnections } from "./nm.js"
 import * as network from "./network.mjs"
-import { regionState, regionValue, regionEnumerators, setRegion } from "./region.js"
+import { regionValue, regionEnumerators, setRegion } from "./region.js"
 
 const configDir = GLib.get_home_dir() + "/.config"
 const catalog = JSON.parse(read(configDir + "/quickshell/settings-panel/catalog.json"))
@@ -298,7 +298,7 @@ async function snapshot(ids, includeMonitors, views = {}) {
             case "mime": value = await mimeDefault(row.mimes[0]); break
             case "pulse": value = pulseValue(row.key, await once("pulse", pulseState)); break
             case "network": value = networkValue(row.key, await once("nm", nmSnapshot)); break
-            case "region": ({ value, note } = regionValue(row.key, await once("region", () => regionState(read)))); break
+            case "region": ({ value, note } = await regionValue(row.key, read, exists)); break
             }
             if (row.default !== undefined) reset = value !== row.default
             const extra = note ? { note } : {}
@@ -452,7 +452,7 @@ async function change(request) {
     case "powerprofile": return execAsync(["powerprofilesctl", "set", value])
     case "pulse": return setPulse(row.key, value, await once("pulse", pulseState))
     case "network": requiredSnapshot(); return setWifiEnabled(value)
-    case "region": return setRegion(row.key, value, await once("region", () => regionState(read)))
+    case "region": return setRegion(row.key, value)
     case "mime": {
         const app = GioUnix.DesktopAppInfo.new(value)
         const declared = new Set(app?.get_supported_types() || [])

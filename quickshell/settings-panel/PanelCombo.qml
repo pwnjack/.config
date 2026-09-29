@@ -11,6 +11,7 @@ ComboBox {
     property var choices: []
     property var value
     property string key: ""
+    property bool commitOnArrows: true
     readonly property bool open: popup.visible
     signal picked(var value)
     objectName: "select-" + key
@@ -20,13 +21,21 @@ ComboBox {
     readonly property bool filterable: combo.choices.length > 20
     readonly property var shown: {
         const words = combo.filter.toLocaleLowerCase().trim();
-        return words ? combo.choices.filter(item => String(item.label).toLocaleLowerCase().includes(words)) : combo.choices;
+        return words ? combo.choices.filter(item => String(item.label).toLocaleLowerCase().includes(words) || String(item.value).toLocaleLowerCase().includes(words)) : combo.choices;
     }
     model: combo.shown
     textRole: "label"
     currentIndex: combo.shown.findIndex(item => String(item.value) === String(combo.value))
     displayText: currentIndex < 0 ? (combo.choices.find(item => String(item.value) === String(combo.value))?.label ?? String(combo.value ?? "")) : currentText
     onActivated: index => { combo.picked(combo.shown[index].value); combo.filter = ""; }
+    Keys.onUpPressed: event => {
+        if (!combo.open && !combo.commitOnArrows) { combo.popup.open(); event.accepted = true; }
+        else event.accepted = false;
+    }
+    Keys.onDownPressed: event => {
+        if (!combo.open && !combo.commitOnArrows) { combo.popup.open(); event.accepted = true; }
+        else event.accepted = false;
+    }
     palette.button: combo.theme.background
     palette.buttonText: combo.theme.foreground
     palette.base: combo.theme.background
@@ -55,7 +64,9 @@ ComboBox {
         required property var modelData
         width: combo.width - 8
         height: 40
+        hoverEnabled: true
         highlighted: combo.filterable ? combo.filterIndex === index : combo.highlightedIndex === index
+        onHoveredChanged: { if (hovered && combo.filterable) combo.filterIndex = index; }
         contentItem: Text {
             text: choice.modelData.label
             color: choice.highlighted ? combo.theme.accentText : combo.theme.foreground
@@ -75,6 +86,7 @@ ComboBox {
         padding: 4
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
         onOpened: { combo.filter = ""; combo.filterIndex = -1; if (combo.filterable) filterField.forceActiveFocus(); }
+        onClosed: { combo.filter = ""; combo.filterIndex = -1; }
         background: Rectangle {
             radius: 10
             color: combo.theme.plate
@@ -89,11 +101,12 @@ ComboBox {
                 Layout.fillWidth: true
                 placeholderText: "Type to filter"
                 text: combo.filter
-                onTextEdited: { combo.filter = text; combo.filterIndex = -1; }
+                onTextEdited: { combo.filter = text; combo.filterIndex = combo.shown.length && combo.filter ? 0 : -1; }
                 color: combo.theme.foreground
                 Keys.onDownPressed: combo.filterIndex = Math.min(combo.filterIndex + 1, combo.shown.length - 1)
                 Keys.onUpPressed: combo.filterIndex = Math.max(combo.filterIndex - 1, 0)
                 Keys.onReturnPressed: { if (combo.filterIndex >= 0) { combo.activated(combo.filterIndex); combo.popup.close(); } }
+                Keys.onEnterPressed: { if (combo.filterIndex >= 0) { combo.activated(combo.filterIndex); combo.popup.close(); } }
                 Keys.onEscapePressed: combo.popup.close()
             }
             ListView {

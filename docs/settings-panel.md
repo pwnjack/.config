@@ -226,6 +226,15 @@ notifications caused no live read; each default-device change caused one.
 Follow-up: the nine File Types rows fork `xdg-mime` on every full read and are
 most of the open cost.
 
+Task 6's full read on September 29, 2026 measured **302 ms cold** after 40
+seconds idle. Five immediate warm runs were 291, 298, 296, 300 and 291 ms,
+for a **296 ms median**. Each run used:
+
+```bash
+req=$(jq -c '{op:"read",ids:[.rows[].id],monitors:true}' quickshell/settings-panel/catalog.json)
+bash scripts/settings/panel-request.sh "$req"
+```
+
 The timestamp starts after the launcher's lock, IPC probe and palette load, so
 these are not full keypress-to-display measurements. A frame swap is a render
 milestone, not a physical screen latency measurement. PSS apportions shared

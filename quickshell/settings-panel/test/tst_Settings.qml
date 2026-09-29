@@ -41,7 +41,7 @@ Item {
             {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
             {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -61,7 +61,7 @@ Item {
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
             controller.network = null;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -187,11 +187,13 @@ Item {
             mouseClick(combo); waitForRendering(view);
             const filter = findChild(combo.popup.contentItem, "filter-zone");
             verify(filter && filter.visible);
-            for (const c of "rome") keyClick(c);
+            for (const c of "new_york") keyClick(c);
             compare(combo.shown.length, 1);
-            compare(combo.shown[0].value, "Europe/Rome");
-            keyClick(Qt.Key_Down); keyClick(Qt.Key_Return);
-            compare(controller.calls[controller.calls.length - 1], {id: "zone", value: "Europe/Rome"});
+            compare(combo.shown[0].value, "America/New_York");
+            compare(combo.filterIndex, 0);
+            keyClick(Qt.Key_Enter);
+            compare(controller.calls[controller.calls.length - 1], {id: "zone", value: "America/New_York"});
+            compare(combo.filter, "");
         }
         function test_short_select_has_no_filter() {
             controller.category = "input"; waitForRendering(view);
@@ -202,9 +204,23 @@ Item {
             keyClick(Qt.Key_Escape);
         }
         function test_auth_banner_and_disabled_controls() {
-            controller.category = "input"; controller.authPending = true; controller.busy = true; waitForRendering(view);
+            controller.category = "input"; controller.authPending = true; waitForRendering(view);
             verify(findChild(view, "authPending").visible);
             verify(!findChild(view, "toggle-ntp").enabled);
+        }
+        function test_auth_combo_arrows_open_without_committing() {
+            controller.category = "input"; waitForRendering(view);
+            const combo = findChild(view, "select-zone");
+            combo.forceActiveFocus();
+            keyClick(Qt.Key_Up);
+            tryCompare(combo.popup, "visible", true);
+            compare(controller.calls.length, 0);
+            keyClick(Qt.Key_Escape);
+            tryCompare(combo.popup, "visible", false);
+            keyClick(Qt.Key_Down);
+            tryCompare(combo.popup, "visible", true);
+            compare(controller.calls.length, 0);
+            keyClick(Qt.Key_Escape);
         }
         function test_dynamic_choices() {
             const combo = findChild(view,"select-theme");

@@ -138,8 +138,7 @@ ShellRoot {
     }
     function select(id) { query = ""; category = id; }
     function change(id, value) {
-        if (catalog.rows.find(row => row.id === id)?.auth) authPending = true;
-        submit({op: "set", id: id, value: value});
+        submit({op: "set", id: id, value: value}, catalog.rows.find(row => row.id === id)?.auth === true);
     }
     function reset(id) { submit({op: "reset", id: id}); }
     function action(id) { submit({op: "action", id: id}); }
@@ -149,10 +148,10 @@ ShellRoot {
         pendingDisplay = null;
         submit({op: "displayRevert"});
     }
-    function submit(request) {
+    function submit(request, auth) {
         if (closing) return;
         problem = "";
-        queue = queue.concat([request]);
+        queue = queue.concat([{request: request, auth: auth === true}]);
         busy = true;
         drain();
     }
@@ -165,8 +164,10 @@ ShellRoot {
             return;
         }
         busy = true;
-        const request = queue[0];
+        const queued = queue[0];
+        const request = queued.request;
         queue = queue.slice(1);
+        authPending = queued.auth;
         writeReply = "";
         writeError = "";
         writeRequest = JSON.stringify(request);
@@ -255,7 +256,7 @@ ShellRoot {
                 if (result.pending !== undefined) root.pendingDisplay = result.pending;
                 // Closed while this Apply was in flight: close() saw no pending change
                 // yet, and submit() ignores requests once closing, so queue it directly.
-                if (root.closing && result.pending) { root.pendingDisplay = null; root.queue = root.queue.concat([{op: "displayRevert"}]); }
+                if (root.closing && result.pending) { root.pendingDisplay = null; root.queue = root.queue.concat([{request: {op: "displayRevert"}, auth: false}]); }
             } catch (error) {
                 root.problem = String(error);
                 if (!root.writeReply.trim()) root.problem = root.writeError.trim() || "The settings helper stopped before confirming the change.";

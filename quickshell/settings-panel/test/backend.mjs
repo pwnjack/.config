@@ -51,7 +51,7 @@ const supportedTypes = {
 const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
-let events = [], failingPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
+let events = [], failingPath = '', failingReadPath = '', failReload = false, failingGsettingsSets = 0, failNextSpawn = ''
 // Shapes copied from `hyprctl getoption -j` on Hyprland 0.56: the value field
 // is named after its type, and `set` is only whether the config assigns it.
 const hyprOptions = {
@@ -128,8 +128,11 @@ const nmMock = {
     },
 }
 let dbusCalls = [], dbusDeny = false
+let dbusLocale = ['LANG=en_US.UTF-8','LC_TIME=it_IT.UTF-8','LC_NUMERIC=it_IT.UTF-8','LC_COLLATE=C.UTF-8']
+let localtimeLink = '/usr/share/zoneinfo/Europe/Rome'
+let localtimeMissing = false
 const dbusMock = {
-    getProperty: async (_name, _path, _iface, property) => ({NTP: true, NTPSynchronized: false}[property]),
+    getProperty: async (_name, _path, _iface, property) => property === 'Locale' ? dbusLocale.slice() : ({NTP: true, NTPSynchronized: false}[property]),
     callSystem: async (_name, _path, _iface, method, signature, args, options = {}) => {
         if (method === 'ListTimezones') return [['Europe/Rome', 'America/New_York', 'America/Argentina/Buenos_Aires']]
         dbusCalls.push([method, signature, args, options.interactive === true])
@@ -140,7 +143,11 @@ const dbusMock = {
 globalThis.settingsMocks = {
     GLib: {
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
-        file_read_link: path => path === '/etc/localtime' ? '/usr/share/zoneinfo/Europe/Rome' : null,
+        file_read_link: path => {
+            if (path !== '/etc/localtime') return null
+            if (localtimeMissing) throw new Error('No such file: '+path)
+            return localtimeLink
+        },
         getenv: name => mockEnv[name] ?? null,
         get_user_runtime_dir: () => '/run/user/1000',
         find_program_in_path: name => name === 'missing-app' ? null : name,
@@ -165,6 +172,7 @@ globalThis.settingsMocks = {
                 return { next_file: () => names.length ? {get_name: (n => () => n)(names.shift())} : null, close: () => {} }
             },
             load_contents: () => {
+                if (path === failingReadPath) throw new Error('Permission denied: '+path)
                 if (!files.has(path)) throw new Error('Missing fixture: '+path)
                 return [true,encoder.encode(files.get(path))]
             },
@@ -252,6 +260,31 @@ registerHooks({resolve(specifier,context,next) {
 }})
 const {dispatch} = await import('../backend.js')
 const displays = await import('../displays.mjs')
+const {parseLocaleConf} = await import('../region.js')
+const {authErrorMessage, interactiveErrorMessage, CANCELLED, NO_AGENT, TIMED_OUT} = await import('../authError.mjs')
+
+assert.deepEqual(parseLocaleConf(`
+# generated locale
+export LANG="en_US.UTF-8"
+LC_TIME='it_IT.UTF-8'
+LC_NUMERIC="de_DE.UT\\F-8"
+LC_MONETARY=fr_FR.UTF-8 # local convention
+BROKEN="unterminated
+`), {
+    LANG: 'en_US.UTF-8',
+    LC_TIME: 'it_IT.UTF-8',
+    LC_NUMERIC: 'de_DE.UTF-8',
+    LC_MONETARY: 'fr_FR.UTF-8',
+})
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.PolicyKit1.Error.NotAuthorized: no'), CANCELLED)
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.PolicyKit1.Error.Cancelled: dismissed'), CANCELLED)
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.DBus.Error.AccessDenied: denied'), CANCELLED)
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.DBus.Error.InteractiveAuthorizationRequired: no agent'), NO_AGENT)
+assert.equal(authErrorMessage('GDBus.Error:org.example.Error.AccessDenied: original'), null)
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.DBus.Error.AccessDeniedExtra: original'), null)
+assert.equal(authErrorMessage('GDBus.Error:org.freedesktop.PolicyKit1.Error.Failed: original'), null)
+assert.equal(interactiveErrorMessage('any message', true), TIMED_OUT)
+console.log('ok: locale.conf syntax and interactive authentication errors are classified precisely')
 let result = await dispatch({op:'read',ids:['appearance.blur','power.lock','power.nightlight-temp','notif.timeout','apps.browser'],monitors:true})
 assert.equal(result.values['appearance.blur'].value,true)
 assert.equal(result.values['power.nightlight-temp'].value,4000)
@@ -909,6 +942,26 @@ assert.deepEqual(result.values['region.formats'].choices.map(c => c.value), ['C.
 assert.equal(dbusCalls.length, 0)
 console.log('ok: region reads come from files and D-Bus properties, without writes')
 
+files.delete('/etc/locale.conf')
+result = await dispatch({op:'read',ids:['region.timezone','region.ntp','region.language','region.formats']})
+assert.equal(result.values['region.timezone'].value, 'Europe/Rome')
+assert.equal(result.values['region.ntp'].value, true)
+assert.equal(result.values['region.language'].value, 'C.UTF-8')
+assert.equal(result.values['region.formats'].value, 'C.UTF-8')
+files.set('/etc/locale.conf', 'LANG=en_US.UTF-8\nLC_TIME=it_IT.UTF-8\nLC_NUMERIC=it_IT.UTF-8\nLC_COLLATE=C.UTF-8\n')
+localtimeMissing = true
+result = await dispatch({op:'read',ids:['region.timezone']})
+assert.equal(result.values['region.timezone'].value, 'UTC')
+localtimeMissing = false
+localtimeLink = null
+result = await dispatch({op:'read',ids:['region.timezone']})
+assert.equal(result.values['region.timezone'].value, 'UTC')
+localtimeLink = '/usr/share/zoneinfo/posix/Europe/Rome'
+result = await dispatch({op:'read',ids:['region.timezone']})
+assert.equal(result.values['region.timezone'].value, 'Europe/Rome')
+localtimeLink = '/usr/share/zoneinfo/Europe/Rome'
+console.log('ok: missing region files fall back per field and zoneinfo prefixes are normalized')
+
 await dispatch({op:'set',id:'region.timezone',value:'America/New_York'})
 await dispatch({op:'set',id:'region.ntp',value:false})
 await dispatch({op:'set',id:'region.formats',value:'en_US.UTF-8'})
@@ -919,6 +972,22 @@ assert.deepEqual(dbusCalls, [
     ['SetLocale','(asb)',[['LANG=en_US.UTF-8','LC_TIME=en_US.UTF-8','LC_NUMERIC=en_US.UTF-8','LC_COLLATE=C.UTF-8','LC_MONETARY=en_US.UTF-8','LC_PAPER=en_US.UTF-8','LC_NAME=en_US.UTF-8','LC_ADDRESS=en_US.UTF-8','LC_TELEPHONE=en_US.UTF-8','LC_MEASUREMENT=en_US.UTF-8','LC_IDENTIFICATION=en_US.UTF-8'],true],true],
     ['SetLocale','(asb)',[['LANG=it_IT.UTF-8','LC_TIME=it_IT.UTF-8','LC_NUMERIC=it_IT.UTF-8','LC_COLLATE=C.UTF-8'],true],true],
 ])
+
+dbusCalls = []
+files.set('/etc/locale.conf', 'LANG=from_FILE.UTF-8\nLC_TIME=from_FILE.UTF-8\n')
+dbusLocale = ['LC_TIME=fr_FR.UTF-8','LANG=de_DE.UTF-8','LC_COLLATE=C.UTF-8']
+await dispatch({op:'set',id:'region.formats',value:'it_IT.UTF-8'})
+assert.deepEqual(dbusCalls, [[
+    'SetLocale','(asb)',[['LC_TIME=it_IT.UTF-8','LANG=de_DE.UTF-8','LC_COLLATE=C.UTF-8','LC_NUMERIC=it_IT.UTF-8','LC_MONETARY=it_IT.UTF-8','LC_PAPER=it_IT.UTF-8','LC_NAME=it_IT.UTF-8','LC_ADDRESS=it_IT.UTF-8','LC_TELEPHONE=it_IT.UTF-8','LC_MEASUREMENT=it_IT.UTF-8','LC_IDENTIFICATION=it_IT.UTF-8'],true],true,
+]])
+failingReadPath = '/etc/locale.conf'
+dbusCalls = []
+await dispatch({op:'set',id:'region.timezone',value:'America/New_York'})
+await dispatch({op:'set',id:'region.ntp',value:false})
+assert.deepEqual(dbusCalls.map(call => call[0]), ['SetTimezone','SetNTP'])
+failingReadPath = ''
+files.set('/etc/locale.conf', 'LANG=en_US.UTF-8\nLC_TIME=it_IT.UTF-8\nLC_NUMERIC=it_IT.UTF-8\nLC_COLLATE=C.UTF-8\n')
+dbusLocale = ['LANG=en_US.UTF-8','LC_TIME=it_IT.UTF-8','LC_NUMERIC=it_IT.UTF-8','LC_COLLATE=C.UTF-8']
 await assert.rejects(dispatch({op:'set',id:'region.timezone',value:'Mars/Olympus'}), /Unknown choice/)
 await assert.rejects(dispatch({op:'set',id:'region.formats',value:'de_DE.ISO-8859-1'}), /Unknown choice/)
 dbusDeny = true
