@@ -7,7 +7,7 @@
 # One row per physical device, from two sources:
 #   power_supply  SCOPE=Device nodes: a battery the kernel can read. CAPACITY
 #                 is a percentage; xone reports only CAPACITY_LEVEL.
-#   USB input     an input device whose USB device holds no such battery:
+#   USB/BT input  an input device whose physical device holds no such battery:
 #                 a receiver whose peripheral reports nothing (the CX dongle
 #                 of an Epomaker keyboard). SCOPE=System batteries are the
 #                 machine's own and stay with battery.sh.
@@ -23,7 +23,7 @@
 #
 # DEVICES_SYSFS, DEVICES_SUPPLY and DEVICES_UDEV move the roots for tests.
 
-SYSFS="${DEVICES_SYSFS:-/sys}"
+SYSFS=$(readlink -f "${DEVICES_SYSFS:-/sys}") || exit 1
 SUPPLY="${DEVICES_SUPPLY:-$SYSFS/class/power_supply}"
 UDEV="${DEVICES_UDEV:-/run/udev/data}"
 LOW=25
@@ -53,10 +53,11 @@ kind_of() {
     else echo other; fi
 }
 
-# usb_of <path> — the nearest ancestor that is a USB device, or nothing.
+# usb_of <path> — one Bluetooth connection, otherwise the nearest USB device.
 usb_of() {
     local dir=$1
     while [[ $dir == "$SYSFS"/devices/* ]]; do
+        [[ ${dir##*/} =~ ^hci[0-9]+:[0-9]+$ ]] && { printf '%s' "$dir"; return; }
         [ -f "$dir/idVendor" ] && { printf '%s' "$dir"; return; }
         dir=${dir%/*}
     done
@@ -103,14 +104,23 @@ for i in "${!in_path[@]}"; do
     seen[$usb]=1
     kind=$(kind_of "$usb")
     [ "$kind" = other ] && continue
-    name=$(head -n1 "$usb/product" 2>/dev/null)
+    name=""
+    if [ -r "$usb/product" ]; then
+        name=$(head -n1 "$usb/product")
+    else
+        for j in "${!in_path[@]}"; do
+            [[ ${in_path[j]} == "$usb"/* ]] || continue
+            name=$(head -n1 "${in_path[j]}/name" 2>/dev/null)
+            break
+        done
+    fi
     name=${name//$'\n'/ }
     rows+="${usb##*/}"$'\t'"${name//$'\t'/ }"$'\t'"$kind"$'\t\t\tfalse\treceiver\n'
 done
 
 printf '%s' "$rows" | jq -R -n --argjson low "$LOW" --argjson critical "$CRITICAL" '
     [inputs | split("\t") | {
-        id: .[0], name: (if .[1] == "" then .[0] else .[1] end), kind: .[2],
+        id: (.[0] | gsub("[^A-Za-z0-9._-]"; "_")), name: (if .[1] == "" then .[0] else .[1] end), kind: .[2],
         percent: (if .[3] == "" then null else (.[3] | tonumber) end),
         level: (if .[4] == "" then null else .[4] end),
         charging: (.[5] == "true"), state: .[6]

@@ -92,4 +92,44 @@ assert_eq "$(field "$(run "$r")" b alert)" critical "critical level overrides a 
 r=$(root); supply "$r" b - TYPE=Battery SCOPE=Device CAPACITY=18 CAPACITY_LEVEL=Critical
 assert_eq "$(field "$(run "$r")" b alert)" critical "critical level overrides a low percent"
 
+# Bluetooth connections share a USB radio, but each is its own device.
+r=$(root)
+usb "$r" usb1/1-6 "Bluetooth Radio"
+bt=usb1/1-6/1-6:1.0/bluetooth/hci0
+input "$r" "$bt/hci0:1/0005:1234:0001.0001" 40 MOUSE
+input "$r" "$bt/hci0:2/0005:1234:0002.0002" 41 KEY KEYBOARD
+printf 'Bluetooth Keyboard\n' > "$r/sys/devices/$bt/hci0:2/0005:1234:0002.0002/input/input41/name"
+supply "$r" bt_mouse "$bt/hci0:1/0005:1234:0001.0001" TYPE=Battery SCOPE=Device CAPACITY=50
+out=$(run "$r")
+assert_eq "$(jq length <<<"$out")" 2 "a Bluetooth battery does not hide another connection"
+assert_eq "$(field "$out" hci0_2 name)" "Bluetooth Keyboard" "Bluetooth name comes from its HID input"
+assert_eq "$(field "$out" hci0_2 kind)" keyboard "Bluetooth keyboard has its own classification"
+
+r=$(root)
+usb "$r" usb1/1-6 "Bluetooth Radio"
+input "$r" "$bt/hci0:1/0005:1234:0001.0001" 40 MOUSE
+input "$r" "$bt/hci0:2/0005:1234:0002.0002" 41 KEY KEYBOARD
+printf 'Bluetooth Mouse\n' > "$r/sys/devices/$bt/hci0:1/0005:1234:0001.0001/input/input40/name"
+out=$(run "$r")
+assert_eq "$(jq -c 'map(.id)' <<<"$out")" '["hci0_1","hci0_2"]' "two battery-less Bluetooth connections stay separate"
+assert_eq "$(field "$out" hci0_1 name)" "Bluetooth Mouse" "Bluetooth mouse uses its input name"
+assert_eq "$(field "$out" hci0_2 name)" 'hci0:2' "missing input name falls back to connection basename"
+assert_eq "$(DEVICES_SYSFS="$r/sys/" DEVICES_UDEV="$r/udev" bash "$DEVICES")" "$out" "trailing slash preserves device discovery"
+ln -s "$r/sys" "$r/sys-link"
+assert_eq "$(DEVICES_SYSFS="$r/sys-link" DEVICES_UDEV="$r/udev" bash "$DEVICES")" "$out" "symlinked sysfs preserves device discovery"
+
+r=$(root)
+usb "$r" usb1/1-5 "Media Gadget"
+input "$r" usb1/1-5/hid.1 2 KEY
+assert_eq "$(run "$r")" '[]' "media-key-only USB gadgets are excluded"
+
+r=$(root)
+supply "$r" z_battery - TYPE=Battery SCOPE=Device CAPACITY=50
+supply "$r" a_battery - TYPE=Battery SCOPE=Device CAPACITY=40
+usb "$r" usb1/1-9 "Later Receiver"
+input "$r" usb1/1-9/hid.1 9 MOUSE
+usb "$r" usb1/1-2 "Earlier Receiver"
+input "$r" usb1/1-2/hid.2 2 KEYBOARD
+assert_eq "$(run "$r" | jq -c 'map(.id)')" '["a_battery","z_battery","1-2","1-9"]' "sorted batteries precede sorted receivers"
+
 test_summary

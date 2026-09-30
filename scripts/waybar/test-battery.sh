@@ -293,32 +293,41 @@ out=$(run "$r")
 assert_json_contains "$out" '.tooltip' 'Pad  Full' "a healthy level-only peripheral stays in the tooltip"
 assert_json_lacks "$out" '.text' 'Full' "healthy level-only peripheral stays out of the text"
 
-# A failing notifier must not corrupt Waybar JSON, and fixture runs must skip
-# it entirely. Stub the helper dispatch so these checks never send real toasts.
+# Fixtures only, with a stub notifier: never touch live notification state.
 mkdir -p "$TMP/bin"
-cat > "$TMP/bin/bash" <<'STUB'
-#!/bin/bash
-case "$1" in
-    */devices/devices.sh)
-        printf '%s\n' '[{"id":"pad","name":"Pad","kind":"gamepad","percent":5,"level":null,"state":"connected","alert":"critical"}]'
-        ;;
-    */devices/battery-alert.sh)
-        printf 'called\n' >> "$BATTERY_TEST_CALLS"
-        printf 'notifier failed\n'
-        exit 1
-        ;;
-    *) exec /usr/bin/bash "$@" ;;
-esac
+cat > "$TMP/bin/notify-send" <<'STUB'
+#!/bin/sh
+printf 'started\n' > "$BATTERY_TEST_STARTED"
+sleep 3
+printf 'finished\n' > "$BATTERY_TEST_FINISHED"
+exit 1
 STUB
-chmod +x "$TMP/bin/bash"
-out=$(unset BATTERY_SYSFS; BATTERY_TEST_CALLS="$TMP/alert-calls" PATH="$TMP/bin:$PATH" /usr/bin/bash "$BATTERY")
-result=$?
-assert_eq "$result" 0 "notifier failure leaves Waybar exit code successful"
-assert_json_field "$out" '.class' critical "notifier failure preserves Waybar JSON"
-assert_eq "$(cat "$TMP/alert-calls")" called "real sysfs invokes the notifier"
+chmod +x "$TMP/bin/notify-send"
 r=$(fixture)
-out=$(BATTERY_TEST_CALLS="$TMP/alert-calls" PATH="$TMP/bin:$PATH" run "$r")
-assert_eq "$(wc -l < "$TMP/alert-calls")" 1 "BATTERY_SYSFS fixtures never invoke the notifier"
+supply "$r" pad POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY=5
+start=$EPOCHREALTIME
+out=$(BATTERY_SYSFS="$r" DEVICES_SYSFS="$TMP/empty-sys" BATTERY_ALERT_FIXTURE=1 \
+    DEVICE_ALERT_STATE="$TMP/alert-state" BATTERY_TEST_STARTED="$TMP/started" \
+    BATTERY_TEST_FINISHED="$TMP/finished" PATH="$TMP/bin:$PATH" bash "$BATTERY")
+result=$?
+elapsed=$(awk -v start="$start" -v end="$EPOCHREALTIME" 'BEGIN {print end-start}')
+assert_eq "$result" 0 "notifier failure leaves Waybar exit code successful"
+assert_json_field "$out" '.class' critical "slow notifier preserves Waybar JSON"
+if awk -v elapsed="$elapsed" 'BEGIN {exit !(elapsed < 2)}'; then
+    pass "Waybar stdout closes within two seconds despite a three-second notifier"
+else
+    fail "Waybar stdout closes within two seconds despite a three-second notifier" "elapsed: $elapsed"
+fi
+for ((i=0; i<100; i++)); do
+    [ -f "$TMP/finished" ] && break
+    sleep 0.05
+done
+assert_eq "$(cat "$TMP/started")" started "fixture opt-in runs the notifier"
+assert_eq "$(cat "$TMP/finished")" finished "detached notifier completes after Waybar returns"
+rm -f "$TMP/started" "$TMP/finished"
+out=$(BATTERY_TEST_STARTED="$TMP/started" BATTERY_TEST_FINISHED="$TMP/finished" \
+    DEVICE_ALERT_STATE="$TMP/alert-state" PATH="$TMP/bin:$PATH" run "$r")
+if [ -e "$TMP/started" ]; then fail "ordinary fixtures skip notifications"; else pass "ordinary fixtures skip notifications"; fi
 assert_json_field "$out" '.class' critical "fixture output still uses the shared reader"
 
 test_summary battery.sh

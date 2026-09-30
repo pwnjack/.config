@@ -32,6 +32,8 @@
 # `#battery.critical:not(.charging)` rule encoded.
 #
 # BATTERY_SYSFS overrides the scan root; test-battery.sh points it at fixtures.
+# BATTERY_ALERT_FIXTURE=1 enables alerts for those fixtures; tests must stub
+# notify-send and set DEVICE_ALERT_STATE to an isolated temporary directory.
 #
 
 LOW=25
@@ -148,9 +150,10 @@ done
 shopt -u nullglob
 
 devices=$(DEVICES_SUPPLY="$SYSFS" bash "$script_dir/../devices/devices.sh")
-# Real hardware only: a fixture or a forced screenshot must never notify.
-if [ -z "${BATTERY_SYSFS+x}" ]; then
-    bash "$script_dir/../devices/battery-alert.sh" <<<"$devices" >/dev/null 2>&1 || true
+# Keep notification delivery outside Waybar's exec and close its output fds.
+# Ordinary fixtures and forced screenshots never notify.
+if [ -z "${BATTERY_SYSFS+x}" ] || [ "${BATTERY_ALERT_FIXTURE:-0}" = 1 ]; then
+    bash "$script_dir/../devices/battery-alert.sh" <<<"$devices" >/dev/null 2>&1 &
 fi
 # JSON lines keep null fields and vendor whitespace intact; tab-delimited read
 # collapses empty fields and would shift a level into the percent column.

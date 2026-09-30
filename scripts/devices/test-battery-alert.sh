@@ -10,28 +10,71 @@ mkdir -p "$TMP/bin"
 printf '#!/bin/sh\nprintf "%%s\\n" "$*" >> "%s/calls"\n' "$TMP" > "$TMP/bin/notify-send"; chmod +x "$TMP/bin/notify-send"
 alert() { printf '%s' "$1" | DEVICE_ALERT_STATE="$TMP/state" PATH="$TMP/bin:$PATH" bash "$TEST_DIR/battery-alert.sh"; }
 calls() { if [ -f "$TMP/calls" ]; then wc -l < "$TMP/calls"; else echo 0; fi; }
-pad='[{"id":"gip0.0","name":"Xbox Controller","percent":null,"level":"critical","alert":"critical"}]'
-mouse='[{"id":"hidpp_battery_0","name":"G Pro","percent":7,"level":null,"alert":"critical"}]'
+pad='[{"id":"gip0.0","name":"Xbox Controller","percent":null,"level":"critical","state":"connected","alert":"critical"}]'
+mouse='[{"id":"hidpp_battery_0","name":"G Pro","percent":7,"level":null,"state":"connected","alert":"critical"}]'
 echo "battery-alert.sh"
 alert "$pad"; assert_eq "$(calls)" 1 "a critical device notifies"
 assert_eq "$(cat "$TMP/calls")" "-a Devices -i battery-caution Xbox Controller battery very low Critical" "level is the body"
 alert "$pad"; assert_eq "$(calls)" 1 "the same episode does not notify twice"
 alert '[]'; alert "$pad"; assert_eq "$(calls)" 2 "leaving and re-entering critical notifies again"
 alert "$mouse"; assert_eq "$(tail -n1 "$TMP/calls")" "-a Devices -i battery-caution G Pro battery very low 7%" "percent is the body"
-alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":20,"level":null,"alert":"low"}]'
+alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":20,"level":null,"state":"connected","alert":"low"}]'
 alert "$mouse"; assert_eq "$(calls)" 4 "recovering to low re-arms"
-alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":35,"level":null,"alert":"none"}]'
+alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":35,"level":null,"state":"connected","alert":"none"}]'
 alert "$mouse"; assert_eq "$(calls)" 5 "recovering to none re-arms"
 if alert 'invalid JSON' 2>/dev/null; then fail "invalid input fails"; else pass "invalid input fails"; fi
 alert "$mouse"; assert_eq "$(calls)" 5 "invalid input preserves the current episode"
-alert '[{"id":"../pad/unsafe","name":"Pad","percent":3,"level":null,"alert":"critical"}]'
+alert '[{"id":"../pad/unsafe","name":"Pad","percent":3,"level":null,"state":"connected","alert":"critical"}]'
 if [ -f "$TMP/state/.._pad_unsafe" ]; then pass "ids cannot escape the state directory"; else fail "ids cannot escape the state directory"; fi
-alert '[{"id":".pad","name":"Pad","percent":3,"level":null,"alert":"critical"}]'
+alert '[{"id":".pad","name":"Pad","percent":3,"level":null,"state":"connected","alert":"critical"}]'
 alert '[]'
 if [ -e "$TMP/state/.pad" ]; then fail "hidden ids re-arm when absent"; else pass "hidden ids re-arm when absent"; fi
 mkdir -p "$TMP/runtime"
 printf '%s' "$mouse" | XDG_RUNTIME_DIR="$TMP/runtime" PATH="$TMP/bin:$PATH" bash "$TEST_DIR/battery-alert.sh"
 if [ -f "$TMP/runtime/device-alerts/hidpp_battery_0" ]; then pass "default state uses XDG_RUNTIME_DIR"; else fail "default state uses XDG_RUNTIME_DIR"; fi
+# Sleep is not recovery: retain the episode until connected and recovered.
+alert '[]'
+before=$(calls)
+alert "$mouse"
+alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":7,"state":"asleep","alert":"none"}]'
+alert "$mouse"
+assert_eq "$(calls)" "$((before + 1))" "critical sleep wake sends one notification"
+
+# Capture mkdir instead of touching the shared /tmp/device-alerts directory.
+mkdir -p "$TMP/fallback-bin"
+cat > "$TMP/fallback-bin/mkdir" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" > "$FALLBACK_PATH"
+exit 1
+STUB
+chmod +x "$TMP/fallback-bin/mkdir"
+printf '%s' "$mouse" | env -u XDG_RUNTIME_DIR -u DEVICE_ALERT_STATE TMPDIR="$TMP" \
+    FALLBACK_PATH="$TMP/fallback-path" PATH="$TMP/fallback-bin:$TMP/bin:$PATH" bash "$TEST_DIR/battery-alert.sh"
+assert_eq "$(cat "$TMP/fallback-path")" '-p /tmp/device-alerts' "missing runtime dir falls back to /tmp regardless of TMPDIR"
+
+# Holding the actual directory lock must not queue a poll indefinitely.
+mkdir -p "$TMP/locked"
+exec 8< "$TMP/locked"
+flock -x 8
+printf '%s' "$mouse" | DEVICE_ALERT_STATE="$TMP/locked" PATH="$TMP/bin:$PATH" \
+    timeout 4 bash "$TEST_DIR/battery-alert.sh"
+result=$?
+assert_eq "$result" 1 "lock contention fails within the two-second wait"
+exec 8<&-
+
+# Verify the notifier is bounded without waiting five seconds in every suite.
+cat > "$TMP/bin/timeout" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$1" > "$TIMEOUT_LIMIT"
+shift
+exec "$@"
+STUB
+chmod +x "$TMP/bin/timeout"
+alert '[]'
+TIMEOUT_LIMIT="$TMP/timeout-limit" alert "$mouse"
+assert_eq "$(cat "$TMP/timeout-limit")" 5 "notification delivery has a five-second timeout"
+alert '[]'
+rm -f "$TMP/bin/timeout"
 printf '#!/bin/sh\nexit 1\n' > "$TMP/bin/notify-send"
 if alert "$mouse"; then fail "delivery failure is reported"; else pass "delivery failure is reported"; fi
 if [ -e "$TMP/state/hidpp_battery_0" ]; then fail "failed delivery leaves no marker"; else pass "failed delivery leaves no marker"; fi
