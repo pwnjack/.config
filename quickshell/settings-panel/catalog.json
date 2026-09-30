@@ -25,6 +25,12 @@
       "description": "Mouse, keyboard and touchpad"
     },
     {
+      "id": "devices",
+      "icon": "f0fb0",
+      "title": "Devices",
+      "description": "Wireless peripherals, their batteries and connection"
+    },
+    {
       "id": "accessibility",
       "icon": "f02e6",
       "title": "Accessibility",

@@ -234,12 +234,18 @@ FocusScope {
                             controller: view.controller
                             theme: view
                         }
+                        DevicesView {
+                            visible: view.controller.category === "devices" && !view.controller.query.trim()
+                            Layout.fillWidth: true
+                            controller: view.controller
+                            theme: view
+                        }
                         Label {
                             objectName: "noSettingsMatch"
                             // Never under a custom view (Network, Displays): its rows are
                             // legitimately empty of generic controls, that is not "no results".
                             visible: !view.controller.loading && !view.controller.visibleRows.length &&
-                                (!!view.controller.query.trim() || (view.controller.category !== "monitors" && view.controller.category !== "network"))
+                                (!!view.controller.query.trim() || (view.controller.category !== "monitors" && view.controller.category !== "network" && view.controller.category !== "devices"))
                             text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24
                         }
                         Repeater {

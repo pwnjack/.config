@@ -22,6 +22,7 @@ Item {
         property var monitors: []
         property var network: null
         property var startup: null
+        property var devices: null
         property color background: "#05090c"
         property color foreground: "#cfddde"
         property color accent: "#6097a1"
@@ -33,7 +34,7 @@ Item {
         property bool keepPendingOnRevert: false
         function keepDisplay() { calls = calls.concat([{op:"displayKeep"}]); }
         function revertDisplay() { if (!keepPendingOnRevert) pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
-        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}, {id:"startup",title:"Startup",description:"Login"}], rows: [
+        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}, {id:"startup",title:"Startup",description:"Login"}, {id:"devices",title:"Devices",description:"Wireless peripherals"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
@@ -71,6 +72,21 @@ Item {
                     {id: "linked.desktop", name: "Linked", origin: "user", removable: true, link: true, enabled: true, scope: "", installed: true, status: {state: "none", label: ""}},
                     {id: "renamed.desktop", name: "Renamed", origin: "override", removable: true, staleOverride: true, enabled: false, scope: "", installed: true, status: {state: "none", label: "Hidden by " + userAutostart + "/renamed.desktop"}}],
                 available: [{id: "firefox.desktop", name: "Firefox"}]};
+        }
+        function test_devices_page_rows() {
+            controller.devices = [
+                {id:"gip0.0",name:"Microsoft Xbox Controller",kind:"gamepad",percent:null,level:"critical",charging:false,state:"connected",alert:"critical"},
+                {id:"hidpp_battery_0",name:"G Pro",kind:"mouse",percent:36,level:null,charging:false,state:"asleep",alert:"none"},
+                {id:"1-8",name:"CX 2.4G Wireless Receiver",kind:"keyboard",percent:null,level:null,charging:false,state:"receiver",alert:"none"}];
+            controller.select("devices"); wait(20);
+            compare(findChild(view,"device-gip0.0-value").text,"Critical");
+            compare(findChild(view,"device-hidpp_battery_0-state").text,"Asleep · last 36%");
+            compare(findChild(view,"device-1-8-value").text,"No battery info");
+            compare(findChild(view,"device-gip0.0-icon").text.codePointAt(0),0xf0297);
+            controller.devices = []; wait(20);
+            verify(findChild(view,"noDevices").visible);
+            controller.devices = null;
+            controller.select("appearance"); wait(20);
         }
         function test_startup_view() {
             controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);
@@ -168,7 +184,7 @@ Item {
             controller.authPending = false;
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
-            controller.network = null; controller.startup = null;
+            controller.network = null; controller.startup = null; controller.devices = null;
             controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true},"opt-lock":{value:false}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;

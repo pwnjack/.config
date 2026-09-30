@@ -259,6 +259,16 @@ Traps:
   not installed, so the generator drops it without a message. The page says "Not installed"
   and `doctor.sh`'s `check_autostart` warns about it.
 
+## Devices
+
+Lists wireless peripherals (mouse, keyboard, gamepad) with their battery and connection,
+rendered from `scripts/devices/devices.sh`, the one reader shared with the Waybar battery
+module and the low-battery toast. `shell.qml` runs it when the page opens and every 10 s
+only while `opened && !closing && category === "devices"` with no search query; nothing
+runs otherwise. `alert` (low/critical) comes from the script, not the page, and draws the
+value in the accent colour, bold. An asleep device shows its last reading; a USB receiver
+with no battery under it shows "Receiver connected". `settings-panel.sh devices` opens it.
+
 ## Network: security rules
 
 `network.mjs`'s `groupSecurity` groups every BSS sharing an SSID and picks the

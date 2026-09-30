@@ -162,6 +162,8 @@ rules; `~/.config/autostart` is per-machine and gitignored, and disabling a syst
 writes a minimal `Hidden=true` override. Panel writes reach `panel-request.sh -` on stdin,
 never in argv, so passwords stay out of `ps`.
 
+**Devices** (round 4) lists wireless peripherals from `scripts/devices/devices.sh`, the one reader shared with Waybar's battery module and the low-battery toast; `shell.qml` runs it on open and every 10 s only while the page is visible, and `alert` is defined once, in the script.
+
 ### Night Light (hyprsunset)
 
 `hyprsunset` runs as a daemon from `config/setup/autostart.lua` and owns the schedule in `hypr/hyprsunset.conf` — a tracked, panel-writable file, the same arrangement as `hypr/hypridle.conf`. `scripts/hyprland/nightlight.sh` is the **only** thing that talks to `hyprctl hyprsunset`; the keybind ($Mod SHIFT+D toggle, $Mod CTRL+D follow-schedule), the waybar `custom/nightlight` module and the panel's Power rows all call the script.
@@ -246,6 +248,7 @@ is the Claude Code status line.
 - `hyprland/` — Startup, wallpaper switching (`wall.sh`), media control, night light (`nightlight.sh`), AI chatbox launcher
   - Media: `medialib.sh` is a sourced helper that picks *which* player the waybar module follows (first `Playing`, else first with a title). `mediaexec.sh` renders it (waybar JSON, or one plain line for hyprlock with `--plain`) and `mediactl.sh` drives transport through the same choice, so the title shown and the player controlled can never diverge. Successful local controls signal Waybar for an immediate refresh; the five-second poll only catches changes made inside a player. There is deliberately no stored player preference — bare `playerctl` picks by bus registration order, and selecting per-poll is what removed the old left-click scope toggle.
 - `waybar/` — Bar management and toggling, plus `battery.sh`: the battery module for the whole machine. It reads `/sys/class/power_supply` directly because waybar's own module counts only `SCOPE=System` and so reported nothing on this desktop. `SCOPE` selects behaviour rather than filtering — `Device` peripherals stay hidden until they fall below 25% (the module appearing is the warning, which is what keeps it stateless), while system batteries are always visible and accumulate, with the alert class taking the minimum across discharging ones. A powered-off peripheral keeps its node *and* its last reading, so `POWER_SUPPLY_ONLINE` present-and-`0` is the skip test; a laptop battery has no `ONLINE` at all and must not be caught by it. Charge state is trusted for system batteries only. `BATTERY_SYSFS` overrides the scan root — that seam is how `test-battery.sh` runs without hardware, and how the bar is screenshotted with the module forced visible without editing a tracked file.
+- `devices/` — `devices.sh`, the one reader of wireless peripheral batteries and connection state; Waybar's battery module, the low-battery toast and the panel's Devices page all consume its JSON
 - `settings/` — Config utilities, updates, monitor detection
 - `fonts/` — Font application automation
 - `theming/` — Pywal fan-out driver (`apply-wal.sh`) and the shared palette loader (`palette.sh`)

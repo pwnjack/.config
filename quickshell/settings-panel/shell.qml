@@ -26,6 +26,9 @@ ShellRoot {
     property var monitors: []
     property var network: null
     property var startup: null
+    // Devices page: devices.sh every 10 s while the page is on screen; nothing otherwise.
+    property var devices: null
+    readonly property bool devicesShown: opened && !closing && category === "devices" && !query.trim()
     readonly property string initialPage: Quickshell.env("SETTINGS_PAGE") || ""
     property string mainMonitor: ""
     property var pendingDisplay: null
@@ -231,6 +234,21 @@ ShellRoot {
                 network: root.network ? (root.network.running ? "up" : "down") : "none",
                 rowErrors: root.visibleRows.filter(row => root.values[row.id]?.error).map(row => ({id:row.id,error:root.values[row.id].error}))});
         }
+    }
+    Process {
+        id: deviceReader
+        command: ["bash", root.configDir + "/scripts/devices/devices.sh"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.devices = JSON.parse(text); }
+                catch (error) { root.devices = {error: String(error)}; }
+            }
+        }
+    }
+    Timer {
+        interval: 10000; repeat: true; triggeredOnStart: true
+        running: root.devicesShown
+        onTriggered: if (!deviceReader.running) deviceReader.running = true
     }
     Process {
         id: reader
