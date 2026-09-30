@@ -132,7 +132,6 @@ FocusScope {
                         background: Rectangle { radius: 10; color: nav.selected ? view.accent : nav.hovered ? view.plate : "transparent"; border.color: nav.activeFocus ? view.foreground : "transparent"; border.width: 2 }
                     }
                 }
-                Label { text: view.controller.busy ? "Saving changes…" : view.controller.loading ? "Reading settings…" : "Text fields: Enter or Save"; color: view.foreground; opacity: 0.75; font.pixelSize: 11; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 PanelButton { objectName: "closeSettings"; text: "Close"; theme: view; Layout.fillWidth: true; onClicked: view.controller.close() }
             }
             Rectangle { Layout.fillHeight: true; implicitWidth: 1; color: view.foreground; opacity: 0.13 }
@@ -261,13 +260,26 @@ FocusScope {
                         }
                     }
                 }
-                Flow {
+                RowLayout {
                     Layout.fillWidth: true
-                    spacing: 8
-                    // A reload would undo a display change still awaiting Keep or Revert.
-                    PanelButton { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.action("reload") }
-                    PanelButton { objectName: "restartWaybar"; theme: view; text: "Restart Waybar"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("waybar") }
-                    PanelButton { objectName: "updateSystem"; theme: view; text: "Update system"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("update") }
+                    spacing: 12
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        // A reload would undo a display change still awaiting Keep or Revert.
+                        PanelButton { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.action("reload") }
+                        PanelButton { objectName: "restartWaybar"; theme: view; text: "Restart Waybar"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("waybar") }
+                        PanelButton { objectName: "updateSystem"; theme: view; text: "Update system"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("update") }
+                    }
+                    // Transient status, bottom right beside the actions. Hidden rather than
+                    // removed when idle, so the buttons never shift as a save or read starts.
+                    Label {
+                        objectName: "panelStatus"
+                        text: view.controller.busy ? "Saving changes…" : "Reading settings…"
+                        opacity: view.controller.busy || view.controller.loading ? 0.75 : 0
+                        color: view.foreground; font.pixelSize: 12
+                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                    }
                 }
             }
         }

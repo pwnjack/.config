@@ -306,6 +306,21 @@ Item {
             compare(scroll.y,y); compare(scroll.height,height);
             compare(findChild(view,"closeSettings").text,"Close");
         }
+        function test_status_line_only_while_saving_or_reading() {
+            const status = findChild(view,"panelStatus");
+            const height = status.height;
+            const reloadX = findChild(view,"reloadHyprland").x;
+            controller.busy = false; controller.loading = false; wait(20);
+            compare(status.opacity,0);
+            controller.busy = true; wait(20);
+            compare(status.text,"Saving changes…");
+            verify(status.opacity > 0);
+            compare(status.height,height,"showing a status does not shift the layout");
+            compare(findChild(view,"reloadHyprland").x,reloadX,"the actions stay put");
+            controller.busy = false; controller.loading = true; wait(20);
+            compare(status.text,"Reading settings…");
+            controller.loading = false; wait(20);
+        }
         function test_panel_title_has_waybar_cog() {
             const icon = findChild(view,"panelIcon");
             verify(icon.visible);
