@@ -214,7 +214,7 @@
       "category": "appearance",
       "id": "appearance.font-gtk",
       "title": "GTK Font",
-      "description": "Font for GTK applications",
+      "description": "System UI font for GTK apps, browsers and Electron apps",
       "source": "option",
       "key": "font-gtk",
       "kind": "text",

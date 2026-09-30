@@ -21,7 +21,7 @@ read_font() {
 main_font=$(read_font font)
 gtk_font=$(read_font font-gtk)
 main_font=${main_font:-FiraCode Nerd Font}
-gtk_font=${gtk_font:-Cascadia Mono Semi-Bold}
+gtk_font=${gtk_font:-Adwaita Sans}
 
 # Every target quotes the name with double quotes, so one inside it cannot be
 # written anywhere safely.
