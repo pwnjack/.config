@@ -25,7 +25,7 @@
    GROUPS
      left     workspaces | taskbar | window
      center   clock · weather
-     right    [media] | [net] | cpu·mem·gpu·disk | [upd] | bt | [bat] | vol | tray | night·notif·set·power
+     right    [media] | [net] | [cpu·mem·gpu·disk] | [upd] | bt | [bat] | vol | tray | night·notif·set·power
 
    The glanced modules sit on fixed anchors: workspaces on the left edge,
    clock and weather as one centred block. Anything that appears and
@@ -37,7 +37,8 @@
    hide themselves whenever there is nothing to report — a module that comes
    and goes cannot be load-bearing for a gap, so each carries its own 15px
    on both sides and the rhythm holds either way. [brackets] mark the
-   self-hiding ones. On the left the taskbar is empty when no window is open,
+   self-hiding ones; the resources are one group, so each of them may hide
+   as well. On the left the taskbar is empty when no window is open,
    so the window title carries the whole group gap itself.
 
    Division of labour: this file owns every gap BETWEEN modules. The gap
@@ -140,7 +141,6 @@ window#waybar {
 }
 
 /* group-opening edges */
-#cpu,
 #custom-nightlight {
     padding-left: 15px;
 }
@@ -161,8 +161,15 @@ window#waybar {
     color: @color8;
 }
 
-/* group-closing edges */
-#disk {
+/* The four resource readouts are one Waybar group. Whichever member is
+   first or last while visible carries the group edge, so any of them can be
+   hidden from the Bar page and the gap stays 30px. Padding on the group box
+   itself was measured leaving a 10px gap behind when all four are hidden. */
+#resources > :first-child > * {
+    padding-left: 15px;
+}
+
+#resources > :last-child > * {
     padding-right: 15px;
 }
 

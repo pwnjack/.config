@@ -45,10 +45,7 @@
   "modules-right": [
     "custom/media",
     "custom/network",
-    "cpu",
-    "memory",
-    "custom/gpu",
-    "disk",
+    "group/resources",
     "custom/updates",
     "bluetooth",
     "custom/battery",
@@ -269,6 +266,15 @@
     "tooltip": true,
   },
 
+  // Resources
+  // One group, so the group box owns the 15px edges (style.css): any member
+  // can be hidden from the settings panel's Bar page and the gap to its
+  // neighbours stays the same.
+  "group/resources": {
+    "orientation": "horizontal",
+    "modules": ["cpu", "memory", "custom/gpu", "disk"],
+  },
+
   // CPU
   "cpu": {
     // Three seconds: cpu and memory are in-process /proc reads, so a faster
@@ -277,7 +283,10 @@
     // Alert thresholds, shared by all four resource readouts. A normal value
     // stays plain; only a busy resource changes colour, so the group answers
     // "is anything high?" without reading four numbers. See style.css.
-    "states": { "warning": 70, "critical": 90 },
+    // "normal" matches every value below warning: the Bar page's include
+    // (scripts/waybar/bar-modes.sh) blanks its format to show a readout only
+    // once it is high, so this file must never set format-normal itself.
+    "states": { "normal": 0, "warning": 70, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
@@ -287,7 +296,7 @@
   // Memory
   "memory": {
     "interval": 3,
-    "states": { "warning": 70, "critical": 90 },
+    "states": { "normal": 0, "warning": 70, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
@@ -310,7 +319,7 @@
   "disk": {
     "interval": 60,
     // A disk is routinely 70% full, so it warns later than the others.
-    "states": { "warning": 80, "critical": 90 },
+    "states": { "normal": 0, "warning": 80, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
