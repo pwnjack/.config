@@ -293,4 +293,32 @@ out=$(run "$r")
 assert_json_contains "$out" '.tooltip' 'Pad  Full' "a healthy level-only peripheral stays in the tooltip"
 assert_json_lacks "$out" '.text' 'Full' "healthy level-only peripheral stays out of the text"
 
+# A failing notifier must not corrupt Waybar JSON, and fixture runs must skip
+# it entirely. Stub the helper dispatch so these checks never send real toasts.
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/bash" <<'STUB'
+#!/bin/bash
+case "$1" in
+    */devices/devices.sh)
+        printf '%s\n' '[{"id":"pad","name":"Pad","kind":"gamepad","percent":5,"level":null,"state":"connected","alert":"critical"}]'
+        ;;
+    */devices/battery-alert.sh)
+        printf 'called\n' >> "$BATTERY_TEST_CALLS"
+        printf 'notifier failed\n'
+        exit 1
+        ;;
+    *) exec /usr/bin/bash "$@" ;;
+esac
+STUB
+chmod +x "$TMP/bin/bash"
+out=$(unset BATTERY_SYSFS; BATTERY_TEST_CALLS="$TMP/alert-calls" PATH="$TMP/bin:$PATH" /usr/bin/bash "$BATTERY")
+result=$?
+assert_eq "$result" 0 "notifier failure leaves Waybar exit code successful"
+assert_json_field "$out" '.class' critical "notifier failure preserves Waybar JSON"
+assert_eq "$(cat "$TMP/alert-calls")" called "real sysfs invokes the notifier"
+r=$(fixture)
+out=$(BATTERY_TEST_CALLS="$TMP/alert-calls" PATH="$TMP/bin:$PATH" run "$r")
+assert_eq "$(wc -l < "$TMP/alert-calls")" 1 "BATTERY_SYSFS fixtures never invoke the notifier"
+assert_json_field "$out" '.class' critical "fixture output still uses the shared reader"
+
 test_summary battery.sh

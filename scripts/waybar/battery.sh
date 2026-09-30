@@ -148,6 +148,10 @@ done
 shopt -u nullglob
 
 devices=$(DEVICES_SUPPLY="$SYSFS" bash "$script_dir/../devices/devices.sh")
+# Real hardware only: a fixture or a forced screenshot must never notify.
+if [ -z "${BATTERY_SYSFS+x}" ]; then
+    bash "$script_dir/../devices/battery-alert.sh" <<<"$devices" >/dev/null 2>&1 || true
+fi
 # JSON lines keep null fields and vendor whitespace intact; tab-delimited read
 # collapses empty fields and would shift a level into the percent column.
 while IFS= read -r device; do
