@@ -14,10 +14,10 @@ pad='[{"id":"gip0.0","name":"Xbox Controller","percent":null,"level":"critical",
 mouse='[{"id":"hidpp_battery_0","name":"G Pro","percent":7,"level":null,"state":"connected","alert":"critical"}]'
 echo "battery-alert.sh"
 alert "$pad"; assert_eq "$(calls)" 1 "a critical device notifies"
-assert_eq "$(cat "$TMP/calls")" "-a Devices -i battery-caution Xbox Controller battery very low Critical" "level is the body"
+assert_eq "$(cat "$TMP/calls")" "-a Devices -i battery-caution Battery very low Xbox Controller · Critical" "the device and its level are the body"
 alert "$pad"; assert_eq "$(calls)" 1 "the same episode does not notify twice"
 alert '[]'; alert "$pad"; assert_eq "$(calls)" 2 "leaving and re-entering critical notifies again"
-alert "$mouse"; assert_eq "$(tail -n1 "$TMP/calls")" "-a Devices -i battery-caution G Pro battery very low 7%" "percent is the body"
+alert "$mouse"; assert_eq "$(tail -n1 "$TMP/calls")" "-a Devices -i battery-caution Battery very low G Pro · 7%" "the device and its percent are the body"
 alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":20,"level":null,"state":"connected","alert":"low"}]'
 alert "$mouse"; assert_eq "$(calls)" 4 "recovering to low re-arms"
 alert '[{"id":"hidpp_battery_0","name":"G Pro","percent":35,"level":null,"state":"connected","alert":"none"}]'

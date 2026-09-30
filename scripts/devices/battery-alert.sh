@@ -45,7 +45,7 @@ while IFS= read -r device; do
     key=${id//[^A-Za-z0-9._-]/_}
     case "$key" in .|..) key="_$key" ;; esac
     [ -e "$state/$key" ] && continue
-    if timeout 5 notify-send -a Devices -i battery-caution "$name battery very low" "$value"; then
+    if timeout 5 notify-send -a Devices -i battery-caution "Battery very low" "$name · $value"; then
         : > "$state/$key" || result=1
     else
         result=1
