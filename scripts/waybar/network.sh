@@ -1,7 +1,8 @@
 #!/bin/bash
 #
 # Network readout for Waybar: download and upload speed while the machine is
-# actually moving data, "Offline" when no physical interface holds a default
+# actually moving data (options/bar-network can instead show them always, or
+# never), "Offline" when no physical interface holds a default
 # route, and nothing at all otherwise. The module appearing is the notice --
 # the same stateless grammar custom/updates and custom/battery use.
 #
@@ -40,6 +41,15 @@ NET_SHOW=${NET_SHOW:-102400}
 # moment does not make the module blink.
 NET_LINGER=${NET_LINGER:-3}
 NET_QUIET=$NET_LINGER
+# The Bar page's mode (options/bar-network): traffic (speeds only while data
+# moves), always, or offline (never speeds). Offline itself shows in every
+# mode. NET_MODE overrides the file for the tests.
+BAR_OPTIONS="${BAR_OPTIONS-}"
+[ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
+if [ -z "${NET_MODE+set}" ]; then
+    NET_MODE=''
+    read -r NET_MODE 2>/dev/null < "$BAR_OPTIONS/bar-network"
+fi
 # Ticks between re-sends of an unchanged line. A closed stdout is only noticed
 # on a write, so an idle bar re-sends once a minute to find out.
 NET_BEAT=${NET_BEAT:-30}
@@ -174,7 +184,13 @@ net_render() {
         OUT="{\"text\":\"<span size='large'>$NET_GLYPH_OFFLINE</span>  Offline\",\"tooltip\":\"No wired or Wi-Fi connection\",\"class\":\"offline\"}"
         return
     fi
-    if net_visible "$rx" "$tx"; then
+    local show=''
+    case $NET_MODE in
+        always)  show=1 ;;
+        offline) ;;
+        *)       net_visible "$rx" "$tx" && show=1 ;;
+    esac
+    if [ -n "$show" ]; then
         net_human "$rx"; down=$REPLY
         net_human "$tx"
         # No space after the glyph, only 6pt letter spacing. cpu/memory/disk

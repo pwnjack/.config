@@ -15,6 +15,9 @@ trap 'rm -rf "$TMP"' EXIT
 # shellcheck disable=SC1091 # Shared assertions are checked by their own suite.
 # shellcheck source=scripts/lib/assert.sh
 . "$TEST_DIR/../lib/assert.sh"
+# The user's own Bar page choice must not steer the baseline: an empty options
+# directory means every mode is its default. Mode tests set NET_MODE.
+export BAR_OPTIONS="$TMP/no-options"
 # shellcheck disable=SC1091 # network.sh is linted on its own.
 . "$TEST_DIR/network.sh"
 
@@ -158,6 +161,22 @@ net_render 'we"ird<&' 0 0 "" ""
 assert_json_contains "$OUT" .tooltip 'we"ird&lt;&amp;' "names are escaped for JSON and Pango"
 net_render $'en\001x\bq' 0 0 "" ""
 assert_json_contains "$OUT" .tooltip "enxq" "control characters are dropped, keeping the JSON valid"
+
+echo
+echo "modes"
+
+fixture
+iface eno1 physical
+# shellcheck disable=SC2034 # read by the sourced functions
+NET_QUIET=3
+NET_MODE=always net_render eno1 0 0 "" ""
+assert_json_contains "$OUT" .text "0K" "always shows speeds with no traffic"
+# shellcheck disable=SC2034 # read by the sourced functions
+NET_QUIET=3
+NET_MODE=offline net_render eno1 13002343 0 "" ""
+assert_json_field "$OUT" .text "" "offline-only never shows speeds"
+NET_MODE=offline net_render "" 0 0 "" ""
+assert_json_field "$OUT" .class offline "offline-only still reports Offline"
 
 echo
 echo "end to end"

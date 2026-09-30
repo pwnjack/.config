@@ -60,6 +60,14 @@ if [ "${1-}" = "update" ]; then
     exit 0
 fi
 
+# The Bar page's mode (options/bar-updates): pending, or hidden. Hidden
+# returns before checkupdates, which syncs a pacman DB over the network.
+BAR_OPTIONS="${BAR_OPTIONS-}"
+[ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
+mode=''
+read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-updates"
+[ "$mode" = hidden ] && exit 0
+
 # count <command> [args...] — lines of output, exit status ignored on purpose.
 count() {
     local out

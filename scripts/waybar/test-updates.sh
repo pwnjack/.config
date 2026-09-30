@@ -22,6 +22,10 @@ trap 'rm -rf "$TMP"' EXIT
 # shellcheck source=scripts/lib/assert.sh
 . "$TEST_DIR/../lib/assert.sh"
 
+# The user's own Bar page choice must not steer the baseline: an empty options
+# directory means the default mode. The mode test below sets its own.
+export BAR_OPTIONS="$TMP/no-options"
+
 # fake <name> <exit> <line>... — a stub command on PATH that prints the given
 # lines and exits with the given status.
 fake() {
@@ -168,6 +172,15 @@ assert_json_lacks "$out" '.tooltip' "AUR" "an uninstalled helper gives a repo-on
 fake checkupdates 0 "foo 1-1 -> 1-2"
 out=$(run_derived checkupdates "$TMP/definitely-not-here")
 assert_total "$out" "1" "a missing aurhelper file is not fatal"
+
+# --- Bar page mode --------------------------------------------------------
+mkdir -p "$TMP/opt"
+printf 'hidden\n' > "$TMP/opt/bar-updates"
+printf '#!/bin/bash\ntouch "%s/ran"\necho "linux 6.1 -> 6.2"\n' "$TMP" > "$TMP/bin/checkupdates-probe"
+chmod +x "$TMP/bin/checkupdates-probe"
+out=$(BAR_OPTIONS="$TMP/opt" UPDATES_REPO_CMD="$TMP/bin/checkupdates-probe" UPDATES_AUR_CMD='' bash "$UPDATES")
+assert_eq "$out" "" "hidden prints nothing even with updates pending"
+[ ! -e "$TMP/ran" ]; assert_eq "$?" 0 "hidden never runs checkupdates"
 
 # --- summary ---------------------------------------------------------------
 

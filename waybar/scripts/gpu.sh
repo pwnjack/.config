@@ -19,6 +19,14 @@
 # field, five times every 5s interval.
 #
 
+# The Bar page's mode (options/bar-gpu): always, high, or hidden. Read before
+# nvidia-smi so a hidden module costs one file read, not a driver probe.
+BAR_OPTIONS="${BAR_OPTIONS-}"
+[ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
+mode=''
+read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-gpu"
+[ "$mode" = hidden ] && exit 0
+
 command -v nvidia-smi >/dev/null 2>&1 || exit 0
 
 read -r usage temp used total name < <(
@@ -43,6 +51,9 @@ class=ok
 if [ "$usage" -ge "$critical" ]; then class=critical
 elif [ "$usage" -ge "$warning" ]; then class=warning
 fi
+
+# "high" shows the readout only once it is worth a colour.
+[ "$mode" = high ] && [ "$class" = ok ] && exit 0
 
 jq -nc \
     --arg usage "$usage" \
