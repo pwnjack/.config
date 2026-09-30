@@ -274,6 +274,44 @@ runs otherwise: hiding the page stops a read in flight and discards a late resul
 value in the accent colour, bold. An asleep device shows its last reading; a USB input device
 with no readable battery (a dongle or a wired keyboard) shows "Connected" and "No battery info". `settings-panel.sh devices` opens it.
 
+## Bar
+
+One select row per Waybar module that can come and go: CPU, Memory, GPU and Disk
+(Always · Only when high · Hidden), Network (During traffic · Always · Offline only) and
+Updates (When pending · Hidden). Each is a plain `options/bar-*` file; a missing or unknown
+value means the first choice, which is also the tracked default, so the bar looks the same
+until something is changed. "High" is the amber threshold: 70%, disk 80%. `settings-panel.sh
+bar` opens it.
+
+Whoever renders a module applies its mode:
+
+- **cpu, memory, disk** are Waybar built-ins, reachable only through config. A save runs
+  `scripts/waybar/bar-modes.sh`, which renders `~/.local/state/waybar/bar.jsonc` and reloads
+  Waybar. The include blanks per-state formats: `format-normal` for "high" (config.jsonc
+  gives each a `"normal": 0` state below warning), all three for "hidden". An empty format
+  hides the module.
+- **gpu.sh, network.sh, updates.sh** read their own option when Waybar (re)starts them,
+  which the same reload does. A hidden GPU never calls `nvidia-smi` and hidden updates never
+  run `checkupdates`, so hiding a module also stops its polling.
+
+The four resources are one `group/resources`. Its outer padding lives on whichever member
+is first or last while visible (`#resources > :first-child > *`): padding on the group box
+itself left a 10 px gap behind when all four were hidden, measured.
+
+Traps:
+
+- **The main config wins over an include key by key.** `waybar/config.jsonc` must never set
+  `format-normal`, `format-warning` or `format-critical` on cpu/memory/disk, or a mode
+  silently stops working; `test-bar-modes.sh` fails if it does. The same reason puts the GPU
+  mode in its script: an include cannot override the `exec` the main config sets.
+- **Unknown values read as the default; a missing file does not.** The backend shows an
+  unrecognised `bar-*` value as the row's first choice, matching the renderers. A deleted
+  option file disables its row, as it does for every option row, while the bar itself falls
+  back to the default; `git restore options/bar-<name>` brings the tracked default back.
+- **Tests must not read the live options.** The network and updates suites point
+  `BAR_OPTIONS` at an empty directory; otherwise a user's own "hidden" breaks them, and the
+  pre-commit hook with them.
+
 ## Network: security rules
 
 `network.mjs`'s `groupSecurity` groups every BSS sharing an SSID and picks the
