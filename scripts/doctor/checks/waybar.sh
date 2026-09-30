@@ -74,7 +74,9 @@
 DOCTOR_WAYBAR_ACTIONS=" activate close minimize minimize-raise fullscreen mode shift_up shift_down shift_reset "
 
 # _way_placed <config>
-# Every module name inside the modules-left/center/right arrays, sorted.
+# Every module name inside the modules-left/center/right arrays, and inside
+# any group's "modules" array, sorted. A group places its members itself, so
+# they never appear in a modules-* array.
 #
 # Both array forms appear in this repo -- inline, as modules-left is written,
 # and one-per-line, as modules-right is -- so the extractor tracks the array
@@ -99,7 +101,7 @@ DOCTOR_WAYBAR_ACTIONS=" activate close minimize minimize-raise fullscreen mode s
 #   so the comment strip has to happen before the bracket test, not after.
 _way_placed() {
     awk '
-        /^[[:space:]]*"modules-(left|center|right)"[[:space:]]*:/ { inarr = 1 }
+        /^[[:space:]]*"modules(-(left|center|right))?"[[:space:]]*:/ { inarr = 1 }
         inarr {
             line = $0
             sub(/\/\/.*$/, "", line)

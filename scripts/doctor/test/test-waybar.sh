@@ -255,3 +255,23 @@ way_bare_out="$(<"$way_out_file")"
 
 assert_contains "$way_bare_out" "nothing to check" "a repo without a waybar config says so"
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" "a missing waybar config is not an error or warning"
+
+# --- group members are placed ---------------------------------------------
+# A group lists its members in its own "modules" array. Reading only the
+# modules-* arrays would report every member block as unplaced.
+way_group_fixture="$(make_fixture)"
+way_config "$way_group_fixture" '{
+  "modules-right": ["group/res"],
+  "group/res": {
+    "orientation": "horizontal",
+    "modules": ["cpu", "memory"],
+  },
+  "cpu": { "interval": 3 },
+  "memory": { "interval": 3 },
+}'
+DOCTOR_ROOT="$way_group_fixture"
+doctor_reset
+check_waybar > "$way_out_file" 2>&1
+way_group_out="$(<"$way_out_file")"
+assert_not_contains "$way_group_out" "configures cpu but" "a module inside a group is placed"
+assert_not_contains "$way_group_out" "configures group/res but" "the group itself is placed"
