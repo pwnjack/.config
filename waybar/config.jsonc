@@ -17,11 +17,13 @@
   "spacing": 0,
   "height": 0,
 
-  // Modules Left
-  "modules-left": ["hyprland/window", "wlr/taskbar"],
+  // Layout: what is read at a glance sits on a fixed anchor. Workspaces own
+  // the left edge; clock and weather share the centre as one block. Everything
+  // that comes and goes -- media, updates, battery, workspaces 6-10 -- is
+  // placed where its width only ever moves empty space.
 
-  // Modules Center
-  "modules-center": [
+  // Modules Left
+  "modules-left": [
     "custom/workspace#one",
     "custom/workspace#two",
     "custom/workspace#three",
@@ -32,19 +34,22 @@
     "custom/workspace#eight",
     "custom/workspace#nine",
     "custom/workspace#ten",
-    "clock",
-    "custom/weather",
-    "custom/media",
+    "wlr/taskbar",
+    "hyprland/window",
   ],
+
+  // Modules Center
+  "modules-center": ["clock", "custom/weather"],
 
   // Modules Right
   "modules-right": [
+    "custom/media",
+    "custom/network",
     "cpu",
     "memory",
     "custom/gpu",
     "disk",
     "custom/updates",
-    "network",
     "bluetooth",
     "custom/battery",
     "pulseaudio",
@@ -173,7 +178,9 @@
 
   // Hyprland Window
   "hyprland/window": {
-    "max-length": 50,
+    // Read rarely, so it stays short and dim (style.css) beside the
+    // workspaces rather than competing with them.
+    "max-length": 40,
     "separate-outputs": false,
     "rewrite": {
       // SYS/BASE PROGRAMS
@@ -225,7 +232,8 @@
 
   // Clock
   "clock": {
-    "format-alt": "{:%d-%m-%Y}",
+    // The long date on click, in the session's LC_TIME like the short one.
+    "format-alt": "{:L%A %d %B %Y}",
     "tooltip": true,
     "tooltip-format": "<tt><small>{calendar}</small></tt>",
     "calendar": {
@@ -263,7 +271,13 @@
 
   // CPU
   "cpu": {
-    "interval": 10,
+    // Three seconds: cpu and memory are in-process /proc reads, so a faster
+    // readout costs only the redraw.
+    "interval": 3,
+    // Alert thresholds, shared by all four resource readouts. A normal value
+    // stays plain; only a busy resource changes colour, so the group answers
+    // "is anything high?" without reading four numbers. See style.css.
+    "states": { "warning": 70, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {usage}%",
     "on-click": "resources",
     "tooltip": true,
@@ -272,7 +286,8 @@
 
   // Memory
   "memory": {
-    "interval": 10,
+    "interval": 3,
+    "states": { "warning": 70, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {}%",
     "on-click": "resources",
     "tooltip": true,
@@ -281,17 +296,21 @@
 
   // GPU with Temperature
   "custom/gpu": {
-    // nvidia-smi is a subprocess and hardware probe; a dashboard does not
-    // need to wake the GPU stack every five seconds while the machine is idle.
-    "interval": 30,
+    // nvidia-smi is a subprocess, but measured at ~20 ms wall and ~4 ms CPU
+    // per call here, so five seconds is cheap.
+    "interval": 5,
+    // Custom modules ignore "states", so the same 70/90 thresholds are
+    // passed to the script, which sets the class itself.
     "return-type": "json",
-    "exec": "~/.config/waybar/scripts/gpu.sh",
+    "exec": "~/.config/waybar/scripts/gpu.sh 70 90",
     "on-click": "resources",
   },
 
   // Disk
   "disk": {
     "interval": 60,
+    // A disk is routinely 70% full, so it warns later than the others.
+    "states": { "warning": 80, "critical": 90 },
     "format": "<span size='large' letter_spacing='4096'></span> {percentage_used}%",
     "path": "/",
     "on-click": "resources",
@@ -316,20 +335,15 @@
   },
 
   // Network
-  "network": {
-    "format": "<span size='large'>󰲛</span>  Offline",
-    "format-wifi": "<span size='large'>{icon}</span>",
-    // Signal ramp, the way battery and pulseaudio already work.
-    // Dormant on this wired desktop; groundwork for a laptop host.
-    "format-icons": ["󰤟", "󰤢", "󰤥", "󰤨"],
-    "format-ethernet": "<span size='large'>󰈀</span>",
-    "format-linked": "<span size='large'>󰈀</span>",
-    "format-disconnected": "<span size='large'>󰲛</span>  Offline",
-    "tooltip-format": "󰈀 {ifname} via {gwaddri}",
-    "tooltip-format-wifi": " Connected \n\nIP: {ipaddr}\nStrength: {signalStrength}%\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
-    "tooltip-format-ethernet": "󰈀 {ifname}\n\nIP: {ipaddr}\nUp: {bandwidthUpBits} Down: {bandwidthDownBits}",
-    "tooltip-format-disconnected": "Disconnected",
-    "max-length": 50,
+  // Speeds appear only while data is moving, "Offline" only when no wired or
+  // Wi-Fi interface holds a default route; nothing shows otherwise. A
+  // continuous script, so there is no interval: it samples every two seconds
+  // without spawning anything. Why Waybar's own network module is not used
+  // is in the script's header.
+  "custom/network": {
+    "format": "{}",
+    "return-type": "json",
+    "exec": "~/.config/scripts/waybar/network.sh",
     "on-click": "~/.config/scripts/hyprland/settings-panel.sh network",
   },
 

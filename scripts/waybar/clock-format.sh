@@ -8,8 +8,13 @@ option=$HOME/.config/options/clock
 include=$HOME/.local/state/waybar/clock.jsonc
 option=${CLOCK_OPTION:-$option}
 include=${CLOCK_INCLUDE:-$include}
-format='{:%H:%M}'
-if [[ -r $option && $(<"$option") == 12h ]]; then format='{:%I:%M %p}'; fi
+# Weekday and day of month lead, two spaces before the time: the same gap
+# the bar uses inside a module, so date and time read as one readout. The L
+# flag is what makes Waybar name the day in the session's LC_TIME (the
+# settings panel's Formats row) rather than always in English; its "locale"
+# option alone does not.
+format='{:L%a %d  %H:%M}'
+if [[ -r $option && $(<"$option") == 12h ]]; then format='{:L%a %d  %I:%M %p}'; fi
 mkdir -p "${include%/*}"
 tmp=$(mktemp "$include.XXXXXX")
 trap 'rm -f "$tmp"' EXIT

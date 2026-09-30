@@ -23,16 +23,22 @@
    lives in CSS. Change the grouped selector, never one module alone.
 
    GROUPS
-     left     window · taskbar
-     center   workspaces | clock · weather · media
-     right    cpu·mem·gpu·disk | [upd] | net | bt | [bat] | vol | tray | night·set·notif·power
+     left     workspaces | taskbar | window
+     center   clock · weather
+     right    [media] | [net] | cpu·mem·gpu·disk | [upd] | bt | [bat] | vol | tray | night·notif·set·power
 
-   network, volume, bluetooth, updates, battery and tray stand alone. Volume
-   is a control rather than a status readout. Updates, bluetooth and battery
-   stand alone because updates and battery each hide themselves whenever
-   there is nothing to report — a module that comes and goes cannot be
-   load-bearing for a gap, so each carries its own 15px on both sides and the
-   rhythm holds either way. [brackets] mark the self-hiding ones.
+   The glanced modules sit on fixed anchors: workspaces on the left edge,
+   clock and weather as one centred block. Anything that appears and
+   disappears is placed so that it only ever moves empty space.
+
+   media, network, volume, bluetooth, updates, battery and tray stand alone.
+   Volume is a control rather than a status readout. Media, network,
+   updates, bluetooth and battery stand alone because all but bluetooth
+   hide themselves whenever there is nothing to report — a module that comes
+   and goes cannot be load-bearing for a gap, so each carries its own 15px
+   on both sides and the rhythm holds either way. [brackets] mark the
+   self-hiding ones. On the left the taskbar is empty when no window is open,
+   so the window title carries the whole group gap itself.
 
    Division of labour: this file owns every gap BETWEEN modules. The gap
    INSIDE a module -- between a glyph and the number it labels -- cannot
@@ -85,7 +91,7 @@ window#waybar {
 #custom-gpu,
 #disk,
 #custom-updates,
-#network,
+#custom-network,
 #bluetooth,
 #custom-battery,
 #pulseaudio,
@@ -118,7 +124,7 @@ window#waybar {
 #custom-gpu,
 #disk,
 #custom-updates,
-#network,
+#custom-network,
 #bluetooth,
 #custom-battery,
 #pulseaudio,
@@ -139,16 +145,24 @@ window#waybar {
     padding-left: 15px;
 }
 
-/* Optional workspace dots 6-10 hide completely when absent. Keep the group
-   boundary on the always-present clock so the gap follows the last real dot. */
-#clock {
-    padding-left: 30px;
+/* Optional workspace dots 6-10 hide completely when absent, so the gap after
+   the dots belongs to what follows them. The taskbar's buttons carry 5px of
+   their own padding and the last dot's pill 2px of margin, which is why these
+   read as the 30px group gap. #taskbar.empty drops to zero below, and the
+   window title then opens the group on its own. */
+#taskbar {
+    padding-left: 25px;
+    padding-right: 0px;
+}
+
+#window {
+    padding-left: 25px;
+    /* Read rarely: dim like a paused track, so it sits behind the dots. */
+    color: @color8;
 }
 
 /* group-closing edges */
-#taskbar,
-#disk,
-#custom-media {
+#disk {
     padding-right: 15px;
 }
 
@@ -158,8 +172,9 @@ window#waybar {
    A module that comes and goes cannot be load-bearing for a gap: with 15px
    on both sides of each, every neighbouring gap stays 30px whether the
    battery is showing or not. */
+#custom-media,
 #custom-updates,
-#network,
+#custom-network,
 #bluetooth,
 #custom-battery,
 #pulseaudio,
@@ -168,11 +183,7 @@ window#waybar {
     padding-right: 15px;
 }
 
-/* bar borders */
-#window {
-    padding-left: 16px;
-}
-
+/* bar borders -- the first dot's edge is #custom-workspace.one below */
 #custom-power {
     padding-right: 16px;
 }
@@ -194,8 +205,10 @@ window#waybar {
     transition: all 0.25s ease-in-out;
 }
 
+/* Against the bar border. The dot's ink sits inside its 26px pill, so a
+   smaller margin than the 16px edge lands the dot where #custom-power sits. */
 #custom-workspace.one {
-    margin-left: 17px;
+    margin-left: 12px;
 }
 
 #custom-workspace.active {
@@ -244,7 +257,7 @@ tooltip label {
    State is signalled by emphasis, never by hue: the pywal palette takes
    its colours from the wallpaper, so "amber means warm" holds for no
    wallpaper in particular. Dim = off, full = on — the same off/on
-   grammar as #network.disconnected and #tray > .passive, so the module
+   grammar as #window and #tray > .passive, so the module
    reads as one of the icons beside it rather than a control of its own.
 
    The glyph already carries the state (󰖙 sun / 󰖔 moon), so the two
@@ -262,15 +275,15 @@ tooltip label {
     color: @foreground;
 }
 
-/* ── NETWORK ─────────────────────────────────────────────────────────*/
+/* ── NETWORK ─────────────────────────────────────────────────────────
+   class: active deliberately has no rule -- speeds read like the resource
+   readouts beside them. */
 
-#network.ethernet,
-#network.wifi {
-    color: @foreground;
-}
-
-#network.disconnected {
-    color: @color8;
+/* ALERT EXCEPTION — see #pulseaudio.muted below. Offline used to be dimmed,
+   when the module was always on screen; now its appearing is the alert, and
+   dimming it would make the one alert on the bar the quietest thing there. */
+#custom-network.offline {
+    color: #ff5555;
 }
 
 /* ── SOUND ───────────────────────────────────────────────────────────*/
@@ -305,6 +318,29 @@ tooltip label {
 
 /* ALERT EXCEPTION — see #pulseaudio.muted above. */
 #custom-battery.critical {
+    color: #ff5555;
+}
+
+/* ── RESOURCES ───────────────────────────────────────────────────────
+   cpu, memory and disk get .warning / .critical from "states" in
+   config.jsonc; gpu.sh sets the same classes itself, because custom
+   modules ignore "states". A healthy readout has
+   no rule and stays @foreground, so colour appears only when something is
+   busy. */
+
+/* ALERT EXCEPTION — see #pulseaudio.muted above: the same fixed amber and
+   red as the battery, so every alert on the bar escalates the same way. */
+#cpu.warning,
+#memory.warning,
+#custom-gpu.warning,
+#disk.warning {
+    color: #ffb86c;
+}
+
+#cpu.critical,
+#memory.critical,
+#custom-gpu.critical,
+#disk.critical {
     color: #ff5555;
 }
 

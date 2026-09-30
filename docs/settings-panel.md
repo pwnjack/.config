@@ -225,6 +225,10 @@ the option too.
 
 Traps:
 
+- **Waybar's clock is English unless its format says `L`.** It ignores both
+  `LC_TIME` and its own `locale` option for `{:%a}`-style names; `{:L%a}` is what
+  makes the Formats row reach the bar, the way `date` already makes it reach hyprlock.
+
 - **Polkit focus and visibility.** `AUTH_HIDES_PANEL = true` (`authHidesPanel` in
   `shell.qml`): a panel-shaped Overlay hid hyprpolkitagent's dialog completely, so the
   panel hides while `authPending` is set and comes back after the answer. A dismissed

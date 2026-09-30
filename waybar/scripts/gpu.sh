@@ -10,6 +10,11 @@
 # The glyph is wrapped in <span size='large'> to match the bar's scale: every
 # module sits at 13px and promotes its glyph by 20%. See waybar/style.css.
 #
+# Usage: gpu.sh [WARNING CRITICAL]. The alert thresholds come from
+# config.jsonc so they sit beside the cpu/memory/disk "states" -- waybar's
+# custom modules ignore "states", so this script sets the class itself, and
+# style.css colours .warning / .critical the same way for all four readouts.
+#
 # One nvidia-smi call, not five. The old version spawned the binary once per
 # field, five times every 5s interval.
 #
@@ -26,13 +31,28 @@ read -r usage temp used total name < <(
 # rather than rendering a bare percent sign with nothing in front of it.
 [ -z "$usage" ] && exit 0
 
+# The same goes for a reading that is not a number: [N/A] from a GPU that
+# does not report utilization, or the error text nvidia-smi prints on stdout
+# when the driver is unreachable. Classifying either would call an unknown
+# state healthy.
+[[ $usage =~ ^[0-9]+$ ]] || exit 0
+
+warning=${1:-70}
+critical=${2:-90}
+class=ok
+if [ "$usage" -ge "$critical" ]; then class=critical
+elif [ "$usage" -ge "$warning" ]; then class=warning
+fi
+
 jq -nc \
     --arg usage "$usage" \
     --arg temp "$temp" \
     --arg name "$name" \
     --arg used "$used" \
     --arg total "$total" \
+    --arg class "$class" \
     '{
+        class: $class,
         text: ("<span size=\"large\" letter_spacing=\"4096\">\ue266</span> " + $usage + "%"),
         tooltip: ("GPU " + $usage + "% [" + $temp + "°C]\n\n" + $name
                   + "\nVRAM: " + $used + "MB / " + $total + "MB")
