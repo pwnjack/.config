@@ -502,6 +502,81 @@
       ]
     },
     {
+      "category": "bar",
+      "id": "bar.position",
+      "title": "Position",
+      "source": "option",
+      "key": "bar-position",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Top",
+          "value": "top"
+        },
+        {
+          "label": "Bottom",
+          "value": "bottom"
+        }
+      ],
+      "reload": true
+    },
+    {
+      "category": "bar",
+      "id": "bar.style",
+      "title": "Style",
+      "source": "option",
+      "key": "bar-style",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Floating",
+          "value": "floating"
+        },
+        {
+          "label": "Docked",
+          "value": "docked"
+        }
+      ],
+      "reload": true
+    },
+    {
+      "category": "bar",
+      "id": "bar.opacity",
+      "title": "Background opacity",
+      "source": "option",
+      "key": "bar-opacity",
+      "kind": "slider",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 50
+    },
+    {
+      "category": "bar",
+      "id": "bar.border",
+      "title": "Border",
+      "source": "option",
+      "key": "bar-border",
+      "kind": "toggle"
+    },
+    {
+      "category": "bar",
+      "id": "bar.output",
+      "title": "Monitors",
+      "source": "option",
+      "key": "bar-output",
+      "kind": "select",
+      "choices": "monitors"
+    },
+    {
+      "category": "bar",
+      "id": "bar.clock-seconds",
+      "title": "Clock seconds",
+      "source": "option",
+      "key": "clock-seconds",
+      "kind": "toggle"
+    },
+    {
       "category": "animations",
       "id": "anim.master",
       "title": "Animations",

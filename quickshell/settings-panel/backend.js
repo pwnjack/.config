@@ -231,6 +231,15 @@ const enumerators = {
         if (current && !apps.some(app => app.value === current)) apps.push({ label: current.replace(/\.desktop$/, ""), value: current })
         return apps
     },
+    monitors: async (row, knownCurrent, once) => {
+        const outputs = await once("bar-monitors", async () => JSON.parse(await execAsync(["hyprctl", "monitors", "-j"])))
+        const choices = [{ label: "All monitors", value: "" }, ...outputs.map(output => ({
+            label: [output.name, [output.make, output.model].filter(Boolean).join(" ")].filter(Boolean).join(" — "), value: output.name,
+        }))]
+        const current = knownCurrent === undefined ? (exists(optionPath(row.key)) ? readOption(row.key) : "") : knownCurrent
+        if (current && !choices.some(item => item.value === current)) choices.push({ label: `${current} (disconnected)`, value: current })
+        return choices
+    },
     "power-profiles": async () => (await execAsync(["powerprofilesctl", "list"])).split("\n")
         .map(line => line.match(/^\*?\s*([\w-]+):$/)).filter(Boolean)
         .map(([, name]) => ({ label: name.replace(/(^|-)(\w)/g, (_, dash, c) => (dash ? " " : "") + c.toUpperCase()), value: name })),
@@ -441,12 +450,18 @@ async function snapshot(ids, includeMonitors, views = {}) {
                 break
             }
             case "option":
-                value = readOption(row.key)
-                if (row.kind === "toggle") value = value === "enabled"
+                value = row.kind === "slider" && !exists(optionPath(row.key)) ? "" : readOption(row.key)
+                if (row.kind === "slider") {
+                    // Read the way scripts/waybar/bar-modes.sh does: plain digits in
+                    // range, anything else is the default the bar actually uses.
+                    const number = /^\d+$/.test(value) ? Number(value) : NaN
+                    value = number >= row.min && number <= row.max ? number : (row.default ?? row.min)
+                }
+                else if (row.kind === "toggle") value = value === "enabled"
                 // The Bar page's renderers treat an unknown mode as the row's first
                 // choice (scripts/waybar/bar-modes.sh and the module scripts), so the
                 // row shows that choice instead of the raw file text.
-                else if (row.key.startsWith("bar-") && !row.items.some(item => item.value === value)) value = row.items[0].value
+                else if (row.key.startsWith("bar-") && row.items && !row.items.some(item => item.value === value)) value = row.items[0].value
                 break
             case "cursor": value = Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])); break
             case "gtk": value = gvariantValue(await execAsync(["gsettings", "get", ...gsettingsArgs(row.key)])); break
@@ -561,12 +576,12 @@ async function change(request) {
         return persist.setAnimationPersistent(row.key, [row.key, animation.enabled ? 1 : 0, value, animation.bezier || "default", animation.style || ""].join(","))
     }
     case "option": {
-        const text = row.kind === "toggle" ? (value ? "enabled" : "disabled") : value.trim()
+        const text = row.kind === "toggle" ? (value ? "enabled" : "disabled") : row.kind === "slider" ? String(value) : value.trim()
         return saveAndApply(optionPath(row.key), text + "\n", async () => {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
-            if (row.key === "clock") await execAsync(["bash", configDir + "/scripts/waybar/clock-format.sh"])
+            if (row.key === "clock" || row.key === "clock-seconds") await execAsync(["bash", configDir + "/scripts/waybar/clock-format.sh"])
             if (row.key.startsWith("bar-")) await execAsync(["bash", configDir + "/scripts/waybar/bar-modes.sh"])
-            // hypr/config/apptype.lua reads these at parse time.
+            // The Lua configuration reads these options at parse time.
             if (row.reload) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])))
         })

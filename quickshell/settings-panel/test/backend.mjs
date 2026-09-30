@@ -6,6 +6,7 @@ import { registerHooks } from 'node:module'
 const autostartUserDir = '~/.config' + '/autostart'
 const base = '/fixture/.config'
 const catalog = JSON.parse(fs.readFileSync(new URL('../catalog.json', import.meta.url)))
+catalog.rows.push({id:'test.option-slider',source:'option',key:'test-slider',kind:'slider',min:10,max:100,step:1})
 catalog.rows.push({id:'test.gtk-raw',source:'gtk',key:'gtk-theme',ini:{key:'gtk-theme-name'}})
 const files = new Map([
     [base + '/quickshell/settings-panel/catalog.json', JSON.stringify(catalog)],
@@ -57,6 +58,7 @@ files.set(base+'/options/clock','24h\n')
 for (const name of ['cpu','memory','gpu','disk']) files.set(`${base}/options/bar-${name}`, 'always\n')
 files.set(base+'/options/bar-network','traffic\n')
 files.set(base+'/options/bar-updates','pending\n')
+for (const [key, value] of Object.entries({'bar-position':'top','bar-style':'floating','bar-opacity':'50','bar-border':'enabled','bar-output':'','clock-seconds':'disabled','test-slider':'broken'})) files.set(`${base}/options/${key}`, value+'\n')
 files.set(base+'/hypr/config/setup/autostart.lua', 'return function(apps)\n    hl.exec_cmd("waybar")\n    hl.exec_cmd("systemctl --user start " .. apps.polkitAgent)\nend\n')
 files.set('/etc/xdg/autostart/nm-applet.desktop', '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n')
 files.set('/etc/xdg/autostart/blueman.desktop', '[Desktop Entry]\nType=Application\nName=Blueman Applet\nExec=blueman-applet\n')
@@ -405,12 +407,79 @@ await dispatch({op:'set',id:'bar.updates',value:'hidden'})
 assert.equal(files.get(base+'/options/bar-updates'), 'hidden\n')
 assert.ok(catalog.categories.some(c => c.id === 'bar'))
 assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key),
-    ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates'])
+    ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates',
+     'bar-position','bar-style','bar-opacity','bar-border','bar-output','clock-seconds'])
 files.set(base+'/options/bar-disk','banana\n')
 result = await dispatch({op:'read',ids:['bar.disk','bar.updates']})
 assert.equal(result.values['bar.disk'].value,'always')
 assert.equal(result.values['bar.updates'].value,'hidden')
 console.log('ok: bar rows render the Waybar include')
+
+const layoutRows = catalog.rows.filter(row => row.category === 'bar').slice(6)
+assert.deepEqual(layoutRows.map(row => [row.id, row.title, row.source, row.kind]), [
+    ['bar.position','Position','option','select'],
+    ['bar.style','Style','option','select'],
+    ['bar.opacity','Background opacity','option','slider'],
+    ['bar.border','Border','option','toggle'],
+    ['bar.output','Monitors','option','select'],
+    ['bar.clock-seconds','Clock seconds','option','toggle'],
+])
+assert.deepEqual(layoutRows.slice(0,2).map(row => row.reload), [true,true])
+const opacityRow = layoutRows[2]
+assert.deepEqual([opacityRow.min,opacityRow.max,opacityRow.step,opacityRow.default], [0,100,5,50])
+assert.equal(layoutRows[4].choices,'monitors')
+for (const [id,key,values,script,reload] of [
+    ['bar.position','bar-position',['bottom','top'],'bar-modes.sh',true],
+    ['bar.style','bar-style',['docked','floating'],'bar-modes.sh',true],
+    ['bar.opacity','bar-opacity',[55],'bar-modes.sh',false],
+    ['bar.border','bar-border',[false,true],'bar-modes.sh',false],
+    ['bar.output','bar-output',['DP-1',''],'bar-modes.sh',false],
+    ['bar.clock-seconds','clock-seconds',[true,false],'clock-format.sh',false],
+]) for (const value of values) {
+    events = []
+    await dispatch({op:'set',id,value})
+    const text = typeof value === 'boolean' ? (value ? 'enabled' : 'disabled') : String(value)
+    assert.equal(files.get(`${base}/options/${key}`),text+'\n')
+    assert.deepEqual(events.filter(e => e[0] === 'bash'), [['bash',`${base}/scripts/waybar/${script}`]])
+    assert.equal(events.filter(e => e[0] === 'hyprctl' && e[1] === 'reload').length,reload ? 1 : 0)
+}
+files.set(base+'/options/bar-opacity','50\n')
+result = await dispatch({op:'read',ids:['bar.opacity','bar.output']})
+assert.equal(result.values['bar.opacity'].value,50)
+assert.equal(result.values['bar.output'].value,'')
+assert.deepEqual(result.values['bar.output'].choices,[
+    {label:'All monitors',value:''},
+    {label:'DP-1 — Ancor Communications Inc ROG PG279Q',value:'DP-1'},
+])
+assert.ok(events.some(e => e[0] === 'hyprctl' && e[1] === 'monitors' && e[2] === '-j'))
+for (const value of ['broken','', 'Infinity']) {
+    files.set(base+'/options/bar-opacity',value+'\n')
+    result = await dispatch({op:'read',ids:['bar.opacity','test.option-slider']})
+    assert.equal(result.values['bar.opacity'].value,50)
+    assert.equal(result.values['test.option-slider'].value,10)
+}
+files.delete(base+'/options/bar-opacity')
+result = await dispatch({op:'read',ids:['bar.opacity']})
+assert.equal(result.values['bar.opacity'].value,50)
+files.set(base+'/options/bar-opacity','50\n')
+files.set(base+'/options/bar-output','HDMI-A-1\n')
+result = await dispatch({op:'read',ids:['bar.output']})
+assert.equal(result.values['bar.output'].value,'HDMI-A-1')
+assert.deepEqual(result.values['bar.output'].choices.at(-1),{label:'HDMI-A-1 (disconnected)',value:'HDMI-A-1'})
+await dispatch({op:'set',id:'bar.output',value:'HDMI-A-1'})
+files.set(base+'/options/bar-output','\n')
+for (const [id,value] of [['bar.opacity',-5],['bar.opacity',105],['bar.opacity','55'],['bar.output','DP-UNKNOWN']]) {
+    events = []
+    const before = new Map(files)
+    await assert.rejects(dispatch({op:'set',id,value}), /outside this setting's range|Unknown choice/)
+    assert.deepEqual(files,before)
+    assert.equal(events.some(e => ['write','bash'].includes(e[0]) || e[1] === 'reload'),false)
+}
+for (const [text, expected] of [['0x10\n', 50], ['500\n', 50], ['1e1\n', 50], ['35\n', 35]]) {
+    files.set(base+'/options/bar-opacity', text)
+    assert.equal((await dispatch({op:'read',ids:['bar.opacity']})).values['bar.opacity'].value, expected)
+}
+console.log('ok: bar layout rows persist typed values, enumerate monitors and validate before applying')
 
 await dispatch({op:'set',id:'anim.windows',value:8})
 assert.match(files.get(base+'/hypr/config/overrides.lua'),/speed = 8/)
