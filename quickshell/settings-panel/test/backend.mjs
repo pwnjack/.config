@@ -54,6 +54,9 @@ const mimeDefaults = {'inode/directory':'kitty-open.desktop'}
 let failMime = ''
 for (const name of ['font','font-gtk','cursortheme','mainmonitor','browser','terminal','editor','codeeditor','filemanager','aurhelper','launchertype','autologin','protonvpn','randomwallpaper']) files.set(`${base}/options/${name}`,name === 'mainmonitor' ? '' : 'enabled\n')
 files.set(base+'/options/clock','24h\n')
+for (const name of ['cpu','memory','gpu','disk']) files.set(`${base}/options/bar-${name}`, 'always\n')
+files.set(base+'/options/bar-network','traffic\n')
+files.set(base+'/options/bar-updates','pending\n')
 files.set(base+'/hypr/config/setup/autostart.lua', 'return function(apps)\n    hl.exec_cmd("waybar")\n    hl.exec_cmd("systemctl --user start " .. apps.polkitAgent)\nend\n')
 files.set('/etc/xdg/autostart/nm-applet.desktop', '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n')
 files.set('/etc/xdg/autostart/blueman.desktop', '[Desktop Entry]\nType=Application\nName=Blueman Applet\nExec=blueman-applet\n')
@@ -384,6 +387,26 @@ assert.equal(files.get(base+'/options/clock'), '12h\n')
 assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scripts/waybar/clock-format.sh')).length, 1)
 await assert.rejects(dispatch({op:'set',id:'region.clock',value:'13h'}), /Unknown choice/)
 console.log('ok: clock row renders the Waybar include')
+
+events = []
+await dispatch({op:'set',id:'bar.cpu',value:'high'})
+assert.equal(files.get(base+'/options/bar-cpu'), 'high\n')
+assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scripts/waybar/bar-modes.sh')).length, 1)
+const beforeInvalidBar = new Map(files)
+const beforeInvalidBarEvents = events.length
+await assert.rejects(dispatch({op:'set',id:'bar.cpu',value:'banana'}), /Unknown choice/)
+assert.deepEqual(files, beforeInvalidBar)
+assert.equal(events.length, beforeInvalidBarEvents)
+events = []
+await dispatch({op:'set',id:'bar.network',value:'offline'})
+assert.equal(files.get(base+'/options/bar-network'), 'offline\n')
+assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scripts/waybar/bar-modes.sh')).length, 1)
+await dispatch({op:'set',id:'bar.updates',value:'hidden'})
+assert.equal(files.get(base+'/options/bar-updates'), 'hidden\n')
+assert.ok(catalog.categories.some(c => c.id === 'bar'))
+assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key),
+    ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates'])
+console.log('ok: bar rows render the Waybar include')
 
 await dispatch({op:'set',id:'anim.windows',value:8})
 assert.match(files.get(base+'/hypr/config/overrides.lua'),/speed = 8/)

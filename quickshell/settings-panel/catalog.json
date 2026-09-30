@@ -7,6 +7,12 @@
       "description": "Borders, blur, gaps, opacity, fonts and cursor"
     },
     {
+      "id": "bar",
+      "icon": "f10a9",
+      "title": "Bar",
+      "description": "Which modules the top bar shows, and when"
+    },
+    {
       "id": "animations",
       "icon": "f0a90",
       "title": "Animations",
@@ -318,6 +324,182 @@
       "min": 16,
       "max": 48,
       "step": 2
+    },
+    {
+      "category": "bar",
+      "id": "bar.cpu",
+      "title": "CPU",
+      "description": "Usage on the bar",
+      "keywords": [
+        "waybar",
+        "resources",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-cpu",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ]
+    },
+    {
+      "category": "bar",
+      "id": "bar.memory",
+      "title": "Memory",
+      "description": "Usage on the bar",
+      "keywords": [
+        "waybar",
+        "resources",
+        "ram",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-memory",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ]
+    },
+    {
+      "category": "bar",
+      "id": "bar.gpu",
+      "title": "GPU",
+      "description": "Usage on the bar; hidden skips the driver probe",
+      "keywords": [
+        "waybar",
+        "resources",
+        "nvidia",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-gpu",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ]
+    },
+    {
+      "category": "bar",
+      "id": "bar.disk",
+      "title": "Disk",
+      "description": "Root filesystem usage on the bar",
+      "keywords": [
+        "waybar",
+        "resources",
+        "storage",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-disk",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (80%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ]
+    },
+    {
+      "category": "bar",
+      "id": "bar.network",
+      "title": "Network",
+      "description": "Download and upload speed; Offline always shows",
+      "keywords": [
+        "waybar",
+        "speed",
+        "bandwidth",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-network",
+      "kind": "select",
+      "items": [
+        {
+          "label": "During traffic",
+          "value": "traffic"
+        },
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Offline only",
+          "value": "offline"
+        }
+      ]
+    },
+    {
+      "category": "bar",
+      "id": "bar.updates",
+      "title": "Updates",
+      "description": "Pending package count; hidden skips the check",
+      "keywords": [
+        "waybar",
+        "packages",
+        "pacman",
+        "aur",
+        "hide",
+        "show"
+      ],
+      "source": "option",
+      "key": "bar-updates",
+      "kind": "select",
+      "items": [
+        {
+          "label": "When pending",
+          "value": "pending"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ]
     },
     {
       "category": "animations",
