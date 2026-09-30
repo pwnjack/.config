@@ -440,7 +440,14 @@ async function snapshot(ids, includeMonitors, views = {}) {
                 reset = persist.hasAnimationOverride(row.key)
                 break
             }
-            case "option": value = readOption(row.key); if (row.kind === "toggle") value = value === "enabled"; break
+            case "option":
+                value = readOption(row.key)
+                if (row.kind === "toggle") value = value === "enabled"
+                // The Bar page's renderers treat an unknown mode as the row's first
+                // choice (scripts/waybar/bar-modes.sh and the module scripts), so the
+                // row shows that choice instead of the raw file text.
+                else if (row.key.startsWith("bar-") && !row.items.some(item => item.value === value)) value = row.items[0].value
+                break
             case "cursor": value = Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])); break
             case "gtk": value = gvariantValue(await execAsync(["gsettings", "get", ...gsettingsArgs(row.key)])); break
             case "idle": value = (await once("idle", () => idleValues(read(idlePath))))[row.key]; break

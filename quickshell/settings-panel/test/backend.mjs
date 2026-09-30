@@ -406,6 +406,10 @@ assert.equal(files.get(base+'/options/bar-updates'), 'hidden\n')
 assert.ok(catalog.categories.some(c => c.id === 'bar'))
 assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key),
     ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates'])
+files.set(base+'/options/bar-disk','banana\n')
+result = await dispatch({op:'read',ids:['bar.disk','bar.updates']})
+assert.equal(result.values['bar.disk'].value,'always')
+assert.equal(result.values['bar.updates'].value,'hidden')
 console.log('ok: bar rows render the Waybar include')
 
 await dispatch({op:'set',id:'anim.windows',value:8})
