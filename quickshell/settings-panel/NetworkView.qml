@@ -52,22 +52,15 @@ ColumnLayout {
         Label { visible: !!page.radio.error; text: page.radio.error || ""; color: page.theme.foreground; opacity: 0.75 }
         Label { visible: !!page.model?.running && !page.model.wifi.enabled; text: "Wi-Fi is off"; color: page.theme.foreground; opacity: 0.75 }
         PanelButton { objectName: "networkEditor"; theme: page.theme; text: "Advanced…"; onClicked: page.controller.action("networkEditor") }
-        Switch {
+        PanelSwitch {
             id: radioSwitch
+            theme: page.theme
             objectName: "wifiRadio"
             visible: page.radio.value !== undefined && !!page.model?.wifi?.available
             checked: page.radio.value === true
             enabled: !page.controller.busy
             Accessible.name: "Wi-Fi"
             onToggled: page.controller.change("network.wifi", checked)
-            implicitWidth: 54; implicitHeight: 40
-            indicator: Rectangle {
-                width: 48; height: 26; x: 3; y: 7; radius: 13
-                color: radioSwitch.checked ? page.theme.accent : page.theme.background
-                border.width: radioSwitch.activeFocus ? 2 : 1
-                border.color: radioSwitch.activeFocus ? page.theme.accent : page.theme.foreground
-                Rectangle { width: 18; height: 18; radius: 9; y: 4; x: radioSwitch.checked ? 26 : 4; color: radioSwitch.checked ? page.theme.accentText : page.theme.foreground }
-            }
         }
     }
     Repeater {
@@ -151,13 +144,13 @@ ColumnLayout {
                     RowLayout {
                         id: pskRow
                         anchors.left: parent.left; anchors.right: parent.right
-                        TextField {
+                        PanelField {
                             id: psk
+                            theme: page.theme
                             objectName: "psk-" + entry.modelData.ssid
                             Layout.fillWidth: true
                             echoMode: TextInput.Password
                             placeholderText: "Password"
-                            color: page.theme.foreground
                             text: page.pskText
                             Accessible.name: "Password for " + entry.modelData.ssid
                             onTextEdited: page.pskText = text
@@ -223,21 +216,14 @@ ColumnLayout {
             }
             Loader {
                 active: vpnRow.modelData.control === "switch"
-                sourceComponent: Switch {
+                sourceComponent: PanelSwitch {
                     id: vpnSwitch
+                    theme: page.theme
                     objectName: "vpn-" + vpnRow.modelData.uuid
                     checked: vpnRow.modelData.state !== "off"
                     enabled: !page.controller.busy
                     Accessible.name: vpnRow.modelData.name
                     onToggled: page.controller.submit({op: "vpn", uuid: vpnRow.modelData.uuid, active: checked})
-                    implicitWidth: 54; implicitHeight: 40
-                    indicator: Rectangle {
-                        width: 48; height: 26; x: 3; y: 7; radius: 13
-                        color: vpnSwitch.checked ? page.theme.accent : page.theme.background
-                        border.width: vpnSwitch.activeFocus ? 2 : 1
-                        border.color: vpnSwitch.activeFocus ? page.theme.accent : page.theme.foreground
-                        Rectangle { width: 18; height: 18; radius: 9; y: 4; x: vpnSwitch.checked ? 26 : 4; color: vpnSwitch.checked ? page.theme.accentText : page.theme.foreground }
-                    }
                 }
             }
         }

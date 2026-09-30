@@ -83,13 +83,13 @@ Rectangle {
         }
         RowLayout {
             Layout.fillWidth: true
-            Switch {
+            PanelSwitch {
+                theme: card.theme
                 objectName: "enableDisplay-" + card.monitor.name
                 text: "On"
                 enabled: !card.locked
                 checked: !card.config.disabled
                 onToggled: card.stage("disabled", !checked)
-                palette.windowText: card.theme.foreground
             }
             Item { Layout.fillWidth: true }
             PanelButton { objectName: "automaticDisplay-" + card.monitor.name; theme: card.theme; text: "Automatic"; enabled: !card.locked && card.monitor.saved !== null; onClicked: { card.unstage(); card.controller.submit({op: "displayApply", output: card.monitor.name, automatic: true}); } }

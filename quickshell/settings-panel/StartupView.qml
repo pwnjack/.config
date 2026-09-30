@@ -93,7 +93,8 @@ ColumnLayout {
                 // and a link is never written through.
                 Loader {
                     active: !app.modelData.scope && !app.modelData.link
-                    sourceComponent: Switch {
+                    sourceComponent: PanelSwitch {
+                        theme: page.theme
                         objectName: "startupSwitch-" + app.modelData.id
                         checked: app.modelData.enabled
                         enabled: !page.controller.busy

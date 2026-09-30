@@ -126,7 +126,10 @@ Item {
             verify(!findChild(view, "startupSwitch-kde.desktop"), "an entry that does not apply to Hyprland has no switch");
             verify(!findChild(view, "startupRemove-nm-applet.desktop"), "system entries cannot be removed");
             verify(findChild(view, "startupStatus-gnome.desktop").text.indexOf("X-GNOME-Autostart-enabled has no effect under systemd") >= 0);
-            mouseClick(findChild(view, "startupSwitch-nm-applet.desktop"));
+            const startupSwitch = findChild(view, "startupSwitch-nm-applet.desktop");
+            compare(startupSwitch.indicator.width, 48, "startup uses the panel's switch");
+            compare(String(startupSwitch.indicator.color), String(startupSwitch.checked ? view.accent : view.background));
+            mouseClick(startupSwitch);
             compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "disable", id: "nm-applet.desktop"});
             verify(findChild(view, "startupStatus-arch-update-tray.desktop").text.indexOf("arch-update") >= 0);
             compare(findChild(view, "startupStatus-mine.desktop").text.indexOf("Added by you"), -1);
@@ -362,6 +365,7 @@ Item {
             mouseClick(combo); waitForRendering(view);
             const filter = findChild(combo.popup.contentItem, "filter-zone");
             verify(filter && filter.visible);
+            compare(String(filter.background.color), String(view.background), "the filter is themed, not the light platform field");
             for (const c of "new_york") keyClick(c);
             compare(combo.shown.length, 1);
             compare(combo.shown[0].value, "America/New_York");

@@ -98,15 +98,15 @@ ComboBox {
         }
         contentItem: ColumnLayout {
             spacing: 4
-            TextField {
+            PanelField {
                 id: filterField
+                theme: combo.theme
                 objectName: "filter-" + combo.key
                 visible: combo.filterable
                 Layout.fillWidth: true
                 placeholderText: "Type to filter"
                 text: combo.filter
                 onTextEdited: { combo.filter = text; combo.filterIndex = combo.shown.length && combo.filter ? 0 : -1; }
-                color: combo.theme.foreground
                 // With no matches there is nothing to highlight: the index stays -1.
                 Keys.onDownPressed: combo.filterIndex = combo.shown.length ? Math.min(combo.filterIndex + 1, combo.shown.length - 1) : -1
                 Keys.onUpPressed: combo.filterIndex = combo.shown.length ? Math.max(combo.filterIndex - 1, 0) : -1

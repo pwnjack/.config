@@ -43,22 +43,15 @@ Rectangle {
                 Accessible.name: "Reset " + control.row.title
                 onClicked: control.controller.reset(control.row.id)
             }
-            Switch {
+            PanelSwitch {
                 id: toggle
+                theme: control.theme
                 objectName: "toggle-" + control.row.id
                 visible: control.row.kind === "toggle"
                 enabled: control.ready && !control.controller.busy && !control.controller.authPending && !control.controller.pendingDisplay
                 checked: control.settingState.value === true
                 Accessible.name: control.row.title
                 onToggled: control.controller.change(control.row.id, checked)
-                implicitWidth: 54; implicitHeight: 40
-                indicator: Rectangle {
-                    width: 48; height: 26; x: 3; y: 7; radius: 13
-                    color: toggle.checked ? control.theme.accent : control.theme.background
-                    border.width: toggle.activeFocus ? 2 : 1
-                    border.color: toggle.activeFocus ? control.theme.accent : control.theme.foreground
-                    Rectangle { width: 18; height: 18; radius: 9; y: 4; x: toggle.checked ? 26 : 4; color: toggle.checked ? control.theme.accentText : control.theme.foreground }
-                }
             }
         }
         Loader {
@@ -115,17 +108,14 @@ Rectangle {
     Component {
         id: textComponent
         RowLayout {
-            TextField {
+            PanelField {
                 id: entry
+                theme: control.theme
                 objectName: "entry-" + control.row.id
                 Layout.fillWidth: true
-                implicitHeight: 40
                 text: control.ready ? String(control.settingState.value) : ""
-                selectByMouse: true
-                color: control.theme.foreground
                 Accessible.name: control.row.title
                 onAccepted: { if ((text.trim() || control.row.optional) && text !== String(control.settingState.value)) control.controller.change(control.row.id, text); }
-                background: Rectangle { color: control.theme.background; radius: 8; border.width: entry.activeFocus ? 2 : 1; border.color: entry.activeFocus ? control.theme.accent : Qt.rgba(control.theme.foreground.r, control.theme.foreground.g, control.theme.foreground.b, 0.25) }
             }
             PanelButton { theme: control.theme; text: "Save"; enabled: (entry.text.trim() !== "" || !!control.row.optional) && entry.text !== String(control.settingState.value); onClicked: control.controller.change(control.row.id, entry.text) }
         }
