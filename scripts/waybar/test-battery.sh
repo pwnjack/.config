@@ -19,6 +19,7 @@ BATTERY="$TEST_DIR/battery.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
+# shellcheck disable=SC1091 # Shared assertions are checked by their own suite.
 # shellcheck source=scripts/lib/assert.sh
 . "$TEST_DIR/../lib/assert.sh"
 
@@ -258,5 +259,38 @@ supply "$r" hidpp_battery_0 \
 out=$(run "$r")
 assert_json_field "$out" '.class' "low" "a verbatim hidpp uevent parses"
 assert_json_contains "$out" '.tooltip' "G Pro Wireless Gaming Mouse" "model name reaches the tooltip"
+
+# --- level-only peripherals (xone reports CAPACITY_LEVEL, never CAPACITY) --
+root=$(fixture)
+supply "$root" gip0.0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device \
+    POWER_SUPPLY_CAPACITY_LEVEL=Critical "POWER_SUPPLY_MODEL_NAME=Microsoft Xbox Controller"
+out=$(run "$root")
+assert_eq "$(jq -r .class <<<"$out")" critical "a Critical level alerts"
+case "$(jq -r .text <<<"$out")" in *Critical*) pass "the level is shown when there is no percent" ;; *) fail "the level is shown when there is no percent" ;; esac
+
+root=$(fixture)
+supply "$root" gip0.0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY_LEVEL=Low
+assert_eq "$(jq -r .class <<<"$(run "$root")")" low "a Low level alerts low"
+
+root=$(fixture)
+supply "$root" gip0.0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY_LEVEL=Full
+assert_silent "$(run "$root")" "a Full level stays hidden"
+
+root=$(fixture)
+mkdir -p "$root/sys/class/input" "$root/sys/class/power_supply" "$root/udev" "$root/sys/devices/usb1/1-13/input/input34"
+printf '1234\n' > "$root/sys/devices/usb1/1-13/idVendor"
+ln -s ../../devices/usb1/1-13/input/input34 "$root/sys/class/input/input34"
+printf 'E:ID_INPUT_JOYSTICK=1\n' > "$root/udev/+input:input34"
+supply "$root/sys/class/power_supply" gip0.0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY=5
+ln -s ../../../devices/usb1/1-13 "$root/sys/class/power_supply/gip0.0/device"
+out=$(DEVICES_SYSFS="$root/sys" DEVICES_UDEV="$root/udev" run "$root/sys/class/power_supply")
+assert_json_contains "$out" '.text' $'\U000f0297' "joystick input renders a gamepad glyph"
+
+r=$(fixture)
+supply "$r" BAT0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_CAPACITY=64
+supply "$r" pad POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY_LEVEL=Full 'POWER_SUPPLY_MODEL_NAME=Pad'
+out=$(run "$r")
+assert_json_contains "$out" '.tooltip' 'Pad  Full' "a healthy level-only peripheral stays in the tooltip"
+assert_json_lacks "$out" '.text' 'Full' "healthy level-only peripheral stays out of the text"
 
 test_summary battery.sh

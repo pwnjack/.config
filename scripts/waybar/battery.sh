@@ -5,7 +5,8 @@
 #
 # waybar's own battery module counts only POWER_SUPPLY_SCOPE=System, which is
 # why it logged "No batteries." on this desktop while a wireless mouse sat on
-# the bus with a perfectly readable charge. This module reads sysfs directly.
+# the bus with a perfectly readable charge. System batteries use sysfs here;
+# peripherals use scripts/devices/devices.sh, including level-only batteries.
 #
 # SCOPE selects behaviour rather than filtering:
 #
@@ -36,9 +37,11 @@
 LOW=25
 CRITICAL=10
 SYSFS="${BATTERY_SYSFS:-/sys/class/power_supply}"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Nerd Font, Material Design range.
 ICON_SYSTEM=$'\U000f0079'    # battery
+ICON_GAMEPAD=$'\U000f0297'   # gamepad
 ICON_MOUSE=$'\U000f037d'     # mouse
 ICON_KEYBOARD=$'\U000f030c'  # keyboard
 ICON_HEADSET=$'\U000f02cb'   # headphones
@@ -77,7 +80,7 @@ device_icon() {
     esac
 }
 
-# entry <icon> <capacity> — one rendered chunk of the bar text. The glyph is
+# entry <icon> <value> — one rendered chunk of the bar text. The glyph is
 # promoted a fifth to match the bar scale (13px base); see waybar/style.css.
 #
 # ONE space between glyph and value. This used to be two, on the argument that
@@ -89,7 +92,7 @@ device_icon() {
 # The gap BETWEEN entries stays wider -- see the joiner below -- so two
 # batteries still read as two readouts rather than one run-on number.
 entry() {
-    printf '<span size="large">%s</span> %s%%' "$1" "$2"
+    printf '<span size="large">%s</span> %s' "$1" "$2"
 }
 
 declare -a system_text=()
@@ -97,7 +100,7 @@ declare -a system_text=()
 # sentinel number, no value CAPACITY can take (even a malformed one out of
 # sysfs's normal 0-100 range) can ever be mistaken for "nothing is alerting".
 system_worst=""
-low_worst=""
+device_alert=none
 declare -a low_text=()
 declare -a tips=()
 
@@ -107,6 +110,7 @@ for uevent in "$SYSFS"/*/uevent; do
     read_uevent "$uevent"
 
     [ "$u_type" = "Battery" ] || continue
+    [ "$u_scope" = "Device" ] && continue
 
     # A missing or non-numeric capacity would make the arithmetic tests below
     # throw into waybar's log once every interval.
@@ -118,40 +122,54 @@ for uevent in "$SYSFS"/*/uevent; do
     dir="${uevent%/uevent}"
     label="${u_model:-${dir##*/}}"
 
-    if [ "$u_scope" = "Device" ]; then
-        tips+=("$label  $u_cap%")
-        if [ "$u_cap" -lt "$LOW" ]; then
-            low_text+=("$(entry "$(device_icon "$u_model")" "$u_cap")")
-            if [ -z "$low_worst" ] || [ "$u_cap" -lt "$low_worst" ]; then
-                low_worst="$u_cap"
+    # Accumulate, don't overwrite: dual-battery laptops are a real target,
+    # and a second, healthier battery must never hide a nearly-flat one.
+    system_text+=("$(entry "$ICON_SYSTEM" "$u_cap%")")
+    case "$u_status" in
+        # "Not charging" means AC is connected but something is inhibiting
+        # the charge -- almost always a charge_control_end_threshold on a
+        # ThinkPad or a Dell/ASUS platform module. The machine is on mains,
+        # so however low the number is it is not an emergency, and treating
+        # it as discharging would raise exactly the false alarm that
+        # suppressing Charging exists to prevent.
+        Charging|Full|"Not charging")
+            tips+=("$label  $u_cap% ($u_status)")
+            ;;
+        *)
+            tips+=("$label  $u_cap%")
+            # Only a discharging system battery can raise an alert; take
+            # the minimum across all of them so the worst one always wins.
+            if [ -z "$system_worst" ] || [ "$u_cap" -lt "$system_worst" ]; then
+                system_worst="$u_cap"
             fi
-        fi
-    else
-        # Accumulate, don't overwrite: dual-battery laptops are a real target,
-        # and a second, healthier battery must never hide a nearly-flat one.
-        system_text+=("$(entry "$ICON_SYSTEM" "$u_cap")")
-        case "$u_status" in
-            # "Not charging" means AC is connected but something is inhibiting
-            # the charge -- almost always a charge_control_end_threshold on a
-            # ThinkPad or a Dell/ASUS platform module. The machine is on mains,
-            # so however low the number is it is not an emergency, and treating
-            # it as discharging would raise exactly the false alarm that
-            # suppressing Charging exists to prevent.
-            Charging|Full|"Not charging")
-                tips+=("$label  $u_cap% ($u_status)")
-                ;;
-            *)
-                tips+=("$label  $u_cap%")
-                # Only a discharging system battery can raise an alert; take
-                # the minimum across all of them so the worst one always wins.
-                if [ -z "$system_worst" ] || [ "$u_cap" -lt "$system_worst" ]; then
-                    system_worst="$u_cap"
-                fi
-                ;;
-        esac
-    fi
+            ;;
+    esac
 done
 shopt -u nullglob
+
+devices=$(DEVICES_SUPPLY="$SYSFS" bash "$script_dir/../devices/devices.sh")
+# JSON lines keep null fields and vendor whitespace intact; tab-delimited read
+# collapses empty fields and would shift a level into the percent column.
+while IFS= read -r device; do
+    name=$(jq -r '.name' <<<"$device")
+    kind=$(jq -r '.kind' <<<"$device")
+    percent=$(jq -r '.percent // empty' <<<"$device")
+    level=$(jq -r '.level // empty' <<<"$device")
+    alert=$(jq -r '.alert' <<<"$device")
+    if [ -n "$percent" ]; then value="$percent%"; else value="${level^}"; fi
+    case "$kind" in
+        gamepad) icon=$ICON_GAMEPAD ;;
+        mouse) icon=$ICON_MOUSE ;;
+        keyboard) icon=$ICON_KEYBOARD ;;
+        *) icon=$(device_icon "$name") ;;
+    esac
+    tips+=("$name  $value")
+    [ "$alert" = none ] && continue
+    low_text+=("$(entry "$icon" "$value")")
+    if [ "$alert" = critical ] || [ "$device_alert" = none ]; then
+        device_alert=$alert
+    fi
+done < <(jq -c '.[] | select(.state == "connected")' <<<"$devices")
 
 declare -a parts=()
 [ "${#system_text[@]}" -gt 0 ] && parts+=("${system_text[@]}")
@@ -161,21 +179,11 @@ declare -a parts=()
 # idiom custom/media uses.
 [ "${#parts[@]}" -eq 0 ] && exit 0
 
-worst=""
-[ -n "$system_worst" ] && worst="$system_worst"
-if [ -n "$low_worst" ] && { [ -z "$worst" ] || [ "$low_worst" -lt "$worst" ]; }; then
-    worst="$low_worst"
-fi
-
-# Empty worst means nothing discharging ever qualified as an alert -- a
-# healthy or absent battery, or one that is charging/full.
-class="ok"
-if [ -n "$worst" ]; then
-    if [ "$worst" -lt "$CRITICAL" ]; then
-        class="critical"
-    elif [ "$worst" -lt "$LOW" ]; then
-        class="low"
-    fi
+class=ok
+if [ "$device_alert" = critical ] || { [ -n "$system_worst" ] && [ "$system_worst" -lt "$CRITICAL" ]; }; then
+    class=critical
+elif [ "$device_alert" = low ] || { [ -n "$system_worst" ] && [ "$system_worst" -lt "$LOW" ]; }; then
+    class=low
 fi
 
 # Three spaces BETWEEN entries, against the one inside each — see entry().

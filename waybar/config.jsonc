@@ -343,6 +343,7 @@
     "return-type": "json",
     "interval": 60,
     "exec": "~/.config/scripts/waybar/battery.sh",
+    "on-click": "~/.config/scripts/hyprland/settings-panel.sh devices",
   },
 
   // Pulseaudio
