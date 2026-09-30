@@ -248,6 +248,9 @@ ShellRoot {
         stdout: StdioCollector {
             onStreamFinished: if (DeviceRead.fresh(deviceReader.generation, root.deviceGeneration, root.devicesShown)) root.devices = DeviceRead.parse(text)
         }
+        // A hide/show faster than one read finds the killed run still "running", so the
+        // Timer's read on show was skipped; start it now that the stale run has gone.
+        onExited: if (root.devicesShown && generation !== root.deviceGeneration) { generation = root.deviceGeneration; running = true }
     }
     Timer {
         interval: 10000; repeat: true; triggeredOnStart: true
