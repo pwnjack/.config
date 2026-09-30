@@ -30,9 +30,11 @@ ShellRoot {
     // Devices page: devices.sh every 10 s while the page is on screen; nothing otherwise.
     property var devices: null
     readonly property bool devicesShown: opened && !closing && category === "devices" && !query.trim()
-    // Bumped whenever the page is hidden, so a read still in flight cannot land afterwards.
+    // Bumped when the page is hidden, so a read still in flight cannot land afterwards.
+    // Only on hide: the Timer's first read on show may fire before this handler, and a
+    // bump there would discard it and leave "Reading devices…" up for a full interval.
     property int deviceGeneration: 0
-    onDevicesShownChanged: { deviceGeneration++; if (!devicesShown) deviceReader.running = false; }
+    onDevicesShownChanged: if (!devicesShown) { deviceGeneration++; deviceReader.running = false; }
     readonly property string initialPage: Quickshell.env("SETTINGS_PAGE") || ""
     property string mainMonitor: ""
     property var pendingDisplay: null
