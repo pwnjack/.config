@@ -17,7 +17,11 @@ trap 'rm -rf "$TMP"' EXIT
 
 mkdir -p "$TMP/opt" "$TMP/bin"
 printf '#!/bin/bash\necho "$*" >> "%s/pkill.log"\n' "$TMP" > "$TMP/bin/pkill"
-chmod +x "$TMP/bin/pkill"
+# A running bar, and a busctl that registers nothing, so the reload through
+# waybar.sh never reaches the real session's tray.
+printf '#!/bin/bash\nexit "${PGREP_STATUS:-0}"\n' > "$TMP/bin/pgrep"
+printf '#!/bin/bash\nexit 0\n' > "$TMP/bin/busctl"
+chmod +x "$TMP/bin/pkill" "$TMP/bin/pgrep" "$TMP/bin/busctl"
 
 # render [--no-reload] — run the script, print the include
 render() {
@@ -56,6 +60,13 @@ else
 fi
 render > /dev/null
 assert_eq "$(<"$TMP/pkill.log")" "-USR2 -x waybar" "a render signals Waybar once"
+rm -f "$TMP/pkill.log"
+PGREP_STATUS=1 render > /dev/null
+if [ -e "$TMP/pkill.log" ]; then
+    fail "a bar that is not running is neither started nor signalled"
+else
+    pass "a bar that is not running is neither started nor signalled"
+fi
 
 config="$TEST_DIR/../../waybar/config.jsonc"
 # shellcheck disable=SC2088 # The literal tilde is present in Waybar's config.

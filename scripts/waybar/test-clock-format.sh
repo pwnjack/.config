@@ -16,12 +16,20 @@ echo 'ok: output always exists and no temporary file is left'
 # The reload path: pkill runs exactly when --no-reload is absent.
 mkdir -p "$tmp/bin"
 printf '#!/bin/bash\necho "$*" >> "%s/pkill.log"\n' "$tmp" > "$tmp/bin/pkill"
-chmod +x "$tmp/bin/pkill"
+# A running bar, and a busctl that registers nothing, so the reload through
+# waybar.sh never reaches the real session's tray.
+printf '#!/bin/bash\nexit "${PGREP_STATUS:-0}"\n' > "$tmp/bin/pgrep"
+printf '#!/bin/bash\nexit 0\n' > "$tmp/bin/busctl"
+chmod +x "$tmp/bin/pkill" "$tmp/bin/pgrep" "$tmp/bin/busctl"
 PATH="$tmp/bin:$PATH" CLOCK_OPTION="$tmp/clock" CLOCK_INCLUDE="$tmp/out/clock.jsonc" bash "$script" --no-reload
 [[ ! -e $tmp/pkill.log ]] || { echo '--no-reload must not signal Waybar' >&2; exit 1; }
 PATH="$tmp/bin:$PATH" CLOCK_OPTION="$tmp/clock" CLOCK_INCLUDE="$tmp/out/clock.jsonc" bash "$script"
 [[ $(<"$tmp/pkill.log") == '-USR2 -x waybar' ]] || { echo 'a render must signal Waybar once' >&2; exit 1; }
 echo 'ok: Waybar is signalled only without --no-reload'
+rm -f "$tmp/pkill.log"
+PGREP_STATUS=1 PATH="$tmp/bin:$PATH" CLOCK_OPTION="$tmp/clock" CLOCK_INCLUDE="$tmp/out/clock.jsonc" bash "$script"
+[[ ! -e $tmp/pkill.log ]] || { echo 'a bar that is not running must not be started or signalled' >&2; exit 1; }
+echo 'ok: a stopped bar stays stopped'
 
 # The main config must not set clock.format (it would win over the include key by
 # key), and its include must be the path this script writes by default.

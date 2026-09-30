@@ -20,4 +20,10 @@ tmp=$(mktemp "$include.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
 printf '{ "clock": { "format": "%s" } }\n' "$format" > "$tmp"
 mv -f "$tmp" "$include"
-if [[ ${1:-} != --no-reload ]]; then pkill -USR2 -x waybar 2>/dev/null || true; fi
+# Reload through waybar.sh, never a bare USR2: Proton VPN's tray icon does not
+# re-register after one, and waybar.sh restores it. Only a running bar is
+# reloaded -- waybar.sh would start one, and a settings change must not bring
+# back a bar the user toggled off.
+if [[ ${1:-} != --no-reload ]] && pgrep -x waybar >/dev/null 2>&1; then
+    bash "$(dirname -- "${BASH_SOURCE[0]}")/waybar.sh" || true
+fi
