@@ -12,10 +12,8 @@
 
   // General Settings
   "layer": "bottom",
-  "margin-top": 8,
-  "margin-bottom": 0,
-  "margin-left": 10,
-  "margin-right": 10,
+  // position, margin-* and output live in bar.jsonc (Bar page); the main
+  // config would win over the include key by key.
   "spacing": 0,
   "height": 0,
 

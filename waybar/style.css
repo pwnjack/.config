@@ -59,11 +59,16 @@
    can still read as tighter. Trust the render: two spaces inside the label
    (~14px), 20px between modules, 30px between groups.
 
+   The bar's background, border and radius are not set here: bar.css
+   (rendered by scripts/waybar/bar-modes.sh from the Bar page's options) is
+   imported after colors.css and owns them; a rule here would beat it.
+
    Colour is pywal-driven throughout. The two alert states are the
    deliberate exception and are marked where they appear.
    ══════════════════════════════════════════════════════════════════════ */
 
 @import "colors.css";
+@import "bar.css";
 
 * {
     font-family: "FiraCode Nerd Font", "JetbrainsMono Nerd", "Hack Nerd", sans-serif;
@@ -71,9 +76,6 @@
 }
 
 window#waybar {
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid @foreground;
-    border-radius: 18px;
     opacity: 1;
 }
 
