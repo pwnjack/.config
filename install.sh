@@ -243,6 +243,10 @@ if ! execute bash "$CONFIG_DIR/scripts/waybar/clock-format.sh" --no-reload; then
     warning "Could not render the Waybar clock format"
 fi
 
+if ! execute bash "$CONFIG_DIR/scripts/waybar/bar-modes.sh" --no-reload; then
+    warning "Could not render the Waybar module modes"
+fi
+
 # Seed waypaper config
 if [ ! -f "$HOME/.cache/waypaper-config.ini" ]; then
     execute cp "$CONFIG_DIR/waypaper/config.ini.template" "$HOME/.cache/waypaper-config.ini"

@@ -4,9 +4,11 @@
 //
 
 {
-  // The clock's format lives here (options/clock, rendered by
-  // scripts/waybar/clock-format.sh). Waybar's own default is {:%H:%M}.
-  "include": ["~/.local/state/waybar/clock.jsonc"],
+  // Rendered, untracked includes. clock.jsonc: the clock's format
+  // (options/clock, scripts/waybar/clock-format.sh; Waybar's own default is
+  // {:%H:%M}). bar.jsonc: the Bar page's modes for cpu/memory/disk
+  // (options/bar-*, scripts/waybar/bar-modes.sh).
+  "include": ["~/.local/state/waybar/clock.jsonc", "~/.local/state/waybar/bar.jsonc"],
 
   // General Settings
   "layer": "bottom",

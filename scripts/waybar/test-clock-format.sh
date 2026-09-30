@@ -28,7 +28,7 @@ echo 'ok: Waybar is signalled only without --no-reload'
 config="$(dirname "$script")/../../waybar/config.jsonc"
 clock_block=$(sed -n '/^  "clock": {/,/^  },/p' "$config")
 if grep -Eq '^    "format":' <<< "$clock_block"; then echo 'waybar/config.jsonc must not set clock.format' >&2; exit 1; fi
-grep -Fq '"include": ["~/.local/state/waybar/clock.jsonc"]' "$config" || { echo 'waybar/config.jsonc must include ~/.local/state/waybar/clock.jsonc' >&2; exit 1; }
+grep -Fq '"include": ["~/.local/state/waybar/clock.jsonc"' "$config" || { echo 'waybar/config.jsonc must include ~/.local/state/waybar/clock.jsonc' >&2; exit 1; }
 # shellcheck disable=SC2016 # the literal $HOME text is what is being checked
 grep -Fq 'include=$HOME/.local/state/waybar/clock.jsonc' "$script" || { echo 'clock-format.sh must default to the include config.jsonc names' >&2; exit 1; }
 echo 'ok: the main config leaves the format to the include it names'
