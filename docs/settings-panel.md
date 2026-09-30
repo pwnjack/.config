@@ -265,9 +265,10 @@ Lists wireless peripherals (mouse, keyboard, gamepad) with their battery and con
 rendered from `scripts/devices/devices.sh`, the one reader shared with the Waybar battery
 module and the low-battery toast. `shell.qml` runs it when the page opens and every 10 s
 only while `opened && !closing && category === "devices"` with no search query; nothing
-runs otherwise. `alert` (low/critical) comes from the script, not the page, and draws the
-value in the accent colour, bold. An asleep device shows its last reading; a USB receiver
-with no battery under it shows "Receiver connected". `settings-panel.sh devices` opens it.
+runs otherwise: hiding the page stops a read in flight and discards a late result
+(`deviceRead.mjs` `fresh`). `alert` (low/critical) comes from the script, not the page, and draws the
+value in the accent colour, bold. An asleep device shows its last reading; a USB input device
+with no readable battery (a dongle or a wired keyboard) shows "Connected" and "No battery info". `settings-panel.sh devices` opens it.
 
 ## Network: security rules
 

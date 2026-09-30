@@ -22,7 +22,6 @@ ColumnLayout {
     }
     function stateText(d) {
         if (d.state === "asleep") return d.percent !== null && d.percent !== undefined ? "Asleep · last " + d.percent + "%" : "Asleep";
-        if (d.state === "receiver") return "Receiver connected";
         return d.charging ? "Charging" : "Connected";
     }
 

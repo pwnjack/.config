@@ -3,6 +3,7 @@ import QtTest
 import ".."
 import "../autostart.mjs" as Autostart
 import "../network.mjs" as Network
+import "../deviceRead.mjs" as DeviceRead
 
 Item {
     width: 1280; height: 900
@@ -82,11 +83,41 @@ Item {
             compare(findChild(view,"device-gip0.0-value").text,"Critical");
             compare(findChild(view,"device-hidpp_battery_0-state").text,"Asleep · last 36%");
             compare(findChild(view,"device-1-8-value").text,"No battery info");
+            compare(findChild(view,"device-1-8-state").text,"Connected");
             compare(findChild(view,"device-gip0.0-icon").text.codePointAt(0),0xf0297);
             controller.devices = []; wait(20);
             verify(findChild(view,"noDevices").visible);
             controller.devices = null;
             controller.select("appearance"); wait(20);
+        }
+        function test_devices_page_states() {
+            controller.select("devices"); controller.devices = null; wait(20);
+            const labels = []; (function walk(i){ for (const c of i.children) { if (c.text === "Reading devices…" && c.visible) labels.push(c); walk(c); } })(view);
+            compare(labels.length, 1);
+            verify(!findChild(view,"noSettingsMatch").visible, "no rows on Devices is not a search miss");
+            controller.devices = {error: "boom"}; wait(20);
+            compare(findChild(view,"devicesError").text, "Could not read devices: boom");
+            controller.devices = [
+                {id:"a",name:"A",kind:"gamepad",percent:5,level:null,charging:false,state:"connected",alert:"low"},
+                {id:"b",name:"B",kind:"mouse",percent:80,level:null,charging:true,state:"connected",alert:"none"},
+                {id:"c",name:"C",kind:"keyboard",percent:null,level:"critical",charging:false,state:"connected",alert:"critical"}];
+            wait(20);
+            const a = findChild(view,"device-a-value"), b = findChild(view,"device-b-value"), c = findChild(view,"device-c-value");
+            verify(a.font.bold); verify(c.font.bold); verify(!b.font.bold);
+            compare(a.color, controller.accent); compare(c.color, controller.accent);
+            verify(b.color !== controller.accent);
+            compare(findChild(view,"device-b-state").text, "Charging");
+            controller.query = "blur"; wait(20);
+            verify(!findChild(view,"devicesView").visible, "a search query hides the page");
+            controller.query = ""; controller.devices = null;
+            controller.select("appearance"); wait(20);
+        }
+        function test_device_read_guard() {
+            verify(DeviceRead.fresh(3, 3, true));
+            verify(!DeviceRead.fresh(3, 4, true), "a read started before the page was hidden is stale");
+            verify(!DeviceRead.fresh(3, 3, false), "nothing lands while hidden");
+            compare(DeviceRead.parse("[1]"), [1]);
+            verify(!!DeviceRead.parse("nope").error);
         }
         function test_startup_view() {
             controller.startup = startupFixture(); controller.category = "startup"; waitForRendering(view);

@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import "deviceRead.mjs" as DeviceRead
 
 ShellRoot {
     id: root
@@ -29,6 +30,9 @@ ShellRoot {
     // Devices page: devices.sh every 10 s while the page is on screen; nothing otherwise.
     property var devices: null
     readonly property bool devicesShown: opened && !closing && category === "devices" && !query.trim()
+    // Bumped whenever the page is hidden, so a read still in flight cannot land afterwards.
+    property int deviceGeneration: 0
+    onDevicesShownChanged: { deviceGeneration++; if (!devicesShown) deviceReader.running = false; }
     readonly property string initialPage: Quickshell.env("SETTINGS_PAGE") || ""
     property string mainMonitor: ""
     property var pendingDisplay: null
@@ -238,17 +242,15 @@ ShellRoot {
     Process {
         id: deviceReader
         command: ["bash", root.configDir + "/scripts/devices/devices.sh"]
+        property int generation: -1
         stdout: StdioCollector {
-            onStreamFinished: {
-                try { root.devices = JSON.parse(text); }
-                catch (error) { root.devices = {error: String(error)}; }
-            }
+            onStreamFinished: if (DeviceRead.fresh(deviceReader.generation, root.deviceGeneration, root.devicesShown)) root.devices = DeviceRead.parse(text)
         }
     }
     Timer {
         interval: 10000; repeat: true; triggeredOnStart: true
         running: root.devicesShown
-        onTriggered: if (!deviceReader.running) deviceReader.running = true
+        onTriggered: if (!deviceReader.running) { deviceReader.generation = root.deviceGeneration; deviceReader.running = true }
     }
     Process {
         id: reader
