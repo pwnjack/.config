@@ -259,6 +259,11 @@ Item {
             compare(scroll.y,y); compare(scroll.height,height);
             compare(findChild(view,"closeSettings").text,"Close");
         }
+        function test_panel_title_has_waybar_cog() {
+            const icon = findChild(view,"panelIcon");
+            verify(icon.visible);
+            compare(icon.text.codePointAt(0),0xf08bb);
+        }
         function test_zero_label() {
             controller.select("input"); wait(20);
             const slider = findChild(view,"slider-idle");

@@ -64,7 +64,19 @@ FocusScope {
                 Layout.preferredWidth: 205
                 Layout.fillHeight: true
                 spacing: 8
-                Label { text: "Settings"; color: view.foreground; font.pixelSize: 27; font.bold: true; Layout.bottomMargin: 12 }
+                RowLayout {
+                    spacing: 10
+                    Layout.bottomMargin: 12
+                    Text {
+                        objectName: "panelIcon"
+                        // md-cog_outline, the glyph of Waybar's custom/settings button.
+                        text: view.glyph("f08bb")
+                        font.family: view.iconFont; font.pixelSize: 28
+                        color: view.foreground
+                        Accessible.ignored: true
+                    }
+                    Label { text: "Settings"; color: view.foreground; font.pixelSize: 27; font.bold: true }
+                }
                 TextField {
                     id: search
                     objectName: "settingsSearch"
