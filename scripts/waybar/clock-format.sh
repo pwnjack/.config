@@ -13,12 +13,18 @@ include=${CLOCK_INCLUDE:-$include}
 # flag is what makes Waybar name the day in the session's LC_TIME (the
 # settings panel's Formats row) rather than always in English; its "locale"
 # option alone does not.
-format='{:L%a %d  %H:%M}'
-if [[ -r $option && $(<"$option") == 12h ]]; then format='{:L%a %d  %I:%M %p}'; fi
+time='%H:%M' suffix=''
+if [[ -r $option && $(<"$option") == 12h ]]; then time='%I:%M' suffix=' %p'; fi
+# Seconds (options/clock-seconds, the Bar page) are the bar's alone: the lock
+# screen keeps its hour/minute layout. They need a one-second interval, which
+# is why the main config must not set clock.interval either.
+seconds=${option%/*}/clock-seconds interval=''
+if [[ -r $seconds && $(<"$seconds") == enabled ]]; then time+=':%S' interval=', "interval": 1'; fi
+format="{:L%a %d  $time$suffix}"
 mkdir -p "${include%/*}"
 tmp=$(mktemp "$include.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
-printf '{ "clock": { "format": "%s" } }\n' "$format" > "$tmp"
+printf '{ "clock": { "format": "%s"%s } }\n' "$format" "$interval" > "$tmp"
 mv -f "$tmp" "$include"
 # Reload through waybar.sh, never a bare USR2: Proton VPN's tray icon does not
 # re-register after one, and waybar.sh restores it. Only a running bar is
