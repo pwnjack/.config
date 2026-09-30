@@ -331,8 +331,12 @@ Traps:
   so the background is blurred only above 50 % opacity; at the default it is not, exactly as
   before. Swapping the threshold to 0.01 and reloading produced a pixel-identical screenshot
   (layer rules apply when a surface maps), so nothing was tuned on a guess.
-- **Missing rendered files** (a fresh checkout before `install.sh`) leave Waybar on its own
-  defaults — top, no margins — the same state `clock.jsonc` and `colors.css` share.
+- **A missing `bar.css` stops Waybar.** A missing JSON include is tolerated, a missing CSS
+  import is a stylesheet error Waybar exits on — the same as a missing `colors.css`. So
+  `install.sh` renders it, `waybar.sh` renders both includes before every start (the
+  Restart Waybar button and the visibility toggle's start path both go through it), and
+  `doctor.sh` reports the dangling `waybar/bar.css` symlink as an ERROR. Login's bare
+  `waybar` is left as is so the doctor can still check the daemon is alive.
 - **Tests must not read the live options.** The network and updates suites point
   `BAR_OPTIONS` at an empty directory; otherwise a user's own "hidden" breaks them, and the
   pre-commit hook with them.

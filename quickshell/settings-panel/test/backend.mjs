@@ -458,9 +458,11 @@ for (const value of ['broken','', 'Infinity']) {
     assert.equal(result.values['bar.opacity'].value,50)
     assert.equal(result.values['test.option-slider'].value,10)
 }
+// A missing file disables the row, as for every option row: a save could not
+// recreate it (saveAndApply reads the old file first).
 files.delete(base+'/options/bar-opacity')
 result = await dispatch({op:'read',ids:['bar.opacity']})
-assert.equal(result.values['bar.opacity'].value,50)
+assert.ok(result.values['bar.opacity'].error)
 files.set(base+'/options/bar-opacity','50\n')
 files.set(base+'/options/bar-output','HDMI-A-1\n')
 result = await dispatch({op:'read',ids:['bar.output']})
@@ -478,6 +480,10 @@ for (const [id,value] of [['bar.opacity',-5],['bar.opacity',105],['bar.opacity',
 for (const [text, expected] of [['0x10\n', 50], ['500\n', 50], ['1e1\n', 50], ['35\n', 35]]) {
     files.set(base+'/options/bar-opacity', text)
     assert.equal((await dispatch({op:'read',ids:['bar.opacity']})).values['bar.opacity'].value, expected)
+}
+for (const [text, expected] of [['banana\n', true], ['\n', true], ['disabled\n', false], ['enabled\n', true]]) {
+    files.set(base+'/options/bar-border', text)
+    assert.equal((await dispatch({op:'read',ids:['bar.border']})).values['bar.border'].value, expected)
 }
 console.log('ok: bar layout rows persist typed values, enumerate monitors and validate before applying')
 

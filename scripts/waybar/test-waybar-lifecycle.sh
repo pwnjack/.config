@@ -36,8 +36,13 @@ run_script() {
     : > "$TMP/pkill.log"
     : > "$TMP/busctl.log"
     rm -f "$TMP/waybar.log"
+    rm -rf "$TMP/state"
+    # The renderers waybar.sh runs before a start write here, never to the
+    # real ~/.local/state, and read no live options.
     PKILL_LOG="$TMP/pkill.log" WAYBAR_LOG="$TMP/waybar.log" \
         BUSCTL_LOG="$TMP/busctl.log" \
+        BAR_OPTIONS="$TMP/no-options" BAR_INCLUDE="$TMP/state/bar.jsonc" BAR_CSS="$TMP/state/bar.css" \
+        CLOCK_OPTION="$TMP/no-options/clock" CLOCK_INCLUDE="$TMP/state/clock.jsonc" \
         PKILL_STATUS="$2" PATH="$TMP/bin:$PATH" bash "$1"
 }
 
@@ -62,7 +67,7 @@ assert_absent_case() {
         [ ! -e "$TMP/waybar.log" ] || break
         sleep 0.01
     done
-    if [ -e "$TMP/waybar.log" ]; then
+    if [ -e "$TMP/waybar.log" ] && [ -e "$TMP/state/bar.css" ] && [ -e "$TMP/state/clock.jsonc" ]; then
         pass "$label"
     else
         fail "$label"

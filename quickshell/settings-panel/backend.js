@@ -450,14 +450,16 @@ async function snapshot(ids, includeMonitors, views = {}) {
                 break
             }
             case "option":
-                value = row.kind === "slider" && !exists(optionPath(row.key)) ? "" : readOption(row.key)
+                value = readOption(row.key)
                 if (row.kind === "slider") {
                     // Read the way scripts/waybar/bar-modes.sh does: plain digits in
                     // range, anything else is the default the bar actually uses.
                     const number = /^\d+$/.test(value) ? Number(value) : NaN
                     value = number >= row.min && number <= row.max ? number : (row.default ?? row.min)
                 }
-                else if (row.kind === "toggle") value = value === "enabled"
+                // Bar toggles default on (bar-border): bar-modes.sh treats anything but
+                // "disabled" as enabled, so the row reads the same way.
+                else if (row.kind === "toggle") value = row.key.startsWith("bar-") ? value !== "disabled" : value === "enabled"
                 // The Bar page's renderers treat an unknown mode as the row's first
                 // choice (scripts/waybar/bar-modes.sh and the module scripts), so the
                 // row shows that choice instead of the raw file text.
