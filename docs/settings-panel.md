@@ -283,6 +283,13 @@ value means the first choice, which is also the tracked default, so the bar look
 until something is changed. "High" is the amber threshold: 70%, disk 80%. `settings-panel.sh
 bar` opens it.
 
+Below them, the bar's layout: Position (Top · Bottom), Style (Floating: today's inset,
+rounded, fully bordered bar · Docked: edge to edge, square, one border line facing the
+windows), Background opacity (0–100 %), Border, Monitors (All, or one connected output — an
+empty `options/bar-output` means all, so the tracked default names no connector) and Clock
+seconds (bar only; the lock screen keeps its hour/minute layout). Their files are
+`bar-position`, `bar-style`, `bar-opacity`, `bar-border`, `bar-output` and `clock-seconds`.
+
 Whoever renders a module applies its mode:
 
 - **cpu, memory, disk** are Waybar built-ins, reachable only through config. A save runs
@@ -293,6 +300,18 @@ Whoever renders a module applies its mode:
 - **gpu.sh, network.sh, updates.sh** read their own option when Waybar (re)starts them,
   which the same reload does. A hidden GPU never calls `nvidia-smi` and hidden updates never
   run `checkupdates`, so hiding a module also stops its polling.
+
+- **Layout** is rendered by the same `bar-modes.sh`: `position`, the four `margin-*` keys
+  and `output` go into `bar.jsonc`, and background, border and radius into
+  `~/.local/state/waybar/bar.css`, which the tracked symlink `waybar/bar.css` exposes to
+  `style.css`'s `@import`. Those keys are gone from `config.jsonc` and `style.css`: the
+  main config wins over an include, and a later `style.css` rule over an import.
+- **Clock seconds** belong to `clock-format.sh`, which adds `:%S` and `"interval": 1` to
+  `clock.jsonc`; `config.jsonc` must set neither `clock.format` nor `clock.interval`.
+- **Position and Style reload Hyprland** after saving: `hypr/config/apptype.lua` reads both,
+  and `rules.lua` places the picture-in-picture window clear of the bar with them.
+- **Monitors** are enumerated from `hyprctl monitors -j` on every read; a saved output that
+  is not connected stays listed as "(disconnected)" rather than breaking the row.
 
 The four resources are one `group/resources`. Its outer padding lives on whichever member
 is first or last while visible (`#resources > :first-child > *`): padding on the group box
@@ -308,6 +327,12 @@ Traps:
   unrecognised `bar-*` value as the row's first choice, matching the renderers. A deleted
   option file disables its row, as it does for every option row, while the bar itself falls
   back to the default; `git restore options/bar-<name>` brings the tracked default back.
+- **Blur is unchanged.** Hyprland's `blur-waybar` rule ignores pixels at 50 % alpha or less,
+  so the background is blurred only above 50 % opacity; at the default it is not, exactly as
+  before. Swapping the threshold to 0.01 and reloading produced a pixel-identical screenshot
+  (layer rules apply when a surface maps), so nothing was tuned on a guess.
+- **Missing rendered files** (a fresh checkout before `install.sh`) leave Waybar on its own
+  defaults — top, no margins — the same state `clock.jsonc` and `colors.css` share.
 - **Tests must not read the live options.** The network and updates suites point
   `BAR_OPTIONS` at an empty directory; otherwise a user's own "hidden" breaks them, and the
   pre-commit hook with them.

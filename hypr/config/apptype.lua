@@ -24,6 +24,11 @@ return {
     cursorTheme = read_option("cursortheme", "Bibata-Modern-Classic"),
     filemanager = read_option("filemanager", "thunar"), -- GUI file manager (yazi for CLI)
 
+    -- Where Waybar sits (the settings panel's Bar page); rules.lua keeps
+    -- floating windows clear of it. Both rows reload Hyprland when saved.
+    barPosition = read_option("bar-position", "top"),
+    barStyle = read_option("bar-style", "floating"),
+
     -- The package ships this systemd user unit rather than a PATH executable.
     polkitAgent = "hyprpolkitagent.service",
 }

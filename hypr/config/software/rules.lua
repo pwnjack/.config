@@ -1,5 +1,15 @@
 -- Window rules
 
+local apps = require("config.apptype")
+
+-- The bar's 40px plus, when floating, its 8px gap from the screen edge, then
+-- gaps_out (10) -- but only when the bar is on top. At the bottom a window
+-- flush with the top edge needs gaps_out alone.
+local below_bar = 10
+if apps.barPosition ~= "bottom" then
+    below_bar = 40 + (apps.barStyle == "docked" and 0 or 8) + 10
+end
+
 hl.window_rule({
     name = "suppress-maximize-events",
     match = { class = ".*" },
@@ -67,11 +77,11 @@ hl.window_rule({
     float = true,
     pin = true,
     -- Fixed size, flush top right: the browser's own size ran off-screen.
-    -- Inset by gaps_out (10) from the right and by the bar's reserved 48px
-    -- plus gaps_out from the top, so it lines up with tiled windows.
+    -- Inset by gaps_out (10) from the right and by below_bar from the top,
+    -- so it lines up with tiled windows wherever the bar is.
     -- Percentages ("69.5% 4%") were silently ignored; use expressions.
     size = "768 432",
-    move = "monitor_w-778 58", -- 768 + 10; 0.56 has no window_w variable
+    move = "monitor_w-778 " .. below_bar, -- 768 + 10; 0.56 has no window_w variable
 })
 
 -- Game window rules. See docs/gaming-wow.md before changing these.
