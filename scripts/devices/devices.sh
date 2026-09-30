@@ -10,7 +10,10 @@
 #   USB/BT input  an input device whose physical device holds no such battery:
 #                 a receiver whose peripheral reports nothing (the CX dongle
 #                 of an Epomaker keyboard). SCOPE=System batteries are the
-#                 machine's own and stay with battery.sh.
+#                 machine's own and stay with battery.sh. "BT" is classic
+#                 Bluetooth (an hciN:M connection); BLE HID arrives through
+#                 uhid with neither parent, so a battery-less BLE device has
+#                 no row -- its battery, when it reports one, still does.
 #
 # kind comes from udev's input classification, never from product names. A
 # gaming mouse also exposes a keyboard interface and a keyboard receiver a
