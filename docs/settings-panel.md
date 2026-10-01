@@ -286,9 +286,10 @@ bar` opens it.
 Below them, the bar's layout: Position (Top · Bottom), Style (Floating: today's inset,
 rounded, fully bordered bar · Docked: edge to edge, square, one border line facing the
 windows), Background opacity (0–100 %), Border, Monitors (All, or one connected output — an
-empty `options/bar-output` means all, so the tracked default names no connector) and Clock
-seconds (bar only; the lock screen keeps its hour/minute layout). Their files are
-`bar-position`, `bar-style`, `bar-opacity`, `bar-border`, `bar-output` and `clock-seconds`.
+empty `options/bar-output` means all, so the tracked default names no connector), Clock
+seconds (bar only; the lock screen keeps its hour/minute layout) and Workspaces (Dots ·
+Numbers). Their files are `bar-position`, `bar-style`, `bar-opacity`, `bar-border`,
+`bar-output`, `clock-seconds` and `bar-workspaces`.
 
 Whoever renders a module applies its mode:
 
@@ -308,6 +309,10 @@ Whoever renders a module applies its mode:
   main config wins over an include, and a later `style.css` rule over an import.
 - **Clock seconds** belong to `clock-format.sh`, which adds `:%S` and `"interval": 1` to
   `clock.jsonc`; `config.jsonc` must set neither `clock.format` nor `clock.interval`.
+- **Workspaces** are read by `scripts/waybar/workspace.sh` on every status call, so the
+  `bar-modes.sh` reload is what applies a save. Numbers mode prints the workspace number
+  with a `numbers` class beside the state class; `style.css` makes those bold and dims
+  `.numbers.empty`, since a number has no hollow form. Anything but `numbers` keeps the dots.
 - **Position and Style reload Hyprland** after saving: `hypr/config/apptype.lua` reads both,
   and `rules.lua` places the picture-in-picture window clear of the bar with them.
 - **Monitors** are enumerated from `hyprctl monitors -j` on every read; a saved output that

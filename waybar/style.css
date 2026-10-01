@@ -198,8 +198,9 @@ window#waybar {
 }
 
 /* ── WORKSPACES ──────────────────────────────────────────────────────
-   ● / ○ are geometric Unicode, not Nerd Font glyphs — they render at
-   full size, so they stay at the text size rather than the icon size. */
+   ● / ○ (or the numbers) are geometric Unicode, not Nerd Font glyphs —
+   they render at full size, so they stay at the text size rather than the
+   icon size. */
 
 #custom-workspace {
     background: transparent;
@@ -223,6 +224,16 @@ window#waybar {
 #custom-workspace.active {
     color: @foreground;
     background-color: @color4;
+}
+
+/* Numbers mode (options/bar-workspaces): bold to carry the dots' weight, and
+   empty ones dimmed because a number has no hollow form. */
+#custom-workspace.numbers {
+    font-weight: bold;
+}
+
+#custom-workspace.numbers.empty {
+    opacity: 0.4;
 }
 
 #custom-workspace:hover {

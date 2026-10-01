@@ -58,7 +58,7 @@ files.set(base+'/options/clock','24h\n')
 for (const name of ['cpu','memory','gpu','disk']) files.set(`${base}/options/bar-${name}`, 'always\n')
 files.set(base+'/options/bar-network','traffic\n')
 files.set(base+'/options/bar-updates','pending\n')
-for (const [key, value] of Object.entries({'bar-position':'top','bar-style':'floating','bar-opacity':'50','bar-border':'enabled','bar-output':'','clock-seconds':'disabled','test-slider':'broken'})) files.set(`${base}/options/${key}`, value+'\n')
+for (const [key, value] of Object.entries({'bar-position':'top','bar-style':'floating','bar-opacity':'50','bar-border':'enabled','bar-output':'','clock-seconds':'disabled','bar-workspaces':'dots','test-slider':'broken'})) files.set(`${base}/options/${key}`, value+'\n')
 files.set(base+'/hypr/config/setup/autostart.lua', 'return function(apps)\n    hl.exec_cmd("waybar")\n    hl.exec_cmd("systemctl --user start " .. apps.polkitAgent)\nend\n')
 files.set('/etc/xdg/autostart/nm-applet.desktop', '[Desktop Entry]\nType=Application\nName=Network\nExec=nm-applet\n')
 files.set('/etc/xdg/autostart/blueman.desktop', '[Desktop Entry]\nType=Application\nName=Blueman Applet\nExec=blueman-applet\n')
@@ -408,7 +408,8 @@ assert.equal(files.get(base+'/options/bar-updates'), 'hidden\n')
 assert.ok(catalog.categories.some(c => c.id === 'bar'))
 assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key),
     ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates',
-     'bar-position','bar-style','bar-opacity','bar-border','bar-output','clock-seconds'])
+     'bar-position','bar-style','bar-opacity','bar-border','bar-output','clock-seconds',
+     'bar-workspaces'])
 files.set(base+'/options/bar-disk','banana\n')
 result = await dispatch({op:'read',ids:['bar.disk','bar.updates']})
 assert.equal(result.values['bar.disk'].value,'always')
@@ -423,6 +424,7 @@ assert.deepEqual(layoutRows.map(row => [row.id, row.title, row.source, row.kind]
     ['bar.border','Border','option','toggle'],
     ['bar.output','Monitors','option','select'],
     ['bar.clock-seconds','Clock seconds','option','toggle'],
+    ['bar.workspaces','Workspaces','option','select'],
 ])
 assert.deepEqual(layoutRows.slice(0,2).map(row => row.reload), [true,true])
 const opacityRow = layoutRows[2]
@@ -435,6 +437,7 @@ for (const [id,key,values,script,reload] of [
     ['bar.border','bar-border',[false,true],'bar-modes.sh',false],
     ['bar.output','bar-output',['DP-1',''],'bar-modes.sh',false],
     ['bar.clock-seconds','clock-seconds',[true,false],'clock-format.sh',false],
+    ['bar.workspaces','bar-workspaces',['numbers','dots'],'bar-modes.sh',false],
 ]) for (const value of values) {
     events = []
     await dispatch({op:'set',id,value})

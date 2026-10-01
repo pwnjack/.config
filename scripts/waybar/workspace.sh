@@ -10,6 +10,12 @@
 #   active or occupied  ●
 #   genuinely empty     ○
 #
+# The Bar page's mode (options/bar-workspaces) swaps the dots for the workspace
+# number; anything but `numbers` keeps the dots. A number cannot be hollow, so
+# that mode adds a `numbers` class and style.css dims the empty ones instead.
+# A save reloads Waybar, which re-runs every instance, so the option is read on
+# each status call rather than cached.
+#
 # Hyprland events signal Waybar for immediate updates; the module's interval is
 # only a fallback. Workspaces 1-5 are always rendered, while `status-existing`
 # lets the optional 6-10 modules disappear until their workspace exists.
@@ -18,6 +24,9 @@ set -uo pipefail
 
 action="${1-}"
 workspace="${2-}"
+
+BAR_OPTIONS="${BAR_OPTIONS-}"
+[ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
 
 case "$action" in
     previous)
@@ -52,11 +61,21 @@ case "$action" in
             <<< "$workspaces" 2>/dev/null) || windows=0
 
         if [ "$active" = "$workspace" ]; then
-            printf '{"text":"●","class":"active"}\n'
+            state=active
         elif [ "$windows" -gt 0 ] 2>/dev/null; then
-            printf '{"text":"●","class":"occupied"}\n'
+            state=occupied
         else
+            state=empty
+        fi
+
+        mode=''
+        read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-workspaces"
+        if [ "$mode" = numbers ]; then
+            printf '{"text":"%s","class":["%s","numbers"]}\n' "$workspace" "$state"
+        elif [ "$state" = empty ]; then
             printf '{"text":"○","class":"empty"}\n'
+        else
+            printf '{"text":"●","class":"%s"}\n' "$state"
         fi
         ;;
     *)

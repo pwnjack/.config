@@ -577,6 +577,31 @@
       "kind": "toggle"
     },
     {
+      "category": "bar",
+      "id": "bar.workspaces",
+      "title": "Workspaces",
+      "description": "Dots, or the workspace number",
+      "keywords": [
+        "waybar",
+        "circles",
+        "dots",
+        "numbers"
+      ],
+      "source": "option",
+      "key": "bar-workspaces",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Dots",
+          "value": "dots"
+        },
+        {
+          "label": "Numbers",
+          "value": "numbers"
+        }
+      ]
+    },
+    {
       "category": "animations",
       "id": "anim.master",
       "title": "Animations",
