@@ -388,8 +388,5 @@ tooltip label {
 
 /* ── CLOCK ───────────────────────────────────────────────────────────
    Emphasis comes from weight, not size, so the clock stays in the
-   text tier. */
-
-#clock {
-    font-weight: bold;
-}
+   text tier. The weight is on the time alone, as <b> markup in the
+   format scripts/waybar/clock-format.sh renders; the date stays regular. */

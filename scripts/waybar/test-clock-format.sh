@@ -3,19 +3,19 @@ set -euo pipefail
 script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/clock-format.sh"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 run() { CLOCK_OPTION="$tmp/clock" CLOCK_INCLUDE="$tmp/out/clock.jsonc" bash "$script" --no-reload; cat "$tmp/out/clock.jsonc"; }
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %H:%M}" } }' ]] || { echo 'missing option should render 24 h' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%H:%M</b>}" } }' ]] || { echo 'missing option should render 24 h' >&2; exit 1; }
 printf '12h\n' > "$tmp/clock"
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %I:%M %p}" } }' ]] || { echo '12h not rendered' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%I:%M %p</b>}" } }' ]] || { echo '12h not rendered' >&2; exit 1; }
 echo 'ok: 12h renders the 12-hour format'
 printf 'banana\n' > "$tmp/clock"
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %H:%M}" } }' ]] || { echo 'garbage should fall back to 24 h' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%H:%M</b>}" } }' ]] || { echo 'garbage should fall back to 24 h' >&2; exit 1; }
 echo 'ok: anything else falls back to 24 h'
 printf 'enabled\n' > "$tmp/clock-seconds"
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %H:%M:%S}", "interval": 1 } }' ]] || { echo 'seconds not rendered in 24 h' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%H:%M:%S</b>}", "interval": 1 } }' ]] || { echo 'seconds not rendered in 24 h' >&2; exit 1; }
 printf '12h\n' > "$tmp/clock"
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %I:%M:%S %p}", "interval": 1 } }' ]] || { echo 'seconds not rendered in 12 h' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%I:%M:%S %p</b>}", "interval": 1 } }' ]] || { echo 'seconds not rendered in 12 h' >&2; exit 1; }
 printf 'banana\n' > "$tmp/clock-seconds"; printf '24h\n' > "$tmp/clock"
-[[ $(run) == '{ "clock": { "format": "{:L%a %d  %H:%M}" } }' ]] || { echo 'anything but enabled must leave seconds off' >&2; exit 1; }
+[[ $(run) == '{ "clock": { "format": "{:L%a %d  <b>%H:%M</b>}" } }' ]] || { echo 'anything but enabled must leave seconds off' >&2; exit 1; }
 rm -f "$tmp/clock-seconds"
 echo 'ok: clock-seconds adds seconds and a one-second interval, and only when enabled'
 [[ -z $(find "$tmp/out" -name 'clock.jsonc.*') ]] || { echo 'temporary file left behind' >&2; exit 1; }

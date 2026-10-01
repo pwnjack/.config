@@ -12,7 +12,8 @@ include=${CLOCK_INCLUDE:-$include}
 # the bar uses inside a module, so date and time read as one readout. The L
 # flag is what makes Waybar name the day in the session's LC_TIME (the
 # settings panel's Formats row) rather than always in English; its "locale"
-# option alone does not.
+# option alone does not. Only the time is bold, as Pango markup inside the
+# one placeholder: the date is the quieter half of the readout.
 time='%H:%M' suffix=''
 if [[ -r $option && $(<"$option") == 12h ]]; then time='%I:%M' suffix=' %p'; fi
 # Seconds (options/clock-seconds, the Bar page) are the bar's alone: the lock
@@ -20,7 +21,7 @@ if [[ -r $option && $(<"$option") == 12h ]]; then time='%I:%M' suffix=' %p'; fi
 # is why the main config must not set clock.interval either.
 seconds=${option%/*}/clock-seconds interval=''
 if [[ -r $seconds && $(<"$seconds") == enabled ]]; then time+=':%S' interval=', "interval": 1'; fi
-format="{:L%a %d  $time$suffix}"
+format="{:L%a %d  <b>$time$suffix</b>}"
 mkdir -p "${include%/*}"
 tmp=$(mktemp "$include.XXXXXX")
 trap 'rm -f "$tmp"' EXIT
