@@ -2,7 +2,7 @@
 # https://github.com/sigoden/aichat/blob/main/config.example.yaml
 
 # ---- Model ----
-model: gemini:gemini-2.5-flash
+model: gemini:gemini-3.6-flash
 
 # ---- Behavior ----
 stream: true
@@ -19,7 +19,7 @@ summary_prompt: "This is a summary of the chat history as a recap: "
 
 # ---- Appearance ----
 highlight: true
-light_theme: false
+# theme: dark | light (unset = dark). aichat 0.30 ignores the old light_theme key.
 left_prompt: "{color.green}{model}{color.cyan}>{color.reset} "
 right_prompt: "{color.purple}{?consume_tokens {consume_tokens}}{color.reset}"
 
@@ -33,7 +33,35 @@ clients:
   # Google Gemini
   # API key loaded from GEMINI_API_KEY environment variable
   - type: gemini
-    # Models: gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash
+    # Listing models here replaces aichat's built-in Gemini list, so every
+    # model that should appear in .model is declared. The 3.x names are newer
+    # than aichat's model database.
+    models:
+      - name: gemini-3.6-flash
+        max_input_tokens: 1048576
+        max_output_tokens: 65536
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-3.8-flash
+        max_input_tokens: 1048576
+        max_output_tokens: 65536
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-3.5-flash-lite
+        max_input_tokens: 1048576
+        max_output_tokens: 65536
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-2.5-flash
+        max_input_tokens: 1048576
+        max_output_tokens: 65536
+        supports_vision: true
+        supports_function_calling: true
+      - name: gemini-2.5-pro
+        max_input_tokens: 1048576
+        max_output_tokens: 65536
+        supports_vision: true
+        supports_function_calling: true
 
 # OpenAI / ChatGPT
 # Set OPENAI_API_KEY environment variable

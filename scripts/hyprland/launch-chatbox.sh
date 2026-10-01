@@ -10,6 +10,13 @@
 # exec`, so it inherits the API keys loaded from .env below; an exec would run
 # with Hyprland's environment instead.
 #
+# aichat copies a role into a session once, when the session starts, and
+# `.clear messages` keeps that copy. --empty-session restarts the "sidebar"
+# session on every launch, so each new window picks up the current
+# aichat/roles/sidebar.md; toggling the window keeps the conversation.
+# An emptied session still keeps the model it was saved with, so the default
+# model is read from aichat's config and passed explicitly.
+#
 
 class="aichat.sidebar"
 
@@ -25,5 +32,9 @@ if [ -f "$HOME/.config/.env" ]; then
     set +a
 fi
 
+args=(-r sidebar -s sidebar --empty-session)
+model=$(aichat --info </dev/null 2>/dev/null | awk '$1 == "model" { print $2 }')
+[ -n "$model" ] && args=(-m "$model" "${args[@]}")
+
 setsid -f ghostty --class="$class" --config-file="$HOME/.config/ghostty/ai-sidebar" \
-    -e aichat -s assistant >/dev/null 2>&1
+    -e aichat "${args[@]}" >/dev/null 2>&1
