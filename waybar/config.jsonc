@@ -260,9 +260,11 @@
   // Weather
   "custom/weather": {
     "format": "{}",
+    // Continuous: the wrapper keeps waybar-weather running and streams each
+    // update, so there is no "interval". restart-interval only revives it.
     "exec": "~/.config/waybar/waybar-weather-wrapper.sh",
     "return-type": "json",
-    "interval": 600,
+    "restart-interval": 60,
     "tooltip": true,
   },
 

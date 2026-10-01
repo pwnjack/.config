@@ -1,7 +1,16 @@
 #!/bin/bash
 #
-# Wrapper for waybar-weather: waits for the network, retries, and always
-# emits valid JSON so waybar never renders a broken module.
+# Wrapper for waybar-weather: waits for the network, then streams the
+# service's output to waybar line by line, and always emits valid JSON so
+# waybar never renders a broken module.
+#
+# waybar-weather is a long-running service, not a one-shot command: it
+# prints a line as soon as it has data (well under a second) and another on
+# every update, and never exits on its own. Running it per interval under
+# `timeout` meant waybar only saw the first line when the timeout killed it,
+# ten seconds after every start. The module is therefore continuous (no
+# "interval" in config.jsonc); "restart-interval" brings it back if the
+# service dies.
 #
 # It also swaps waybar-weather's colour emoji for monochrome Nerd Font
 # glyphs. The emoji were the only colour glyphs on an otherwise monochrome
@@ -18,21 +27,23 @@
 TEXT_MAP='{"☀":"󰖙","☁":"󰖐","⛅":"󰖕","🌤":"󰖕","⛈":"󰙾","🌩":"󰖓","🌫":"󰖑","🌦":"󰖗","🌧":"󰖖","🌨":"󰖘","🌑":"󰖔","🌒":"󰖔","🌓":"󰖔","🌔":"󰖔","🌕":"󰖔","🌖":"󰖔","🌗":"󰖔","🌘":"󰖔","🌙":"󰖔"}'
 TIP_MAP='{"🌅":"󰖜","🌇":"󰖛"}'
 
-# Function to check network connectivity
-check_network() {
-    # First check if any network interface is up
-    if command -v ip >/dev/null 2>&1; then
-        ip route | grep -q "default" || return 1
-    fi
+# The last rendered reading, shown the moment the module starts: Open-Meteo
+# takes anywhere from 0.3 to 4.5 s to answer the service's first request, and
+# the bar restarts the module on every reload. A reading older than an hour
+# is not shown; the module stays empty until a fresh one arrives. Each bar
+# (one per monitor) runs its own wrapper, so every write goes through a
+# private temporary file, and the replay passes on only one JSON object.
+cache=${XDG_CACHE_HOME:-$HOME/.cache}/waybar-weather.json
+if [ -n "$(find "$cache" -mmin -60 2>/dev/null)" ]; then
+    jq -cs 'if length == 1 and (.[0] | type) == "object" then .[0] else empty end' "$cache" 2>/dev/null
+fi
 
-    # Then check if we can reach a reliable host
-    if command -v ping >/dev/null 2>&1; then
-        ping -c 1 -W 1 8.8.8.8 >/dev/null 2>&1 || \
-        ping -c 1 -W 1 1.1.1.1 >/dev/null 2>&1
-    else
-        # If ping is not available, just check for default route
-        ip route | grep -q default
-    fi
+# The network is up once there is a default route. No ping: ICMP is rate
+# limited upstream (a third of the probes to 1.1.1.1 drop), and each failed
+# probe cost seconds before the service even started. waybar-weather makes
+# its own HTTPS requests and needs nothing more than a route.
+check_network() {
+    [ -n "$(ip route show default 2>/dev/null)" ]
 }
 
 # Wait up to 30 seconds for network to be available
@@ -43,35 +54,57 @@ while ! check_network && [ $waited -lt $max_wait ]; do
     waited=$((waited + 1))
 done
 
-# Try to fetch weather data with retries
-max_retries=3
-retry=0
-output=""
+# U+FE0F is the emoji variation selector; it trails most of these glyphs and
+# would survive the swap as an invisible stray character. If the swap fails
+# the untouched original is emitted, but only when it is itself a JSON object:
+# anything else prints nothing, and the line is skipped.
+render() {
+    printf '%s' "$1" | jq -c \
+        --argjson text_map "$TEXT_MAP" \
+        --argjson tip_map "$TIP_MAP" '
+        def strip_vs: gsub("️"; "");
+        def swap($m; wrap): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value | wrap));
+        def large: "<span size=\"large\" letter_spacing=\"4096\">" + . + "</span>";
+        .text = (.text | strip_vs | swap($text_map; large))
+        | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map; .)) else . end
+    ' 2>/dev/null || jq -ce 'select(type == "object")' <<< "$1" 2>/dev/null
+}
 
-while [ $retry -lt $max_retries ] && [ -z "$output" ]; do
-    output=$(timeout 10 waybar-weather 2>/dev/null | grep -v "^time=" | head -1)
-    if [ -z "$output" ]; then
-        sleep 2
-        retry=$((retry + 1))
+# The service is the wrapper's child, and goes with it: waybar stops the
+# module on every reload, and an orphaned service would keep polling.
+exec {weather}< <(exec waybar-weather 2>/dev/null)
+service=$!
+tmp=''
+trap 'kill "$service" 2>/dev/null; rm -f "$tmp"' EXIT
+trap 'exit 0' TERM INT HUP
+
+# Its log lines go to stderr; only JSON objects are passed on. The service
+# re-emits its output every 30 s, so five silent minutes mean it has hung:
+# the reading is cleared rather than left on the bar as though current, and
+# the next line restores it.
+shown=0
+while :; do
+    IFS= read -r -t 300 line <&"$weather"; status=$?
+    if [ "$status" -gt 128 ]; then
+        echo '{"text":"","tooltip":"Weather service not responding"}'
+        continue
     fi
+    [ "$status" -eq 0 ] || break
+    [[ $line == \{* ]] || continue
+    rendered=$(render "$line")
+    [ -n "$rendered" ] || continue
+    printf '%s\n' "$rendered"
+    if tmp=$(mktemp "$cache.XXXXXX" 2>/dev/null); then
+        printf '%s\n' "$rendered" > "$tmp" && mv -f "$tmp" "$cache"
+        rm -f "$tmp"; tmp=''
+    fi
+    shown=1
 done
 
-# Output result, or minimal valid JSON if all retries failed, so waybar
-# always receives something parseable.
-if [ -z "$output" ]; then
+# The service exited. Clear any reading it left behind rather than show it
+# as current; waybar restarts the module after its restart-interval.
+if [ "$shown" -eq 0 ]; then
     echo '{"text":"","tooltip":"Weather data unavailable"}'
-    exit 0
+else
+    echo '{"text":"","tooltip":"Weather service stopped"}'
 fi
-
-# U+FE0F is the emoji variation selector; it trails most of these glyphs and
-# would survive the swap as an invisible stray character. If jq fails for any
-# reason the untouched original is emitted rather than nothing.
-printf '%s' "$output" | jq -c \
-    --argjson text_map "$TEXT_MAP" \
-    --argjson tip_map "$TIP_MAP" '
-    def strip_vs: gsub("️"; "");
-    def swap($m; wrap): reduce ($m | to_entries[]) as $e (.; gsub($e.key; $e.value | wrap));
-    def large: "<span size=\"large\" letter_spacing=\"4096\">" + . + "</span>";
-    .text = (.text | strip_vs | swap($text_map; large))
-    | if .tooltip then .tooltip = (.tooltip | strip_vs | swap($tip_map; .)) else . end
-' 2>/dev/null || printf '%s' "$output"
