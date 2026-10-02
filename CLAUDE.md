@@ -116,7 +116,11 @@ before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 `scripts/hyprland/settings-panel.sh`, used by both Super+I and Waybar. It exits
 on close after pending saves finish; failed saves reopen the panel with an
 error. There is no login autostart or wallpaper-triggered AGS restart.
-`catalog.json` is the only list of settings and categories. Rows may declare
+`catalog.json` is the only list of settings and categories. Pages sit in five
+sidebar groups and rows in titled sections (`group`, `sections`, `section`);
+sliders may declare `ends`/`invert` and rows `dependsOn`. `pages.mjs` is the pure
+layer that draws and validates this; `test/catalog.mjs` freezes the row-id set.
+Maintenance actions are in the title bar's ⋯ menu. Rows may declare
 `choices` (valid values enumerated from what is installed, validated on write),
 a text `check` (`xkb-*`, `font`, `command`), `optional` and `reload`. Beyond
 Hyprland options and `options/` files, the backend drives gsettings plus both
@@ -134,7 +138,7 @@ the UI thread. One value snapshot covers all categories; switching tabs/search
 only builds the selected rows, with no new helper or loading layout shift.
 The snapshot refreshes after edits and on every fresh opening.
 `scripts/settings/panel-request.sh` serializes requests with a cache-backed
-lock. Text fields save with Enter/Save; sliders save on release.
+lock. Text fields apply with Return or Apply; sliders save on release.
 
 `quickshell/settings-panel/persist.js` serializes Hyprland apply/save operations. It waits for an
 `ok` reply before saving, reloads the saved configuration if a write fails,

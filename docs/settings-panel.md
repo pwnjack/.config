@@ -7,11 +7,14 @@ values immediately, without starting another helper. Edits refresh the snapshot;
 closing discards it, so reopening always reads current values. Escape, Close,
 clicking outside, or Super+I closes it.
 Once pending saves finish, the process exits. Failed saves keep the error visible
-by reopening the panel. Text fields require Enter or Save; sliders save on release.
+by reopening the panel. Text fields apply with Return or their Apply button, which appears while the text differs from the saved value; sliders save on release.
 
-`catalog.json` is the only list of settings (95 rows in twelve categories on
-September 28, 2026), with search, editable display cards, per-row resets and
-the footer actions. Things another surface already owns stay there: the
+`catalog.json` is the only list of settings (114 rows on 15 pages on October 2,
+2026), with search, editable display cards and per-row resets. Pages sit in five
+sidebar groups, and rows sit in titled sections inside each page, one line each:
+label on the left, control on the right. Reload Hyprland, Restart bar and Update
+system live in the title bar's ⋯ menu; Restart bar and Update now also appear as
+buttons in the Bar and Default Apps sections they belong to. Things another surface already owns stay there: the
 keybind cheatsheet (Super+H), Do Not Disturb, output volume, mute and per-app
 volume (SwayNC),
 updates (Waybar), screenshot options (Rofi) and wallpapers (the carousel).
@@ -20,6 +23,22 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 
 ## Implementation
 
+- Layout is data. Each category has a `group` (`connectivity`, `hardware`,
+  `look`, `input` or `system`; the categories array is the sidebar order, and a
+  gap opens where the group changes) and ordered `sections`
+  (`{id, title, footer?, actions?}`, where each action is `{label, action}` and
+  the action is `reload`, `waybar` or `update`). Each row names its `section`.
+  A slider may add `ends` (two end labels shown instead of the value) and
+  `invert` (drawn mirrored, so right means faster for Hyprland's animation
+  durations; stored values are unchanged). Any row may add `dependsOn`, the id
+  of a toggle on the same page; the row is dimmed and disabled while that
+  toggle is off. `pages.mjs` turns the catalog into sidebar entries and drawn
+  sections, and its `validateCatalog` enforces every rule above.
+  `test/catalog.mjs` runs that check on the real file and freezes the set of
+  row ids, because ids are API; `test/search.mjs` evaluates the real
+  `visibleRows` binding, which the QML tests stub. Search matches section
+  titles too, and a title made plainer keeps its old wording in `keywords`.
+  `backend.js` ignores all of these keys.
 - `catalog.json` owns setting metadata, accepted ranges and dropdown choices.
   Each category's `icon` is a hex codepoint of a Material Design glyph in
   Symbols Nerd Font (`ttf-nerd-fonts-symbols`), drawn in the nav rail and beside
