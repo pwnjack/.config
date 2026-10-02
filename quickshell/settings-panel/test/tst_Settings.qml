@@ -46,10 +46,11 @@ Item {
             {id:"ntp",category:"input",title:"NTP",description:"Sync",kind:"toggle",auth:true},
             {id:"idle",category:"input",title:"Idle",description:"Hide",kind:"slider",min:0,max:30,step:1,format:"seconds",zeroLabel:"Never"},
             {id:"mic",category:"input",title:"Mic",description:"Level",kind:"slider",min:0,max:100,step:1,format:"percent"},
+            {id:"speed",category:"input",title:"Speed",description:"Animation speed",kind:"slider",min:1,max:10,step:1,ends:["Slow","Fast"],invert:true,dependsOn:"ntp"},
             {id:"network.wifi",category:"network",title:"Wi-Fi",description:"Radio",kind:"toggle",inView:true},
             {id:"opt-lock",category:"startup",title:"Lock",description:"Lock on autologin",kind:"toggle"}
         ]})
-        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true},"opt-lock":{value:false}})
+        property var values: ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},speed:{value:3},"network.wifi":{value:true},"opt-lock":{value:false}})
         readonly property var visibleRows: catalog.rows.filter(row => query ? row.title.toLowerCase().includes(query.toLowerCase()) : row.category === category && !row.inView)
         function close() { closed = true; }
         function select(id) { query = ""; category = id; }
@@ -220,7 +221,7 @@ Item {
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
             controller.network = null; controller.startup = null; controller.devices = null;
-            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},"network.wifi":{value:true},"opt-lock":{value:false}});
+            controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},speed:{value:3},"network.wifi":{value:true},"opt-lock":{value:false}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
@@ -334,13 +335,51 @@ Item {
             controller.select("input"); wait(20);
             const slider = findChild(view,"slider-idle");
             verify(slider);
-            compare(slider.parent.children[1].text,"Never");
+            compare(findChild(view,"value-idle").text,"Never");
         }
         function test_percent_format() {
             controller.select("input"); wait(20);
             const slider = findChild(view,"slider-mic");
             verify(slider);
-            compare(slider.parent.children[1].text,"62 %");
+            compare(findChild(view,"value-mic").text,"62 %");
+        }
+        function test_reset_icon_only_on_overridden_rows() {
+            const reset = findChild(view,"reset-blur");
+            verify(reset && reset.visible, "blur carries reset:true");
+            verify(!findChild(view,"reset-size").visible);
+            mouseClick(reset);
+            compare(controller.calls[0], {reset:"blur"});
+        }
+        function test_ends_replace_the_value_and_invert_mirrors() {
+            controller.select("input"); wait(20);
+            const slider = findChild(view,"slider-speed");
+            verify(!findChild(view,"value-speed").visible, "a row with end labels shows no value");
+            compare(slider.value, 8, "stored 3 on 1..10 draws at 8");
+            mousePress(slider, slider.width - 2, slider.height / 2);
+            mouseRelease(slider, slider.width - 2, slider.height / 2);
+            compare(controller.calls.length, 1);
+            compare(controller.calls[0], {id:"speed", value:1}, "far right is fastest: the smallest duration");
+        }
+        function test_depends_on_disables_the_row() {
+            controller.select("input"); wait(20);
+            verify(findChild(view,"slider-speed").enabled);
+            controller.values = Object.assign({}, controller.values, {ntp:{value:false}}); wait(20);
+            verify(!findChild(view,"slider-speed").enabled, "ntp off disables its dependent");
+        }
+        function test_apply_appears_only_on_changed_text() {
+            const apply = findChild(view,"apply-font");
+            verify(!apply.visible);
+            const entry = findChild(view,"entry-font");
+            entry.forceActiveFocus();
+            keyClick(Qt.Key_End); keyClick("X");
+            verify(apply.visible);
+            wait(20);
+            mouseClick(apply);
+            compare(controller.calls[0], {id:"font", value:"SansX"});
+        }
+        function test_row_error_is_shown() {
+            controller.values = Object.assign({}, controller.values, {size:{error:"Hyprland said no"}}); wait(20);
+            compare(findChild(view,"error-size").text, "Hyprland said no");
         }
         function test_dropdown_popup_theme_and_keyboard_selection() {
             controller.select("input"); wait(20);
