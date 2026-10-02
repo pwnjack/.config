@@ -66,4 +66,9 @@ assert.match(broken(c => { c.rows[0].category = 'zz' }), /unknown category/)
 // A custom page may have no sections, and a row its view draws itself (inView) needs none.
 assert.deepEqual(pages.validateCatalog({categories: [{id: 'network', title: 'N', group: 'connectivity', sections: []}],
     rows: [{id: 'network.wifi', category: 'network', kind: 'toggle', inView: true}]}), [])
+// Footer pages neither consume nav space nor split the visible groups.
+const footer = {id:'about',title:'About',group:'system',placement:'footer',sections:[]}
+assert.deepEqual(pages.navEntries([categories[0], footer, categories[1], categories[2]]).map(c => [c.id,c.gapBefore]), [['a',false],['b',false],['c',true]])
+assert.deepEqual(pages.validateCatalog({categories:[footer],rows:[]}),[])
+assert.match(pages.validateCatalog({categories:[{...footer,placement:'header'}],rows:[]}).join('\n'),/placement/)
 console.log('ok: pages')

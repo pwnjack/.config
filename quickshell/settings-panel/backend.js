@@ -6,6 +6,8 @@ import { checkedHyprctl } from "./hyprctl.js"
 import * as persist from "./persist.js"
 import { pulseState, pulseValue, pulseEnumerators, setPulse } from "./pulse.js"
 import * as displays from "./displays.mjs"
+import * as about from "./about.mjs"
+import { callSystem, getProperty } from "./dbus.js"
 import { nmSnapshot, setWifiEnabled, requestScan, activate, addAndActivate, deactivate, removeConnections } from "./nm.js"
 import * as network from "./network.mjs"
 import * as autostart from "./autostart.mjs"
@@ -422,6 +424,99 @@ function onceCache() {
         return cached.get(key)
     }
 }
+// Every source is optional. Reading machine information must never break settings.
+async function optionalRead(readValue) {
+    try { return await readValue() } catch (_) { return null }
+}
+const aboutText = path => optionalRead(() => read(path).trim() || null)
+const pacmanLog = "/var/log/pacman.log"
+function pacmanChunk(tail) {
+    let stream
+    try {
+        const file = Gio.File.new_for_path(pacmanLog)
+        stream = file.read(null)
+        if (!tail) {
+            // The timestamp starts the first line; no other part of that line is needed.
+            return new TextDecoder().decode(stream.read_bytes(256, null).get_data()).split("\n")[0]
+        }
+        // Seek rather than loading a log that can be many years old.
+        const size = file.query_info("standard::size", Gio.FileQueryInfoFlags.NONE, null).get_size()
+        const offset = Math.max(0, size - 256 * 1024)
+        stream.seek(offset, GLib.SeekType.SET, null)
+        let content = new TextDecoder().decode(stream.read_bytes(256 * 1024, null).get_data())
+        if (offset > 0) content = content.slice(content.indexOf("\n") + 1)
+        return content
+    } finally {
+        if (stream) stream.close(null)
+    }
+}
+async function pacmanDates() {
+    // A failed tail read must not erase a readable installation timestamp.
+    return {
+        installed: await optionalRead(() => about.installedFromPacmanLog(pacmanChunk(false))),
+        lastUpgrade: await optionalRead(() => about.lastFullUpgrade(pacmanChunk(true))),
+    }
+}
+async function accountAvatar(user) {
+    const face = GLib.get_home_dir() + "/.face"
+    const paths = [face]
+    if (user) paths.push("/var/lib/AccountsService/icons/" + user)
+    for (const path of paths) {
+        const readable = await optionalRead(() => Gio.File.new_for_path(path)
+            .query_info("access::can-read", Gio.FileQueryInfoFlags.NONE, null)
+            .get_attribute_boolean("access::can-read"))
+        if (readable) return path
+    }
+    return ""
+}
+async function aboutState(mode) {
+    const result = {}
+    result.user = await optionalRead(() => GLib.get_user_name())
+    result.realName = await optionalRead(() => {
+        const name = GLib.get_real_name()
+        return name && name !== "Unknown" ? name : null
+    })
+    result.host = await optionalRead(() => GLib.get_host_name())
+    result.os = await optionalRead(async () => about.osName(await aboutText("/etc/os-release")) || null)
+    result.kernel = await aboutText("/proc/sys/kernel/osrelease")
+    result.hyprland = await optionalRead(async () => {
+        const version = JSON.parse(await execAsync(["hyprctl", "version", "-j"]))
+        const value = version.tag || version.version
+        return typeof value === "string" ? value.replace(/^v/, "") || null : null
+    })
+    result.uptimeSeconds = await optionalRead(async () => {
+        const raw = await aboutText("/proc/uptime")
+        const number = raw === null ? NaN : Number(raw.split(/\s+/)[0])
+        return Number.isFinite(number) && number >= 0 ? number : null
+    })
+    result.avatar = await accountAvatar(result.user)
+    if (mode !== "full") return result
+    result.session = await optionalRead(() => about.sessionName(GLib.getenv("XDG_CURRENT_DESKTOP"), GLib.getenv("XDG_SESSION_TYPE")) || null)
+    const dates = await optionalRead(pacmanDates)
+    result.installed = dates?.installed || await optionalRead(() => {
+        const info = Gio.File.new_for_path("/").query_info("time::created", Gio.FileQueryInfoFlags.NONE, null)
+        const seconds = info.get_attribute_uint64("time::created")
+        return seconds > 0 ? new Date(seconds * 1000).toISOString() : null
+    })
+    result.lastUpgrade = dates?.lastUpgrade || null
+    result.cpu = await optionalRead(async () => {
+        const input = await aboutText("/proc/cpuinfo")
+        return input ? about.cpuInfo(input) : null
+    })
+    result.memoryGB = await optionalRead(async () => about.memoryGB(await aboutText("/proc/meminfo")))
+    result.gpus = await optionalRead(async () => GLib.find_program_in_path("lspci") ? about.gpus(await execAsync(["lspci", "-mm"])) : null)
+    result.storage = await optionalRead(() => {
+        const info = Gio.File.new_for_path("/").query_filesystem_info("filesystem::size,filesystem::used", null)
+        return about.storageGB(info.get_attribute_uint64("filesystem::size"), info.get_attribute_uint64("filesystem::used"))
+    })
+    result.machine = await optionalRead(async () => about.machine({
+        sysVendor: await aboutText("/sys/class/dmi/id/sys_vendor"), productName: await aboutText("/sys/class/dmi/id/product_name"),
+        productVersion: await aboutText("/sys/class/dmi/id/product_version"),
+        boardVendor: await aboutText("/sys/class/dmi/id/board_vendor"), boardName: await aboutText("/sys/class/dmi/id/board_name"),
+    }))
+    return result
+}
+
 async function snapshot(ids, includeMonitors, views = {}) {
     const once = onceCache()
     const values = {}
@@ -492,6 +587,9 @@ async function snapshot(ids, includeMonitors, views = {}) {
     // A broken startup source must not blank the other pages' values.
     if (views.startup) {
         try { result.startup = await startupState() } catch (error) { result.startup = { error: error.message } }
+    }
+    if (views.about) {
+        try { result.about = await aboutState(views.about) } catch (_) { result.about = null }
     }
     return result
 }
@@ -771,7 +869,7 @@ export async function dispatch(request) {
         throw new Error("Keep or Revert the display change first")
     if (request.op === "read") {
         if (!Array.isArray(request.ids) || request.ids.length > catalog.rows.length) throw new Error("Invalid settings request")
-        return snapshot([...new Set(request.ids)], request.monitors === true, { network: request.network === true, startup: request.startup === true })
+        return snapshot([...new Set(request.ids)], request.monitors === true, { network: request.network === true, startup: request.startup === true, about: ["summary", "full"].includes(request.about) ? request.about : null })
     }
     if (request.op === "set" || request.op === "reset") { await change(request); return {} }
     if (request.op === "mainMonitor") {

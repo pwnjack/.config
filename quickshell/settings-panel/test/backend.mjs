@@ -30,6 +30,10 @@ const files = new Map([
     [base + '/mimeapps.list', '[Default Applications]\ninode/directory=kitty-open.desktop\n'],
     ['/etc/locale.conf', 'LANG=en_US.UTF-8\nLC_TIME=it_IT.UTF-8\nLC_NUMERIC=it_IT.UTF-8\nLC_COLLATE=C.UTF-8\n'],
 ])
+const aboutAttributes = new Map()
+const unreadableAvatars = new Set()
+let aboutCommandsMissing = false, failAboutTail = false
+const aboutStreamReads = []
 const dirs = new Map([
     ['/usr/share/themes', ['Kripton','Adwaita','NoGtk','Emacs','A$&B','Bad\nTheme']],
     ['/usr/share/themes/Emacs/gtk-3.0', []],
@@ -177,6 +181,8 @@ const dbusMock = {
 }
 globalThis.settingsMocks = {
     GLib: {
+        get_user_name: () => "alex", get_real_name: () => "Alex Example", get_host_name: () => "workstation",
+        SeekType: {SET:0,END:2},
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
         file_read_link: path => {
             if (path !== '/etc/localtime') return null
@@ -185,7 +191,7 @@ globalThis.settingsMocks = {
         },
         getenv: name => mockEnv[name] ?? null,
         get_user_runtime_dir: () => '/run/user/1000',
-        find_program_in_path: name => name === 'missing-app' || name === 'arch-update' ? null : name,
+        find_program_in_path: name => (aboutCommandsMissing && name === 'lspci') || name === 'missing-app' || name === 'arch-update' ? null : name,
         SpawnFlags: {SEARCH_PATH:1,STDOUT_TO_DEV_NULL:2,STDERR_TO_DEV_NULL:4},
         spawn_async: (...args) => {
             events.push(['spawn',args[1]])
@@ -206,12 +212,26 @@ globalThis.settingsMocks = {
         io_error_quark: () => 'g-io-error-quark',
         File:{new_for_path: path => ({
             query_exists: () => { const at = resolveLink(path); return at !== null && (files.has(at) || dirs.has(at)) },
+            query_filesystem_info: attrs => {
+                assert.equal(attrs,'filesystem::size,filesystem::used')
+                const values = aboutAttributes.get(path)
+                if (!values) throw new Error('No filesystem information')
+                return {get_attribute_uint64: key => values[key]}
+            },
+            read: () => {
+                if (!files.has(path)) throw new Error('Missing stream')
+                const bytes = encoder.encode(files.get(path)); let at = 0
+                return {seek: offset => {at = offset; aboutStreamReads.push(['seek',offset])},
+                    read_bytes: count => {if (failAboutTail && count === 256*1024) throw new Error("Tail unreadable"); aboutStreamReads.push(['read',count]); const result = bytes.slice(at,at+count); at += result.length; return {get_data: () => result}},close: () => {}}
+            },
             query_info: (attrs, flags) => {
+                if (aboutAttributes.has(path)) return {get_attribute_uint64: key => aboutAttributes.get(path)[key]}
+                if (attrs === 'standard::size' && files.has(path)) return {get_size: () => encoder.encode(files.get(path)).length}
                 const nofollow = flags === 1
                 if (nofollow && links.has(path)) return {get_is_symlink: () => true, get_file_type: () => 3}
                 const at = resolveLink(path)
                 if (at === null || !(files.has(at) || dirs.has(at))) throw gioError(1, 'No such file: '+path)
-                return {get_is_symlink: () => links.has(path), get_file_type: () => files.has(at) ? 1 : 2, get_attribute_boolean: () => files.has(at) && execs.has(at)}
+                return {get_is_symlink: () => links.has(path), get_file_type: () => files.has(at) ? 1 : 2, get_attribute_boolean: key => key === 'access::can-read' ? files.has(at) && !unreadableAvatars.has(path) : files.has(at) && execs.has(at)}
             },
             enumerate_children: () => {
                 if (!dirs.has(path)) throw new Error('No such directory: '+path)
@@ -254,6 +274,8 @@ globalThis.settingsMocks = {
     },
     execAsync: async args => {
         events.push(args)
+        if (args[0] === 'hyprctl' && args[1] === 'version') { if (aboutCommandsMissing) throw new Error('No compositor'); return JSON.stringify({tag:'v0.54.0'}) }
+        if (args[0] === 'lspci') { if (aboutCommandsMissing) throw new Error('No lspci'); return '01:00.0 "VGA compatible controller" "NVIDIA Corporation" "GA104 [GeForce RTX 3070]"' }
         if (args[0] === 'localectl' && args[1] === 'list-locales') return 'C.UTF-8\nen_US.UTF-8\nit_IT.UTF-8\nde_DE.ISO-8859-1'
         if (args[0] === 'xdg-mime' && args[1] === 'query') return (mimeDefaults[args[3]] || '') + '\n'
         if (args[0] === 'xdg-mime' && args[1] === 'default') {
@@ -323,6 +345,16 @@ registerHooks({resolve(specifier,context,next) {
     if (specifier === './dbus.js') return {url:'data:text/javascript,'+encodeURIComponent('const m = () => globalThis.settingsMocks.dbus; export const callSystem = (...a) => m().callSystem(...a), getProperty = (...a) => m().getProperty(...a); export const CANCELLED = "Authentication was cancelled; nothing changed."'),shortCircuit:true}
     return next(specifier,context)
 }})
+const originalCallSystem = dbusMock.callSystem
+const originalGetProperty = dbusMock.getProperty
+dbusMock.callSystem = async (...args) => {
+    if (args[0] === 'org.freedesktop.Accounts') { events.push(['accounts-dbus']); throw new Error('AccountsService must not be contacted') }
+    return originalCallSystem(...args)
+}
+dbusMock.getProperty = async (...args) => {
+    if (args[0] === 'org.freedesktop.Accounts') { events.push(['accounts-dbus']); throw new Error('AccountsService must not be contacted') }
+    return originalGetProperty(...args)
+}
 const {dispatch} = await import('../backend.js')
 const displays = await import('../displays.mjs')
 const {parseLocaleConf} = await import('../region.js')
@@ -1389,3 +1421,71 @@ console.log('ok: new autostart files are published whole; no temporary file is l
     files.set(idle, before)
 }
 console.log('ok: the lock listener is found whether it runs hyprlock or loginctl lock-session')
+
+// About uses synthetic data only; full reads seek into the bounded log tail.
+const aboutSources = {
+    '/etc/os-release':'PRETTY_NAME="Example Linux"', '/proc/sys/kernel/osrelease':'6.12.4-1-example\n', '/proc/uptime':'28260.50 99999.00\n',
+    '/proc/cpuinfo':'processor : 0\nmodel name : Example CPU\ncpu cores : 1\n', '/proc/meminfo':'MemTotal: 16000000 kB\n',
+    '/var/log/pacman.log':'[2025-08-14T12:03:26+0200] [PACMAN] Running pacman\n' + 'x'.repeat(300000) + '\n[2026-01-05T11:15:00+0100] [PACMAN] starting full system upgrade\n[2026-01-05T11:16:00+0100] [ALPM] transaction completed\n',
+    '/sys/class/dmi/id/sys_vendor':'Example Corporation', '/sys/class/dmi/id/product_name':'System Product Name',
+    '/sys/class/dmi/id/board_vendor':'Example Corporation', '/sys/class/dmi/id/board_name':'Example Board'}
+for (const [path,text] of Object.entries(aboutSources)) files.set(path,text)
+aboutAttributes.set('/',{'filesystem::size':999e9,'filesystem::free':750e9,'filesystem::used':199e9,'time::created':1735732800})
+mockEnv.XDG_CURRENT_DESKTOP = 'Hyprland:Example'; mockEnv.XDG_SESSION_TYPE = 'wayland'
+events = []
+let aboutReply = await dispatch({op:'read',ids:[],about:'summary'})
+assert.deepEqual(aboutReply.about,{user:'alex',realName:'Alex Example',host:'workstation',os:'Example Linux',kernel:'6.12.4-1-example',hyprland:'0.54.0',uptimeSeconds:28260.5,avatar:''})
+assert.equal(events.some(e => e[0] === 'lspci'),false)
+assert.equal(aboutStreamReads.length,0,'summary does not read the pacman log')
+aboutReply = await dispatch({op:'read',ids:[],about:'full'})
+assert.equal(aboutReply.about.session,'Hyprland on Wayland')
+assert.equal(aboutReply.about.installed,'2025-08-14T10:03:26.000Z')
+assert.equal(aboutReply.about.lastUpgrade,'2026-01-05T10:15:00.000Z')
+assert.deepEqual(aboutReply.about.cpu,{name:'Example',cores:1,threads:1})
+assert.equal(aboutReply.about.memoryGB,16)
+assert.deepEqual(aboutReply.about.gpus,['NVIDIA GeForce RTX 3070'])
+assert.deepEqual(aboutReply.about.storage,{used:199,total:999,fraction:199/999})
+assert.deepEqual(aboutReply.about.machine,{label:'Motherboard',value:'Example Example Board'})
+assert.ok(aboutStreamReads.some(e => e[0] === 'seek' && e[1] > 0))
+assert.ok(aboutStreamReads.filter(e => e[0] === 'read').every(e => e[1] <= 256*1024))
+failAboutTail = true
+const partialLog = (await dispatch({op:'read',ids:[],about:'full'})).about
+assert.equal(partialLog.installed,'2025-08-14T10:03:26.000Z','tail errors preserve the first-line install timestamp')
+assert.equal(partialLog.lastUpgrade,null)
+assert.equal(partialLog.memoryGB,16,'unrelated sources survive log errors')
+failAboutTail = false
+files.set('/fixture/.face','image')
+assert.equal((await dispatch({op:'read',ids:[],about:'summary'})).about.avatar,'/fixture/.face')
+const accountIcon = '/var/lib/AccountsService/icons/alex'
+files.set(accountIcon,'image')
+assert.equal((await dispatch({op:'read',ids:[],about:'summary'})).about.avatar,'/fixture/.face','home face takes priority')
+unreadableAvatars.add('/fixture/.face')
+assert.equal((await dispatch({op:'read',ids:[],about:'summary'})).about.avatar,accountIcon,'unreadable home face falls back to the icon file')
+files.delete('/fixture/.face'); unreadableAvatars.clear()
+assert.equal((await dispatch({op:'read',ids:[],about:'summary'})).about.avatar,accountIcon)
+unreadableAvatars.add(accountIcon)
+assert.equal((await dispatch({op:'read',ids:[],about:'summary'})).about.avatar,'')
+unreadableAvatars.clear(); files.delete(accountIcon)
+files.set('/sys/class/dmi/id/sys_vendor','LENOVO')
+files.set('/sys/class/dmi/id/product_name','21CBCTO1WW')
+files.set('/sys/class/dmi/id/product_version','ThinkPad X1 Carbon Gen 10')
+assert.deepEqual((await dispatch({op:'read',ids:[],about:'full'})).about.machine,{label:'Model',value:'Lenovo ThinkPad X1 Carbon Gen 10'})
+files.delete('/sys/class/dmi/id/product_version')
+const originalHomeDir = settingsMocks.GLib.get_home_dir
+settingsMocks.GLib.get_home_dir = () => { throw new Error('Avatar source failed') }
+try {
+    const reply = await dispatch({op:'read',ids:['power.lock'],about:'summary'})
+    assert.equal(reply.about,null)
+    assert.equal(typeof reply.values['power.lock'].value,'number','settings values survive an unexpected About failure')
+    assert.equal(reply.values['power.lock'].error,undefined)
+} finally { settingsMocks.GLib.get_home_dir = originalHomeDir }
+files.delete('/var/log/pacman.log')
+assert.equal((await dispatch({op:'read',ids:[],about:'full'})).about.installed,'2025-01-01T12:00:00.000Z')
+for (const path of Object.keys(aboutSources)) files.delete(path)
+aboutAttributes.clear(); aboutCommandsMissing = true
+const missingAbout = (await dispatch({op:'read',ids:[],about:'full'})).about
+for (const key of ['os','kernel','hyprland','uptimeSeconds','installed','lastUpgrade','cpu','memoryGB','gpus','storage','machine']) assert.equal(missingAbout[key],null,key)
+assert.equal(missingAbout.avatar,'')
+assert.equal(missingAbout.error,undefined)
+assert.equal(events.some(e => e[0] === 'accounts-dbus'),false,'About never contacts AccountsService, even for missing or unreadable avatars')
+console.log('ok: about backend')

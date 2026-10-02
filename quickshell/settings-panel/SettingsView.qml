@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import "pages.mjs" as Pages
+import "about.mjs" as About
 
 FocusScope {
     id: view
@@ -201,6 +202,32 @@ FocusScope {
                             }
                         }
                     }
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        AccountCard { Layout.fillWidth: true; controller: view.controller; theme: view }
+                        // Two quiet, centred lines under the card: a footnote, not content.
+                        Label {
+                            objectName: "accountSystemSummary"
+                            readonly property var accountData: view.controller.about || ({})
+                            visible: !!accountData.os || !!accountData.kernel
+                            text: [accountData.os || "", accountData.kernel ? "Linux " + accountData.kernel.split("-")[0] : ""].filter(Boolean).join(" · ")
+                            Layout.fillWidth: true
+                            horizontalAlignment: Text.AlignHCenter
+                            color: view.dim; font.pixelSize: 11; elide: Text.ElideRight
+                        }
+                        Label {
+                            objectName: "accountSessionSummary"
+                            readonly property var accountData: view.controller.about || ({})
+                            readonly property string uptime: About.formatUptime(accountData.uptimeSeconds, true)
+                            visible: !!accountData.hyprland || !!uptime
+                            text: [accountData.hyprland ? "Hyprland " + accountData.hyprland : "", uptime ? "up " + uptime : ""].filter(Boolean).join(" · ")
+                            Layout.fillWidth: true
+                            Layout.topMargin: -6
+                            horizontalAlignment: Text.AlignHCenter
+                            color: view.dim; font.pixelSize: 11; elide: Text.ElideRight
+                        }
+                    }
                 }
             }
             ColumnLayout {
@@ -372,6 +399,12 @@ FocusScope {
                         }
                         StartupView {
                             visible: view.customPage === "startup"
+                            Layout.fillWidth: true
+                            controller: view.controller
+                            theme: view
+                        }
+                        AboutView {
+                            visible: view.customPage === "about"
                             Layout.fillWidth: true
                             controller: view.controller
                             theme: view

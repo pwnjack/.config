@@ -1,78 +1,6 @@
 {
   "categories": [
     {
-      "id": "network",
-      "group": "connectivity",
-      "icon": "f05a9",
-      "title": "Network",
-      "description": "Wi-Fi, wired and VPN connections",
-      "sections": []
-    },
-    {
-      "id": "devices",
-      "group": "connectivity",
-      "icon": "f0fb0",
-      "title": "Devices",
-      "description": "Wireless peripherals, their batteries and connection",
-      "sections": []
-    },
-    {
-      "id": "monitors",
-      "group": "hardware",
-      "icon": "f0379",
-      "title": "Displays",
-      "description": "Resolution, refresh rate, scale, arrangement and the main display",
-      "sections": [
-        {
-          "id": "options",
-          "title": "Options"
-        }
-      ]
-    },
-    {
-      "id": "sound",
-      "group": "hardware",
-      "icon": "f057e",
-      "title": "Sound",
-      "description": "Devices, ports and microphone level. Volume lives in the notification sidebar.",
-      "sections": [
-        {
-          "id": "output",
-          "title": "Output",
-          "footer": "Volume and per-app levels live in the notification sidebar."
-        },
-        {
-          "id": "input",
-          "title": "Input"
-        }
-      ]
-    },
-    {
-      "id": "power",
-      "group": "hardware",
-      "icon": "f0425",
-      "title": "Power",
-      "description": "Idle timeouts, display power and night light",
-      "sections": [
-        {
-          "id": "mode",
-          "title": "Power mode"
-        },
-        {
-          "id": "sleep",
-          "title": "Lock & sleep"
-        },
-        {
-          "id": "wake",
-          "title": "Wake screen"
-        },
-        {
-          "id": "nightlight",
-          "title": "Night Light"
-        }
-      ]
-    },
-    {
       "id": "appearance",
       "group": "look",
       "icon": "f0e0c",
@@ -192,6 +120,78 @@
       ]
     },
     {
+      "id": "network",
+      "group": "connectivity",
+      "icon": "f05a9",
+      "title": "Network",
+      "description": "Wi-Fi, wired and VPN connections",
+      "sections": []
+    },
+    {
+      "id": "devices",
+      "group": "connectivity",
+      "icon": "f0fb0",
+      "title": "Devices",
+      "description": "Wireless peripherals, their batteries and connection",
+      "sections": []
+    },
+    {
+      "id": "monitors",
+      "group": "hardware",
+      "icon": "f0379",
+      "title": "Displays",
+      "description": "Resolution, refresh rate, scale, arrangement and the main display",
+      "sections": [
+        {
+          "id": "options",
+          "title": "Options"
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "group": "hardware",
+      "icon": "f057e",
+      "title": "Sound",
+      "description": "Devices, ports and microphone level. Volume lives in the notification sidebar.",
+      "sections": [
+        {
+          "id": "output",
+          "title": "Output",
+          "footer": "Volume and per-app levels live in the notification sidebar."
+        },
+        {
+          "id": "input",
+          "title": "Input"
+        }
+      ]
+    },
+    {
+      "id": "power",
+      "group": "hardware",
+      "icon": "f0425",
+      "title": "Power",
+      "description": "Idle timeouts, display power and night light",
+      "sections": [
+        {
+          "id": "mode",
+          "title": "Power mode"
+        },
+        {
+          "id": "sleep",
+          "title": "Lock & sleep"
+        },
+        {
+          "id": "wake",
+          "title": "Wake screen"
+        },
+        {
+          "id": "nightlight",
+          "title": "Night Light"
+        }
+      ]
+    },
+    {
       "id": "input",
       "group": "input",
       "icon": "f097b",
@@ -287,6 +287,15 @@
           ]
         }
       ]
+    },
+    {
+      "id": "about",
+      "group": "system",
+      "placement": "footer",
+      "icon": "f02fd",
+      "title": "About this machine",
+      "description": "Account, system and hardware",
+      "sections": []
     }
   ],
   "rows": [

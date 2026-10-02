@@ -4,15 +4,16 @@
 // structure catalog.json must keep.
 
 // Sidebar clusters, in order. A gap is drawn wherever the group changes.
-export const GROUPS = ["connectivity", "hardware", "look", "input", "system"]
+export const GROUPS = ["look", "connectivity", "hardware", "input", "system"]
 // Pages drawn mostly by their own view; they need no catalog sections.
-export const CUSTOM_PAGES = ["monitors", "network", "devices", "startup"]
+export const CUSTOM_PAGES = ["monitors", "network", "devices", "startup", "about"]
 // controller.action() ids a catalog section button may run (backend.js op "action").
 export const SECTION_ACTIONS = ["reload", "waybar", "update"]
 
 export function navEntries(categories) {
-    return categories.map((category, index) =>
-        Object.assign({}, category, {gapBefore: index > 0 && category.group !== categories[index - 1].group}))
+    const entries = categories.filter(category => category.placement !== "footer")
+    return entries.map((category, index) =>
+        Object.assign({}, category, {gapBefore: index > 0 && category.group !== entries[index - 1].group}))
 }
 
 // Groups visible rows (already filtered, in catalog order) into what is drawn. On a
@@ -58,6 +59,7 @@ export function validateCatalog(catalog) {
     const rows = catalog.rows || []
     for (const category of categories) {
         if (!GROUPS.includes(category.group)) errors.push(`${category.id}: unknown group ${category.group}`)
+        if (category.placement !== undefined && category.placement !== "footer") errors.push(`${category.id}: unknown placement ${category.placement}`)
         const sections = category.sections || []
         if (!sections.length && !CUSTOM_PAGES.includes(category.id)) errors.push(`${category.id}: no sections`)
         const ids = sections.map(section => section.id)

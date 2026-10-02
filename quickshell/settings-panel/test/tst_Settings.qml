@@ -23,6 +23,7 @@ Item {
         property var monitors: []
         property var network: null
         property var startup: null
+        property var about: null
         property var devices: null
         property color background: "#05090c"
         property color foreground: "#cfddde"
@@ -35,7 +36,7 @@ Item {
         property bool keepPendingOnRevert: false
         function keepDisplay() { calls = calls.concat([{op:"displayKeep"}]); }
         function revertDisplay() { if (!keepPendingOnRevert) pendingDisplay = null; calls = calls.concat([{op:"displayRevert"}]); }
-        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}, {id:"startup",title:"Startup",description:"Login"}, {id:"devices",title:"Devices",description:"Wireless peripherals"}], rows: [
+        property var catalog: ({categories: [{id:"appearance",title:"Appearance",description:"Look and feel"}, {id:"input",title:"Input",description:"Mouse and keyboard"}, {id:"monitors",title:"Displays",description:"Screens"}, {id:"network",title:"Network",description:"Connections"}, {id:"startup",title:"Startup",description:"Login"}, {id:"devices",title:"Devices",description:"Wireless peripherals"}, {id:"about",title:"About this machine",placement:"footer"}], rows: [
             {id:"blur",category:"appearance",title:"Blur",description:"Frosted glass",kind:"toggle"},
             {id:"size",category:"appearance",title:"Size",description:"Radius",kind:"slider",min:1,max:20,step:1},
             {id:"font",category:"appearance",title:"Font",description:"Main font",kind:"text"},
@@ -222,11 +223,96 @@ Item {
             controller.authPending = false;
             controller.loaded = true; controller.loading = false;
             controller.pendingDisplay = null; controller.monitors = []; controller.stagedDisplays = ({}); controller.keepPendingOnRevert = false;
-            controller.network = null; controller.startup = null; controller.devices = null;
+            controller.network = null; controller.startup = null; controller.devices = null; controller.about = null;
             controller.values = ({blur:{value:true,reset:true},size:{value:4},font:{value:"Sans"},nickname:{value:"Bob"},theme:{value:"B",choices:[{label:"A",value:"A"},{label:"B",value:"B"}]},focus:{value:"1"},zone:{value:"Europe/Rome",choices:Array.from({length:30},(_,i)=>i===7?{label:"Europe / Rome",value:"Europe/Rome"}:i===8?{label:"New York",value:"America/New_York"}:{label:"Zone "+i,value:"Z"+i})},ntp:{value:true,note:"Synchronized with a time server"},idle:{value:0},mic:{value:62},speed:{value:3},"network.wifi":{value:true},"opt-lock":{value:false}});
             view.forceActiveFocus();
             findChild(view,"settingsScroll").contentItem.contentY = 0;
             waitForRendering(view);
+        }
+        function aboutFixture() {
+            return {user:"alex",realName:"Alex Example",host:"workstation",os:"Example Linux",kernel:"6.12.4-1-example",hyprland:"0.54.0",uptimeSeconds:28260,avatar:"",
+                session:"Hyprland on Wayland",installed:"2025-08-14T12:00:00Z",lastUpgrade:"2026-01-05T11:15:00Z",cpu:{name:"Example CPU",cores:6,threads:12},memoryGB:16,
+                gpus:["Example Graphics", "Second Graphics"],storage:{used:199,total:999,fraction:199/999},machine:{label:"Motherboard",value:"Example Board"}};
+        }
+        function test_about_card_and_page() {
+            controller.about = aboutFixture(); waitForRendering(view);
+            const card = findChild(view,"accountCard"); verify(card);
+            compare(findChild(view,"accountName").text,"Alex Example");
+            compare(findChild(view,"accountHost").text,"Signed in on workstation");
+            compare(findChild(card,"avatarInitial").text,"A");
+            verify(!findChild(view,"nav-about"));
+            mouseClick(card); waitForRendering(view);
+            compare(controller.category,"about"); verify(card.selected);
+            compare(findChild(view,"pageTitle").text,"About this machine");
+            const page = findChild(view,"aboutView"); page.shownAt = new Date(2026,9,2,12,0).getTime(); waitForRendering(view);
+            compare(findChild(view,"about-os-value").text,"Example Linux");
+            compare(findChild(view,"about-hyprland-value").text,"0.54.0");
+            compare(findChild(view,"about-installed-value").text,"14 August 2025 · 1 year, 2 months ago");
+            compare(findChild(view,"about-uptime-value").text,"7 h 51 m");
+            compare(findChild(view,"about-upgrade-value").text,"5 January 2026");
+            compare(findChild(view,"about-kernel-value").text,"6.12.4-1-example");
+            compare(findChild(view,"about-cpu-value").text,"Example CPU · 6 cores · 12 threads");
+            compare(findChild(view,"about-memory-value").text,"16 GB");
+            compare(findChild(view,"about-storage-value").text,"199 of 999 GB used");
+            compare(findChild(view,"about-gpu-1-value").text,"Second Graphics");
+            compare(findChild(view,"about-session").text,"alex@workstation · Hyprland on Wayland");
+            const bar = findChild(view,"about-storage-bar");
+            compare(bar.width,120); compare(bar.height,5);
+            fuzzyCompare(bar.children[0].width,120*199/999,0.001);
+            compare(findChild(view,"about-machine-value").text,"Example Board");
+            verify(findChild(view,"accountSystemSummary").text.endsWith(" · Linux 6.12.4"));
+            compare(findChild(view,"accountSessionSummary").text,"Hyprland 0.54.0 · up 7h 51m");
+            verify(!findChild(view,"noSettingsMatch").visible);
+            controller.query = "blur"; waitForRendering(view); verify(!card.selected);
+        }
+        function test_about_keyboard() {
+            controller.about = aboutFixture(); waitForRendering(view);
+            const card = findChild(view,"accountCard"); card.forceActiveFocus(); keyClick(Qt.Key_Space);
+            compare(controller.category,"about"); controller.select("appearance");
+            card.forceActiveFocus(); keyClick(Qt.Key_Return); compare(controller.category,"about");
+        }
+        function test_about_missing_values() {
+            controller.select("about"); waitForRendering(view);
+            verify(findChild(view,"aboutReading").visible);
+            controller.about = {realName:"Alex",avatar:"",os:"Example Linux",session:null}; waitForRendering(view);
+            verify(!findChild(view,"aboutReading").visible);
+            verify(findChild(view,"aboutSystem").visible); verify(!findChild(view,"aboutHardware").visible);
+            verify(!findChild(view,"about-kernel"));
+            controller.about = {session:null}; waitForRendering(view);
+            verify(!findChild(view,"aboutSystem").visible); verify(!findChild(view,"aboutHardware").visible);
+            verify(!findChild(view,"accountSystemSummary").visible); verify(!findChild(view,"accountSessionSummary").visible);
+        }
+        function test_about_pending_full_read() {
+            controller.about = {user:"alex",host:"workstation",os:"Example Linux",kernel:"6.12.4-1-example",uptimeSeconds:60};
+            controller.select("about"); waitForRendering(view);
+            verify(findChild(view,"aboutReading").visible);
+            compare(findChild(view,"aboutReading").text,"Reading system information…");
+            verify(findChild(view,"aboutSystem").visible);
+            compare(findChild(view,"about-os-value").text,"Example Linux");
+            verify(!findChild(view,"about-installed")); verify(!findChild(view,"about-upgrade"));
+            verify(!findChild(view,"aboutHardware").visible);
+            controller.about = aboutFixture(); waitForRendering(view);
+            verify(!findChild(view,"aboutReading").visible);
+            verify(findChild(view,"about-installed").visible); verify(findChild(view,"about-upgrade").visible);
+            verify(findChild(view,"aboutHardware").visible);
+        }
+        function test_about_core_and_model_rows() {
+            const data = aboutFixture(); data.cpu.threads = 6; data.machine = {label:"Model",value:"Example Laptop"};
+            controller.about = data; controller.select("about"); waitForRendering(view);
+            compare(findChild(view,"about-cpu-value").text,"Example CPU · 6 cores");
+            compare(findChild(view,"about-machine-value").text,"Example Laptop");
+        }
+        function test_about_avatar_image() {
+            const data = aboutFixture();
+            data.avatar = decodeURIComponent(Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "")) + "avatar #%.svg";
+            controller.about = data; waitForRendering(view);
+            const initial = findChild(findChild(view,"accountCard"),"avatarInitial");
+            tryCompare(initial,"visible",false);
+        }
+        function test_about_avatar_bad_image() {
+            controller.about = Object.assign(aboutFixture(), {avatar:"/nonexistent-avatar.png"}); waitForRendering(view);
+            const initial = findChild(findChild(view,"accountCard"),"avatarInitial");
+            tryCompare(initial,"visible",true); compare(initial.text,"A");
         }
         function test_no_writes_on_build() { wait(50); compare(controller.calls.length,0); }
         function test_search_keyboard() {
@@ -817,6 +903,9 @@ Item {
             const list = findChild(view,"categoryList");
             const bottom = list.mapToItem(panel,0,list.height).y;
             verify(bottom <= panel.height, "the sidebar ends at " + bottom + " inside a " + panel.height + " px panel");
+            const card = findChild(view,"accountCard");
+            verify(list.mapToItem(view,0,list.height).y <= card.mapToItem(view,0,0).y);
+            verify(card.mapToItem(panel,0,card.height).y <= panel.height);
             controller.catalog = saved;
             wait(20);
         }

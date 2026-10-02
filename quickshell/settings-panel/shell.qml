@@ -27,6 +27,7 @@ ShellRoot {
     property var monitors: []
     property var network: null
     property var startup: null
+    property var about: null
     // Devices page: devices.sh every 10 s while the page is on screen; nothing otherwise.
     property var devices: null
     readonly property bool devicesShown: opened && !closing && category === "devices" && !query.trim()
@@ -46,6 +47,7 @@ ShellRoot {
     // Whether the full read in flight asked for the network view.
     property bool readerNetwork: false
     property bool readerStartup: false
+    property bool readerAboutFull: false
     onInteractingChanged: {
         if (interacting !== "network.psk" && networkSkipped) {
             networkSkipped = false;
@@ -129,7 +131,8 @@ ShellRoot {
         loading = true;
         readerNetwork = category === "network";
         readerStartup = category === "startup";
-        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network", startup: category === "startup"})];
+        readerAboutFull = category === "about";
+        reader.command = ["bash", configDir + "/scripts/settings/panel-request.sh", JSON.stringify({op: "read", ids: ids, monitors: true, network: category === "network", startup: category === "startup", about: readerAboutFull ? "full" : "summary"})];
         reader.running = true;
         // A full read supersedes any live read still waiting on its debounce.
         liveDirty = ({});
@@ -157,7 +160,7 @@ ShellRoot {
         // The startup list is read on every visit (files change behind the panel's back);
         // network data only when it is missing. Both are read again after every edit.
         // refresh() already ignores the call while a read runs; onExited catches up.
-        if (id === "startup" || (id === "network" && !network)) refresh();
+        if (id === "startup" || (id === "network" && !network) || (id === "about" && (!about || about.session === undefined))) refresh();
     }
     function change(id, value) {
         submit({op: "set", id: id, value: value}, catalog.rows.find(row => row.id === id)?.auth === true);
@@ -272,6 +275,7 @@ ShellRoot {
                 // would recreate the Wi-Fi list's delegates under the user's hands.
                 if (result.network) { if (root.interacting !== "network.psk") root.network = result.network; else root.networkSkipped = true; }
                 if (result.startup) root.startup = result.startup;
+                if (result.about) root.about = root.readerAboutFull ? result.about : Object.assign({}, root.about || {}, result.about);
                 // An open display dropdown keeps its card (the read is replayed when it
                 // closes); a queued Keep/Revert is about to change pendingDisplay.
                 if (result.monitors && root.interacting.startsWith("display:")) root.displaysSkipped = true;
@@ -283,7 +287,7 @@ ShellRoot {
             root.loaded = true;
             if (root.queue.length || root.closing) root.drain();
             // The page was opened while this read was in flight and did not ask for its data.
-            else if (root.category === "startup" && !root.readerStartup && !root.problem) root.refresh();
+            else if (((root.category === "startup" && !root.readerStartup) || (root.category === "about" && (!root.about || root.about.session === undefined))) && !root.problem) root.refresh();
         }
     }
     Process {

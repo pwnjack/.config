@@ -4,8 +4,9 @@ import * as pages from '../pages.mjs'
 
 const catalog = JSON.parse(fs.readFileSync(new URL('../catalog.json', import.meta.url)))
 assert.deepEqual(pages.validateCatalog(catalog), [])
-assert.deepEqual(catalog.categories.map(c => c.id), ['network', 'devices', 'monitors', 'sound', 'power',
-    'appearance', 'bar', 'windows', 'animations', 'notifications', 'input', 'accessibility', 'region', 'startup', 'apps'])
+// Appearance leads: it is the page the panel opens on, so the panel opens at the top of the list.
+assert.deepEqual(catalog.categories.map(c => c.id), ['appearance', 'bar', 'windows', 'animations', 'notifications',
+    'network', 'devices', 'monitors', 'sound', 'power', 'input', 'accessibility', 'region', 'startup', 'apps', 'about'])
 // Row ids are API: requests, live tags and saved overrides name them. A re-home never renames one.
 assert.deepEqual(catalog.rows.map(row => row.id).sort(), ["a11y.text-scale", "a11y.zoom", "anim.border", "anim.fade",
     "anim.master", "anim.windows", "anim.windowsIn", "anim.windowsMove", "anim.windowsOut", "anim.workspaces",

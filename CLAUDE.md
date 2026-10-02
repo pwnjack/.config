@@ -120,7 +120,9 @@ error. There is no login autostart or wallpaper-triggered AGS restart.
 sidebar groups and rows in titled sections (`group`, `sections`, `section`);
 sliders may declare `ends`/`invert` and rows `dependsOn`. `pages.mjs` is the pure
 layer that draws and validates this; `test/catalog.mjs` freezes the row-id set.
-Maintenance actions are in the title bar's ⋯ menu. Rows may declare
+Maintenance actions are in the title bar's ⋯ menu. The account card under the
+sidebar opens the `about` page (`placement: "footer"`, parsed by `about.mjs`).
+Rows may declare
 `choices` (valid values enumerated from what is installed, validated on write),
 a text `check` (`xkb-*`, `font`, `command`), `optional` and `reload`. Beyond
 Hyprland options and `options/` files, the backend drives gsettings plus both

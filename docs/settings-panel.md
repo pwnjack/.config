@@ -23,8 +23,9 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 
 ## Implementation
 
-- Layout is data. Each category has a `group` (`connectivity`, `hardware`,
-  `look`, `input` or `system`; the categories array is the sidebar order, and a
+- Layout is data. Each category has a `group` (`look`, `connectivity`,
+  `hardware`, `input` or `system`, in that sidebar order: the panel opens on
+  Appearance, so it opens at the top of the list; the categories array is the sidebar order, and a
   gap opens where the group changes) and ordered `sections`
   (`{id, title, footer?, actions?}`, where each action is `{label, action}` and
   the action is `reload`, `waybar` or `update`). Each row names its `section`.
@@ -39,6 +40,19 @@ wallpaper carousel remains a separate application with its existing lifecycle.
   `visibleRows` binding, which the QML tests stub. Search matches section
   titles too, and a title made plainer keeps its old wording in `keywords`.
   `backend.js` ignores all of these keys.
+- A category with `"placement": "footer"` (only `about`) has no sidebar entry;
+  the account card pinned under the list opens it. The card shows the avatar
+  (`~/.face`, else AccountsService's icon file; files only, no D-Bus, so the
+  every-open read cannot start or wait on accounts-daemon), the name, the host
+  and two quiet summary lines (OS and kernel, Hyprland and uptime). That
+  summary is part of every read; the About page asks for `about: "full"`, which
+  adds the install date (first line of `pacman.log`, which survives snapper
+  rollbacks, falling back to the root filesystem's creation time), the last
+  completed full upgrade (from the log's last 256 KiB), CPU, GPUs (`lspci`),
+  memory, root storage in decimal GB (GIO `filesystem::used`, as `df`) and the
+  board or laptop model. Parsing and formatting live in the pure `about.mjs`,
+  shared by the backend, QML and Node; every field is optional and a missing one
+  hides its row.
 - `catalog.json` owns setting metadata, accepted ranges and dropdown choices.
   Each category's `icon` is a hex codepoint of a Material Design glyph in
   Symbols Nerd Font (`ttf-nerd-fonts-symbols`), drawn in the nav rail and beside
