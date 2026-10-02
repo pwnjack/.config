@@ -948,6 +948,10 @@ Item {
             tryCompare(view.actionsMenu,"visible",false);
             controller.busy = false;
         }
+        function test_actions_menu_entries_have_icons() {
+            compare(menuItem("reloadHyprland-icon").text.codePointAt(0), 0xf0450);
+            compare(menuItem("updateSystem-icon").text.codePointAt(0), 0xf03d5);
+        }
         function test_close_button_closes() {
             mouseClick(findChild(view,"closeSettings"));
             compare(controller.closed,true);

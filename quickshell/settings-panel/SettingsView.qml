@@ -299,13 +299,15 @@ FocusScope {
                         background: Rectangle { radius: 10; color: view.plate; border.color: view.tone(0.18) }
                         contentItem: ColumnLayout {
                             spacing: 2
-                            MenuEntry { id: reloadEntry; objectName: "reloadHyprland"; theme: view; KeyNavigation.down: restartEntry; text: "Reload Hyprland"; enabled: !view.controller.busy && view.actionsIdle; onClicked: view.run("reload") }
-                            MenuEntry { id: restartEntry; objectName: "restartWaybar"; theme: view; KeyNavigation.up: reloadEntry; KeyNavigation.down: updateEntry; text: "Restart bar"; enabled: view.actionsIdle; onClicked: view.run("waybar") }
+                            MenuEntry { id: reloadEntry; objectName: "reloadHyprland"; theme: view; glyph: "f0450"; KeyNavigation.down: restartEntry; text: "Reload Hyprland"; enabled: !view.controller.busy && view.actionsIdle; onClicked: view.run("reload") }
+                            MenuEntry { id: restartEntry; objectName: "restartWaybar"; theme: view; glyph: view.controller.catalog.categories.find(c => c.id === "bar")?.icon || ""; KeyNavigation.up: reloadEntry; KeyNavigation.down: updateEntry; text: "Restart bar"; enabled: view.actionsIdle; onClicked: view.run("waybar") }
                             Rectangle { Layout.fillWidth: true; Layout.leftMargin: 6; Layout.rightMargin: 6; implicitHeight: 1; color: view.line }
                             MenuEntry {
                                 id: updateEntry
                                 KeyNavigation.up: restartEntry
                                 objectName: "updateSystem"; theme: view; text: "Update system…"
+                                // md-package_up
+                                glyph: "f03d5"
                                 hint: view.controller.values["apps.aurhelper"]?.value || ""
                                 enabled: view.actionsIdle
                                 onClicked: view.run("update")
@@ -485,6 +487,8 @@ FocusScope {
         id: menuEntry
         required property var theme
         property string hint: ""
+        // A Nerd Font code point, as the catalog stores page icons.
+        property string glyph: ""
         Layout.fillWidth: true
         implicitHeight: 30
         leftPadding: 10; rightPadding: 10
@@ -494,7 +498,17 @@ FocusScope {
         Keys.onReturnPressed: clicked()
         Keys.onEnterPressed: clicked()
         contentItem: RowLayout {
-            spacing: 12
+            spacing: 10
+            Text {
+                objectName: menuEntry.objectName + "-icon"
+                visible: !!menuEntry.glyph
+                text: menuEntry.glyph ? String.fromCodePoint(parseInt(menuEntry.glyph, 16)) : ""
+                font.family: menuEntry.theme.iconFont; font.pixelSize: 15
+                color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.accent
+                horizontalAlignment: Text.AlignHCenter
+                Layout.preferredWidth: 18
+                Accessible.ignored: true
+            }
             Text { text: menuEntry.text; color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.foreground; font.pixelSize: 13; Layout.fillWidth: true }
             Text { visible: !!menuEntry.hint; text: menuEntry.hint; color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.dim; font.pixelSize: 11; elide: Text.ElideLeft; Layout.maximumWidth: 110 }
         }
