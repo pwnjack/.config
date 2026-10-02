@@ -1,246 +1,546 @@
 {
   "categories": [
     {
-      "id": "appearance",
-      "icon": "f0e0c",
-      "title": "Appearance",
-      "description": "Borders, blur, gaps, opacity, fonts and cursor"
-    },
-    {
-      "id": "bar",
-      "icon": "f10a9",
-      "title": "Bar",
-      "description": "Which modules the top bar shows, and when"
-    },
-    {
-      "id": "animations",
-      "icon": "f0a90",
-      "title": "Animations",
-      "description": "Master switch and per-animation speeds"
-    },
-    {
-      "id": "windows",
-      "icon": "f0a1d",
-      "title": "Windows",
-      "description": "Tiling layout and window behavior"
-    },
-    {
-      "id": "input",
-      "icon": "f097b",
-      "title": "Input",
-      "description": "Mouse, keyboard and touchpad"
+      "id": "network",
+      "group": "connectivity",
+      "icon": "f05a9",
+      "title": "Network",
+      "description": "Wi-Fi, wired and VPN connections",
+      "sections": []
     },
     {
       "id": "devices",
+      "group": "connectivity",
       "icon": "f0fb0",
       "title": "Devices",
-      "description": "Wireless peripherals, their batteries and connection"
-    },
-    {
-      "id": "accessibility",
-      "icon": "f02e6",
-      "title": "Accessibility",
-      "description": "Zoom and text size"
-    },
-    {
-      "id": "sound",
-      "icon": "f057e",
-      "title": "Sound",
-      "description": "Devices, ports and microphone level. Volume lives in the notification sidebar."
-    },
-    {
-      "id": "network",
-      "icon": "f05a9",
-      "title": "Network",
-      "description": "Wi-Fi, wired and VPN connections"
-    },
-    {
-      "id": "notifications",
-      "icon": "f009c",
-      "title": "Notifications",
-      "description": "SwayNC toasts and control center"
+      "description": "Wireless peripherals, their batteries and connection",
+      "sections": []
     },
     {
       "id": "monitors",
+      "group": "hardware",
       "icon": "f0379",
       "title": "Displays",
-      "description": "Resolution, refresh rate, scale, arrangement and the main display"
+      "description": "Resolution, refresh rate, scale, arrangement and the main display",
+      "sections": [
+        {
+          "id": "options",
+          "title": "Options"
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "group": "hardware",
+      "icon": "f057e",
+      "title": "Sound",
+      "description": "Devices, ports and microphone level. Volume lives in the notification sidebar.",
+      "sections": [
+        {
+          "id": "output",
+          "title": "Output",
+          "footer": "Volume and per-app levels live in the notification sidebar."
+        },
+        {
+          "id": "input",
+          "title": "Input"
+        }
+      ]
     },
     {
       "id": "power",
+      "group": "hardware",
       "icon": "f0425",
       "title": "Power",
-      "description": "Idle timeouts, display power and night light"
+      "description": "Idle timeouts, display power and night light",
+      "sections": [
+        {
+          "id": "mode",
+          "title": "Power mode"
+        },
+        {
+          "id": "sleep",
+          "title": "Lock & sleep"
+        },
+        {
+          "id": "wake",
+          "title": "Wake screen"
+        },
+        {
+          "id": "nightlight",
+          "title": "Night Light"
+        }
+      ]
+    },
+    {
+      "id": "appearance",
+      "group": "look",
+      "icon": "f0e0c",
+      "title": "Appearance",
+      "description": "Borders, blur, gaps, opacity, fonts and cursor",
+      "sections": [
+        {
+          "id": "style",
+          "title": "Style"
+        },
+        {
+          "id": "themes",
+          "title": "Themes"
+        },
+        {
+          "id": "fonts",
+          "title": "Fonts"
+        },
+        {
+          "id": "cursor",
+          "title": "Cursor"
+        },
+        {
+          "id": "windows",
+          "title": "Window style"
+        },
+        {
+          "id": "effects",
+          "title": "Transparency & effects"
+        }
+      ]
+    },
+    {
+      "id": "bar",
+      "group": "look",
+      "icon": "f10a9",
+      "title": "Bar",
+      "description": "Which modules the top bar shows, and when",
+      "sections": [
+        {
+          "id": "layout",
+          "title": "Layout",
+          "actions": [
+            {
+              "label": "Restart bar",
+              "action": "waybar"
+            }
+          ]
+        },
+        {
+          "id": "clock",
+          "title": "Clock & workspaces"
+        },
+        {
+          "id": "modules",
+          "title": "Modules"
+        }
+      ]
+    },
+    {
+      "id": "windows",
+      "group": "look",
+      "icon": "f0a1d",
+      "title": "Windows",
+      "description": "Tiling layout and window behavior",
+      "sections": [
+        {
+          "id": "tiling",
+          "title": "Tiling"
+        },
+        {
+          "id": "focus",
+          "title": "Focus"
+        },
+        {
+          "id": "advanced",
+          "title": "Advanced"
+        }
+      ]
+    },
+    {
+      "id": "animations",
+      "group": "look",
+      "icon": "f0a90",
+      "title": "Animations",
+      "description": "Master switch and per-animation speeds",
+      "sections": [
+        {
+          "id": "general",
+          "title": "General"
+        },
+        {
+          "id": "speed",
+          "title": "Speed"
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "group": "look",
+      "icon": "f009c",
+      "title": "Notifications",
+      "description": "SwayNC toasts and control center",
+      "sections": [
+        {
+          "id": "position",
+          "title": "Position"
+        },
+        {
+          "id": "timing",
+          "title": "Timing"
+        },
+        {
+          "id": "size",
+          "title": "Size"
+        }
+      ]
+    },
+    {
+      "id": "input",
+      "group": "input",
+      "icon": "f097b",
+      "title": "Keyboard & Mouse",
+      "description": "Mouse, keyboard and touchpad",
+      "sections": [
+        {
+          "id": "keyboard",
+          "title": "Keyboard"
+        },
+        {
+          "id": "mouse",
+          "title": "Mouse"
+        },
+        {
+          "id": "touchpad",
+          "title": "Touchpad"
+        },
+        {
+          "id": "pointer",
+          "title": "Pointer"
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "group": "input",
+      "icon": "f02e6",
+      "title": "Accessibility",
+      "description": "Zoom and text size",
+      "sections": [
+        {
+          "id": "vision",
+          "title": "Vision"
+        }
+      ]
     },
     {
       "id": "region",
+      "group": "system",
       "icon": "f01e7",
       "title": "Date & Region",
-      "description": "Time zone, clock and regional formats. System-wide changes ask for your password."
+      "description": "Time zone, clock and regional formats. System-wide changes ask for your password.",
+      "sections": [
+        {
+          "id": "datetime",
+          "title": "Date & time",
+          "footer": "Time zone and automatic time ask for your password."
+        },
+        {
+          "id": "language",
+          "title": "Language & formats",
+          "footer": "Applies to programs started after your next login."
+        }
+      ]
     },
     {
       "id": "startup",
+      "group": "system",
       "icon": "f14df",
       "title": "Startup",
-      "description": "Apps started at login, and what Hyprland itself starts"
+      "description": "Apps started at login, and what Hyprland itself starts",
+      "sections": [
+        {
+          "id": "login",
+          "title": "At login"
+        }
+      ]
     },
     {
       "id": "apps",
+      "group": "system",
       "icon": "f003b",
       "title": "Default Apps",
-      "description": "Applications used by keybinds and scripts"
-    },
-    {
-      "id": "filetypes",
-      "icon": "f09ee",
-      "title": "File Types",
-      "description": "Which app opens each kind of file or link"
+      "description": "Apps used by keybinds and scripts, and which app opens each file type",
+      "sections": [
+        {
+          "id": "applications",
+          "title": "Applications"
+        },
+        {
+          "id": "filetypes",
+          "title": "File types"
+        },
+        {
+          "id": "launcher",
+          "title": "Launcher & updates",
+          "actions": [
+            {
+              "label": "Update now",
+              "action": "update"
+            }
+          ]
+        }
+      ]
     }
   ],
   "rows": [
     {
-      "category": "appearance",
-      "id": "appearance.blur",
-      "title": "Blur",
-      "description": "Frosted-glass effect behind windows",
+      "category": "network",
+      "id": "network.wifi",
+      "title": "Wi-Fi",
+      "description": "Turn the Wi-Fi radio on or off",
+      "source": "network",
+      "key": "wifi",
+      "kind": "toggle",
+      "live": "network",
+      "inView": true,
+      "keywords": ["wireless", "wlan", "radio"]
+    },
+    {
+      "category": "monitors",
+      "section": "options",
+      "id": "monitors.vrr",
+      "title": "Adaptive sync",
+      "description": "Variable refresh rate, for smoother games and video",
       "source": "keyword",
-      "key": "decoration:blur:enabled",
-      "kind": "toggle"
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.blur-size",
-      "title": "Blur Size",
-      "description": "Blur kernel radius",
-      "source": "keyword",
-      "key": "decoration:blur:size",
-      "kind": "slider",
-      "min": 1,
-      "max": 20,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.blur-passes",
-      "title": "Blur Passes",
-      "description": "More passes, smoother and costlier blur",
-      "source": "keyword",
-      "key": "decoration:blur:passes",
-      "kind": "slider",
-      "min": 1,
-      "max": 6,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.shadows",
-      "title": "Shadows",
-      "description": "Drop shadow under windows",
-      "source": "keyword",
-      "key": "decoration:shadow:enabled",
-      "kind": "toggle"
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.rounding",
-      "title": "Corner Rounding",
-      "description": "Window corner radius in pixels",
-      "source": "keyword",
-      "key": "decoration:rounding",
-      "kind": "slider",
-      "min": 0,
-      "max": 30,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.border",
-      "title": "Border Width",
-      "description": "Window border thickness",
-      "source": "keyword",
-      "key": "general:border_size",
-      "kind": "slider",
-      "min": 0,
-      "max": 5,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.gaps-in",
-      "title": "Gaps Inner",
-      "description": "Space between tiled windows",
-      "source": "keyword",
-      "key": "general:gaps_in",
-      "kind": "slider",
-      "min": 0,
-      "max": 20,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.gaps-out",
-      "title": "Gaps Outer",
-      "description": "Space between windows and screen edge",
-      "source": "keyword",
-      "key": "general:gaps_out",
-      "kind": "slider",
-      "min": 0,
-      "max": 30,
-      "step": 1
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.opacity-active",
-      "title": "Active Opacity",
-      "description": "Opacity of the focused window",
-      "source": "keyword",
-      "key": "decoration:active_opacity",
-      "kind": "slider",
-      "min": 0.1,
-      "max": 1,
-      "step": 0.05
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.opacity-inactive",
-      "title": "Inactive Opacity",
-      "description": "Opacity of unfocused windows",
-      "source": "keyword",
-      "key": "decoration:inactive_opacity",
-      "kind": "slider",
-      "min": 0.1,
-      "max": 1,
-      "step": 0.05
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.font",
-      "title": "Main Font",
-      "description": "Applied to Rofi, Waybar and terminals",
-      "source": "option",
-      "key": "font",
-      "kind": "text",
-      "check": "font"
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.font-gtk",
-      "title": "GTK Font",
-      "description": "System UI font for GTK apps, browsers and Electron apps",
-      "source": "option",
-      "key": "font-gtk",
-      "kind": "text",
-      "check": "font"
-    },
-    {
-      "category": "appearance",
-      "id": "appearance.color-scheme",
-      "title": "Colour Scheme",
-      "description": "Light or dark preference for GTK and portal apps",
-      "keywords": [
-        "dark mode",
-        "light mode"
+      "key": "misc:vrr",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Off",
+          "value": "0"
+        },
+        {
+          "label": "On",
+          "value": "1"
+        },
+        {
+          "label": "Fullscreen only",
+          "value": "2"
+        }
       ],
+      "keywords": ["vrr", "freesync", "g-sync"]
+    },
+    {
+      "category": "sound",
+      "section": "output",
+      "id": "sound.output",
+      "title": "Device",
+      "description": "Where sound plays",
+      "source": "pulse",
+      "key": "output",
+      "kind": "select",
+      "choices": "audio-outputs",
+      "live": "audio",
+      "keywords": ["speakers", "headphones", "audio"]
+    },
+    {
+      "category": "sound",
+      "section": "output",
+      "id": "sound.output-port",
+      "title": "Port",
+      "description": "Connector on the device, e.g. headphones or line out",
+      "source": "pulse",
+      "key": "output-port",
+      "kind": "select",
+      "choices": "output-ports",
+      "live": "audio",
+      "keywords": ["jack", "headphones", "speakers"]
+    },
+    {
+      "category": "sound",
+      "section": "output",
+      "id": "sound.output-profile",
+      "title": "Profile",
+      "description": "Channel layout of the device's card",
+      "source": "pulse",
+      "key": "output-profile",
+      "kind": "select",
+      "choices": "output-profiles",
+      "live": "audio",
+      "keywords": ["surround", "stereo", "hdmi"]
+    },
+    {
+      "category": "sound",
+      "section": "input",
+      "id": "sound.input",
+      "title": "Device",
+      "description": "Microphone that apps record from",
+      "source": "pulse",
+      "key": "input",
+      "kind": "select",
+      "choices": "audio-inputs",
+      "live": "audio",
+      "keywords": ["microphone", "mic", "recording"]
+    },
+    {
+      "category": "sound",
+      "section": "input",
+      "id": "sound.input-port",
+      "title": "Port",
+      "description": "Connector on the device",
+      "source": "pulse",
+      "key": "input-port",
+      "kind": "select",
+      "choices": "input-ports",
+      "live": "audio",
+      "keywords": ["microphone", "mic", "jack"]
+    },
+    {
+      "category": "sound",
+      "section": "input",
+      "id": "sound.mic-level",
+      "title": "Level",
+      "description": "Above 100 % amplifies in software",
+      "source": "pulse",
+      "key": "mic-level",
+      "kind": "slider",
+      "min": 0,
+      "max": 150,
+      "step": 1,
+      "format": "percent",
+      "live": "audio",
+      "keywords": ["microphone", "mic", "gain", "recording", "volume"]
+    },
+    {
+      "category": "power",
+      "section": "mode",
+      "id": "power.profile",
+      "title": "Power profile",
+      "description": "Performance, balanced or power saving",
+      "source": "powerprofile",
+      "kind": "select",
+      "choices": "power-profiles",
+      "keywords": ["battery", "cpu"]
+    },
+    {
+      "category": "power",
+      "section": "sleep",
+      "id": "power.lock",
+      "title": "Lock after",
+      "description": "Idle time before the lock screen",
+      "source": "idle",
+      "key": "lock",
+      "kind": "slider",
+      "min": 60,
+      "max": 1800,
+      "step": 30,
+      "default": 180,
+      "format": "duration",
+      "keywords": ["timeout", "idle", "hyprlock"]
+    },
+    {
+      "category": "power",
+      "section": "sleep",
+      "id": "power.dpms",
+      "title": "Turn screen off after",
+      "description": "Idle time before displays power down",
+      "source": "idle",
+      "key": "dpms",
+      "kind": "slider",
+      "min": 120,
+      "max": 3600,
+      "step": 60,
+      "default": 600,
+      "format": "duration",
+      "keywords": ["timeout", "idle", "dpms"]
+    },
+    {
+      "category": "power",
+      "section": "sleep",
+      "id": "power.suspend",
+      "title": "Suspend after",
+      "description": "The lock screen engages first",
+      "source": "idle",
+      "key": "suspend",
+      "kind": "slider",
+      "min": 0,
+      "max": 7200,
+      "step": 60,
+      "format": "duration",
+      "zeroLabel": "Never",
+      "keywords": ["sleep", "idle"]
+    },
+    {
+      "category": "power",
+      "section": "wake",
+      "id": "power.dpms-key",
+      "title": "On key press",
+      "source": "keyword",
+      "key": "misc:key_press_enables_dpms",
+      "kind": "toggle",
+      "keywords": ["dpms"]
+    },
+    {
+      "category": "power",
+      "section": "wake",
+      "id": "power.dpms-mouse",
+      "title": "On mouse move",
+      "source": "keyword",
+      "key": "misc:mouse_move_enables_dpms",
+      "kind": "toggle",
+      "keywords": ["dpms"]
+    },
+    {
+      "category": "power",
+      "section": "nightlight",
+      "id": "power.nightlight-temp",
+      "title": "Warmth",
+      "description": "Colour temperature on the evening schedule",
+      "source": "sunset",
+      "key": "nightTemp",
+      "kind": "slider",
+      "min": 2000,
+      "max": 6000,
+      "step": 100,
+      "default": 4000,
+      "format": "temperature",
+      "keywords": ["hyprsunset", "blue light", "schedule", "nightlight"]
+    },
+    {
+      "category": "power",
+      "section": "nightlight",
+      "id": "power.nightlight-start",
+      "title": "Starts at",
+      "description": "When the warm profile takes over",
+      "source": "sunset",
+      "key": "nightMinutes",
+      "kind": "slider",
+      "min": 0,
+      "max": 1410,
+      "step": 30,
+      "default": 1200,
+      "format": "clock",
+      "keywords": ["hyprsunset", "blue light", "schedule", "nightlight"]
+    },
+    {
+      "category": "power",
+      "section": "nightlight",
+      "id": "power.nightlight-end",
+      "title": "Ends at",
+      "description": "When the neutral profile takes over",
+      "source": "sunset",
+      "key": "dayMinutes",
+      "kind": "slider",
+      "min": 0,
+      "max": 1410,
+      "step": 30,
+      "default": 420,
+      "format": "clock",
+      "keywords": ["hyprsunset", "blue light", "schedule", "nightlight"]
+    },
+    {
+      "category": "appearance",
+      "section": "style",
+      "id": "appearance.color-scheme",
+      "title": "Colour scheme",
+      "description": "Light or dark preference for GTK and portal apps",
       "source": "gtk",
       "key": "color-scheme",
       "kind": "select",
@@ -265,12 +565,14 @@
           "prefer-light": "false",
           "default": "false"
         }
-      }
+      },
+      "keywords": ["dark mode", "light mode"]
     },
     {
       "category": "appearance",
+      "section": "themes",
       "id": "appearance.gtk-theme",
-      "title": "GTK Theme",
+      "title": "GTK theme",
       "description": "Widget theme for GTK apps",
       "source": "gtk",
       "key": "gtk-theme",
@@ -282,8 +584,9 @@
     },
     {
       "category": "appearance",
+      "section": "themes",
       "id": "appearance.icon-theme",
-      "title": "Icon Theme",
+      "title": "Icon theme",
       "description": "Application and file icons",
       "source": "gtk",
       "key": "icon-theme",
@@ -295,19 +598,45 @@
     },
     {
       "category": "appearance",
+      "section": "themes",
       "id": "appearance.kvantum",
-      "title": "Qt Theme (Kvantum)",
-      "description": "Qt apps pick it up when they restart",
-      "keywords": ["qt", "kde"],
+      "title": "Qt theme",
+      "description": "Kvantum; Qt apps pick it up when they restart",
       "source": "kvantum",
       "kind": "select",
-      "choices": "kvantum-themes"
+      "choices": "kvantum-themes",
+      "keywords": ["qt", "kde", "kvantum"]
     },
     {
       "category": "appearance",
+      "section": "fonts",
+      "id": "appearance.font",
+      "title": "Desktop font",
+      "description": "Rofi, Waybar and terminals",
+      "source": "option",
+      "key": "font",
+      "kind": "text",
+      "check": "font",
+      "keywords": ["main"]
+    },
+    {
+      "category": "appearance",
+      "section": "fonts",
+      "id": "appearance.font-gtk",
+      "title": "App font",
+      "description": "GTK apps, browsers and Electron apps",
+      "source": "option",
+      "key": "font-gtk",
+      "kind": "text",
+      "check": "font",
+      "keywords": ["gtk", "system"]
+    },
+    {
+      "category": "appearance",
+      "section": "cursor",
       "id": "appearance.cursor-theme",
-      "title": "Cursor Theme",
-      "description": "Cursor theme name; fully applies after restart",
+      "title": "Theme",
+      "description": "Fully applies after apps restart",
       "source": "option",
       "key": "cursortheme",
       "kind": "select",
@@ -315,194 +644,146 @@
     },
     {
       "category": "appearance",
+      "section": "cursor",
       "id": "appearance.cursor-size",
-      "title": "Cursor Size",
-      "description": "Pointer size in pixels",
+      "title": "Size",
+      "description": "In pixels",
       "source": "cursor",
       "key": "size",
       "kind": "slider",
       "min": 16,
       "max": 48,
-      "step": 2
+      "step": 2,
+      "keywords": ["pointer"]
+    },
+    {
+      "category": "appearance",
+      "section": "windows",
+      "id": "appearance.rounding",
+      "title": "Corner rounding",
+      "description": "Radius in pixels",
+      "source": "keyword",
+      "key": "decoration:rounding",
+      "kind": "slider",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "keywords": ["radius"]
+    },
+    {
+      "category": "appearance",
+      "section": "windows",
+      "id": "appearance.border",
+      "title": "Border width",
+      "description": "In pixels",
+      "source": "keyword",
+      "key": "general:border_size",
+      "kind": "slider",
+      "min": 0,
+      "max": 5,
+      "step": 1
+    },
+    {
+      "category": "appearance",
+      "section": "windows",
+      "id": "appearance.gaps-in",
+      "title": "Gaps between windows",
+      "source": "keyword",
+      "key": "general:gaps_in",
+      "kind": "slider",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "keywords": ["inner"]
+    },
+    {
+      "category": "appearance",
+      "section": "windows",
+      "id": "appearance.gaps-out",
+      "title": "Gaps at screen edges",
+      "source": "keyword",
+      "key": "general:gaps_out",
+      "kind": "slider",
+      "min": 0,
+      "max": 30,
+      "step": 1,
+      "keywords": ["outer"]
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.opacity-active",
+      "title": "Active window opacity",
+      "source": "keyword",
+      "key": "decoration:active_opacity",
+      "kind": "slider",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.opacity-inactive",
+      "title": "Inactive window opacity",
+      "source": "keyword",
+      "key": "decoration:inactive_opacity",
+      "kind": "slider",
+      "min": 0.1,
+      "max": 1,
+      "step": 0.05
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.blur",
+      "title": "Blur",
+      "description": "Frosted glass behind windows",
+      "source": "keyword",
+      "key": "decoration:blur:enabled",
+      "kind": "toggle"
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.blur-size",
+      "title": "Blur size",
+      "description": "Kernel radius",
+      "source": "keyword",
+      "key": "decoration:blur:size",
+      "kind": "slider",
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "dependsOn": "appearance.blur"
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.blur-passes",
+      "title": "Blur passes",
+      "description": "More passes are smoother and cost more",
+      "source": "keyword",
+      "key": "decoration:blur:passes",
+      "kind": "slider",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "dependsOn": "appearance.blur"
+    },
+    {
+      "category": "appearance",
+      "section": "effects",
+      "id": "appearance.shadows",
+      "title": "Shadows",
+      "description": "Drop shadow under windows",
+      "source": "keyword",
+      "key": "decoration:shadow:enabled",
+      "kind": "toggle"
     },
     {
       "category": "bar",
-      "id": "bar.cpu",
-      "title": "CPU",
-      "description": "Usage on the bar",
-      "keywords": [
-        "waybar",
-        "resources",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-cpu",
-      "kind": "select",
-      "items": [
-        {
-          "label": "Always",
-          "value": "always"
-        },
-        {
-          "label": "Only when high (70%+)",
-          "value": "high"
-        },
-        {
-          "label": "Hidden",
-          "value": "hidden"
-        }
-      ]
-    },
-    {
-      "category": "bar",
-      "id": "bar.memory",
-      "title": "Memory",
-      "description": "Usage on the bar",
-      "keywords": [
-        "waybar",
-        "resources",
-        "ram",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-memory",
-      "kind": "select",
-      "items": [
-        {
-          "label": "Always",
-          "value": "always"
-        },
-        {
-          "label": "Only when high (70%+)",
-          "value": "high"
-        },
-        {
-          "label": "Hidden",
-          "value": "hidden"
-        }
-      ]
-    },
-    {
-      "category": "bar",
-      "id": "bar.gpu",
-      "title": "GPU",
-      "description": "Usage on the bar; hidden skips the driver probe",
-      "keywords": [
-        "waybar",
-        "resources",
-        "nvidia",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-gpu",
-      "kind": "select",
-      "items": [
-        {
-          "label": "Always",
-          "value": "always"
-        },
-        {
-          "label": "Only when high (70%+)",
-          "value": "high"
-        },
-        {
-          "label": "Hidden",
-          "value": "hidden"
-        }
-      ]
-    },
-    {
-      "category": "bar",
-      "id": "bar.disk",
-      "title": "Disk",
-      "description": "Root filesystem usage on the bar",
-      "keywords": [
-        "waybar",
-        "resources",
-        "storage",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-disk",
-      "kind": "select",
-      "items": [
-        {
-          "label": "Always",
-          "value": "always"
-        },
-        {
-          "label": "Only when high (80%+)",
-          "value": "high"
-        },
-        {
-          "label": "Hidden",
-          "value": "hidden"
-        }
-      ]
-    },
-    {
-      "category": "bar",
-      "id": "bar.network",
-      "title": "Network",
-      "description": "Download and upload speed; Offline always shows",
-      "keywords": [
-        "waybar",
-        "speed",
-        "bandwidth",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-network",
-      "kind": "select",
-      "items": [
-        {
-          "label": "During traffic",
-          "value": "traffic"
-        },
-        {
-          "label": "Always",
-          "value": "always"
-        },
-        {
-          "label": "Offline only",
-          "value": "offline"
-        }
-      ]
-    },
-    {
-      "category": "bar",
-      "id": "bar.updates",
-      "title": "Updates",
-      "description": "Pending package count; hidden skips the check",
-      "keywords": [
-        "waybar",
-        "packages",
-        "pacman",
-        "aur",
-        "hide",
-        "show"
-      ],
-      "source": "option",
-      "key": "bar-updates",
-      "kind": "select",
-      "items": [
-        {
-          "label": "When pending",
-          "value": "pending"
-        },
-        {
-          "label": "Hidden",
-          "value": "hidden"
-        }
-      ]
-    },
-    {
-      "category": "bar",
+      "section": "layout",
       "id": "bar.position",
       "title": "Position",
       "source": "option",
@@ -522,8 +803,10 @@
     },
     {
       "category": "bar",
+      "section": "layout",
       "id": "bar.style",
       "title": "Style",
+      "description": "Floating, or docked to the screen edge",
       "source": "option",
       "key": "bar-style",
       "kind": "select",
@@ -541,6 +824,19 @@
     },
     {
       "category": "bar",
+      "section": "layout",
+      "id": "bar.output",
+      "title": "Show on",
+      "description": "Every monitor, or just one",
+      "source": "option",
+      "key": "bar-output",
+      "kind": "select",
+      "choices": "monitors",
+      "keywords": ["monitors", "output", "display"]
+    },
+    {
+      "category": "bar",
+      "section": "layout",
       "id": "bar.opacity",
       "title": "Background opacity",
       "source": "option",
@@ -553,6 +849,7 @@
     },
     {
       "category": "bar",
+      "section": "layout",
       "id": "bar.border",
       "title": "Border",
       "source": "option",
@@ -561,32 +858,19 @@
     },
     {
       "category": "bar",
-      "id": "bar.output",
-      "title": "Monitors",
-      "source": "option",
-      "key": "bar-output",
-      "kind": "select",
-      "choices": "monitors"
-    },
-    {
-      "category": "bar",
+      "section": "clock",
       "id": "bar.clock-seconds",
-      "title": "Clock seconds",
+      "title": "Show seconds",
       "source": "option",
       "key": "clock-seconds",
       "kind": "toggle"
     },
     {
       "category": "bar",
+      "section": "clock",
       "id": "bar.workspaces",
-      "title": "Workspaces",
+      "title": "Workspace indicator",
       "description": "Dots, or the workspace number",
-      "keywords": [
-        "waybar",
-        "circles",
-        "dots",
-        "numbers"
-      ],
       "source": "option",
       "key": "bar-workspaces",
       "kind": "select",
@@ -599,105 +883,160 @@
           "label": "Numbers",
           "value": "numbers"
         }
-      ]
+      ],
+      "keywords": ["waybar", "circles", "dots", "numbers"]
     },
     {
-      "category": "animations",
-      "id": "anim.master",
-      "title": "Animations",
-      "description": "Master switch for all animations",
-      "source": "keyword",
-      "key": "animations:enabled",
-      "kind": "toggle"
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.cpu",
+      "title": "CPU",
+      "description": "Usage on the bar",
+      "source": "option",
+      "key": "bar-cpu",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ],
+      "keywords": ["waybar", "resources", "hide", "show"]
     },
     {
-      "category": "animations",
-      "id": "anim.windows",
-      "title": "Windows",
-      "description": "Open/close scale animation",
-      "source": "animation",
-      "key": "windows",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.memory",
+      "title": "Memory",
+      "description": "Usage on the bar",
+      "source": "option",
+      "key": "bar-memory",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ],
+      "keywords": ["waybar", "resources", "ram", "hide", "show"]
     },
     {
-      "category": "animations",
-      "id": "anim.windowsIn",
-      "title": "Windows In",
-      "description": "Window opening",
-      "source": "animation",
-      "key": "windowsIn",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.gpu",
+      "title": "GPU",
+      "description": "Usage on the bar; hidden skips the driver probe",
+      "source": "option",
+      "key": "bar-gpu",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (70%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ],
+      "keywords": ["waybar", "resources", "nvidia", "hide", "show"]
     },
     {
-      "category": "animations",
-      "id": "anim.windowsOut",
-      "title": "Windows Out",
-      "description": "Window closing",
-      "source": "animation",
-      "key": "windowsOut",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.disk",
+      "title": "Disk",
+      "description": "Root filesystem usage on the bar",
+      "source": "option",
+      "key": "bar-disk",
+      "kind": "select",
+      "items": [
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Only when high (80%+)",
+          "value": "high"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ],
+      "keywords": ["waybar", "resources", "storage", "hide", "show"]
     },
     {
-      "category": "animations",
-      "id": "anim.windowsMove",
-      "title": "Windows Move",
-      "description": "Drag and tile movement",
-      "source": "animation",
-      "key": "windowsMove",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.network",
+      "title": "Network",
+      "description": "Download and upload speed; Offline always shows",
+      "source": "option",
+      "key": "bar-network",
+      "kind": "select",
+      "items": [
+        {
+          "label": "During traffic",
+          "value": "traffic"
+        },
+        {
+          "label": "Always",
+          "value": "always"
+        },
+        {
+          "label": "Offline only",
+          "value": "offline"
+        }
+      ],
+      "keywords": ["waybar", "speed", "bandwidth", "hide", "show"]
     },
     {
-      "category": "animations",
-      "id": "anim.fade",
-      "title": "Fade",
-      "description": "Opacity transitions",
-      "source": "animation",
-      "key": "fade",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
-    },
-    {
-      "category": "animations",
-      "id": "anim.workspaces",
-      "title": "Workspaces",
-      "description": "Workspace switch slide",
-      "source": "animation",
-      "key": "workspaces",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
-    },
-    {
-      "category": "animations",
-      "id": "anim.border",
-      "title": "Border",
-      "description": "Border color transitions",
-      "source": "animation",
-      "key": "border",
-      "kind": "slider",
-      "min": 1,
-      "max": 10,
-      "step": 1
+      "category": "bar",
+      "section": "modules",
+      "id": "bar.updates",
+      "title": "Updates",
+      "description": "Pending package count; hidden skips the check",
+      "source": "option",
+      "key": "bar-updates",
+      "kind": "select",
+      "items": [
+        {
+          "label": "When pending",
+          "value": "pending"
+        },
+        {
+          "label": "Hidden",
+          "value": "hidden"
+        }
+      ],
+      "keywords": ["waybar", "packages", "pacman", "aur", "hide", "show"]
     },
     {
       "category": "windows",
+      "section": "tiling",
       "id": "win.layout",
-      "title": "Layout Mode",
+      "title": "Layout",
       "description": "Dwindle splits like a binary tree; master keeps one main window",
       "source": "keyword",
       "key": "general:layout",
@@ -711,12 +1050,14 @@
           "label": "Master",
           "value": "master"
         }
-      ]
+      ],
+      "keywords": ["dwindle", "master"]
     },
     {
       "category": "windows",
+      "section": "tiling",
       "id": "win.preserve-split",
-      "title": "Preserve Split",
+      "title": "Preserve split",
       "description": "Keep split direction when windows close",
       "source": "keyword",
       "key": "dwindle:preserve_split",
@@ -724,8 +1065,9 @@
     },
     {
       "category": "windows",
+      "section": "tiling",
       "id": "win.smart-split",
-      "title": "Smart Split",
+      "title": "Smart split",
       "description": "Split direction follows cursor position",
       "source": "keyword",
       "key": "dwindle:smart_split",
@@ -733,77 +1075,9 @@
     },
     {
       "category": "windows",
-      "id": "win.tearing",
-      "title": "Allow Tearing",
-      "description": "Reduces latency in games; may cause glitches",
-      "source": "keyword",
-      "key": "general:allow_tearing",
-      "kind": "toggle"
-    },
-    {
-      "category": "windows",
-      "id": "win.resize-border",
-      "title": "Resize on Border",
-      "description": "Drag window edges to resize",
-      "source": "keyword",
-      "key": "general:resize_on_border",
-      "kind": "toggle"
-    },
-    {
-      "category": "windows",
-      "id": "win.xwayland",
-      "title": "XWayland",
-      "description": "Support for X11-only applications",
-      "source": "keyword",
-      "key": "xwayland:enabled",
-      "kind": "toggle"
-    },
-    {
-      "category": "windows",
-      "id": "win.dim-inactive",
-      "title": "Dim Inactive Windows",
-      "description": "Darken every window except the focused one",
-      "source": "keyword",
-      "key": "decoration:dim_inactive",
-      "kind": "toggle"
-    },
-    {
-      "category": "windows",
-      "id": "win.dim-strength",
-      "title": "Dim Strength",
-      "description": "How dark inactive windows become",
-      "source": "keyword",
-      "key": "decoration:dim_strength",
-      "kind": "slider",
-      "min": 0.05,
-      "max": 0.8,
-      "step": 0.05
-    },
-    {
-      "category": "windows",
-      "id": "win.focus-on-activate",
-      "title": "Focus on Activation",
-      "description": "Switch to windows that ask for attention",
-      "source": "keyword",
-      "key": "misc:focus_on_activate",
-      "kind": "toggle"
-    },
-    {
-      "category": "input",
-      "id": "input.sensitivity",
-      "title": "Mouse Sensitivity",
-      "description": "−1 slow … +1 fast (libinput acceleration)",
-      "source": "keyword",
-      "key": "input:sensitivity",
-      "kind": "slider",
-      "min": -1,
-      "max": 1,
-      "step": 0.1
-    },
-    {
-      "category": "input",
+      "section": "focus",
       "id": "input.follow-mouse",
-      "title": "Focus Follows Mouse",
+      "title": "Focus follows mouse",
       "description": "How window focus follows the pointer",
       "source": "keyword",
       "key": "input:follow_mouse",
@@ -828,405 +1102,199 @@
       ]
     },
     {
-      "category": "input",
-      "id": "input.numlock",
-      "title": "Numlock by Default",
-      "description": "Enable numlock at startup",
+      "category": "windows",
+      "section": "focus",
+      "id": "win.focus-on-activate",
+      "title": "Focus on activation",
+      "description": "Switch to windows that ask for attention",
       "source": "keyword",
-      "key": "input:numlock_by_default",
+      "key": "misc:focus_on_activate",
       "kind": "toggle"
     },
     {
-      "category": "input",
-      "id": "input.natural-scroll",
-      "title": "Natural Scroll (Touchpad)",
-      "description": "Content follows finger direction",
+      "category": "windows",
+      "section": "focus",
+      "id": "win.dim-inactive",
+      "title": "Dim inactive windows",
+      "description": "Darken every window except the focused one",
       "source": "keyword",
-      "key": "input:touchpad:natural_scroll",
+      "key": "decoration:dim_inactive",
       "kind": "toggle"
     },
     {
-      "category": "input",
-      "id": "input.scroll-factor",
-      "title": "Touchpad Scroll Factor",
-      "description": "Scroll speed multiplier",
+      "category": "windows",
+      "section": "focus",
+      "id": "win.dim-strength",
+      "title": "Dim strength",
+      "description": "How dark inactive windows become",
       "source": "keyword",
-      "key": "input:touchpad:scroll_factor",
+      "key": "decoration:dim_strength",
       "kind": "slider",
-      "min": 0.1,
-      "max": 2,
-      "step": 0.1
+      "min": 0.05,
+      "max": 0.8,
+      "step": 0.05,
+      "dependsOn": "win.dim-inactive"
     },
     {
-      "category": "input",
-      "id": "input.kb-layout",
-      "title": "Keyboard Layout",
-      "description": "XKB layout, e.g. us or us,it for two",
-      "keywords": [
-        "keymap",
-        "language"
-      ],
+      "category": "windows",
+      "section": "advanced",
+      "id": "win.resize-border",
+      "title": "Resize on border",
+      "description": "Drag window edges to resize",
       "source": "keyword",
-      "key": "input:kb_layout",
-      "kind": "text",
-      "check": "xkb-layout"
-    },
-    {
-      "category": "input",
-      "id": "input.kb-variant",
-      "title": "Layout Variant",
-      "description": "Optional, one per layout, e.g. intl",
-      "keywords": [
-        "keymap"
-      ],
-      "source": "keyword",
-      "key": "input:kb_variant",
-      "kind": "text",
-      "optional": true,
-      "check": "xkb-variant"
-    },
-    {
-      "category": "input",
-      "id": "input.kb-options",
-      "title": "Keyboard Options",
-      "description": "Optional XKB options, e.g. caps:escape",
-      "keywords": [
-        "caps",
-        "compose",
-        "keymap"
-      ],
-      "source": "keyword",
-      "key": "input:kb_options",
-      "kind": "text",
-      "optional": true,
-      "check": "xkb-options"
-    },
-    {
-      "category": "input",
-      "id": "input.repeat-rate",
-      "title": "Key Repeat Rate",
-      "description": "Repeats per second while a key is held",
-      "keywords": [
-        "keyboard"
-      ],
-      "source": "keyword",
-      "key": "input:repeat_rate",
-      "kind": "slider",
-      "min": 10,
-      "max": 100,
-      "step": 1
-    },
-    {
-      "category": "input",
-      "id": "input.repeat-delay",
-      "title": "Key Repeat Delay",
-      "description": "Milliseconds before a held key repeats",
-      "keywords": [
-        "keyboard"
-      ],
-      "source": "keyword",
-      "key": "input:repeat_delay",
-      "kind": "slider",
-      "min": 150,
-      "max": 1000,
-      "step": 25
-    },
-    {
-      "category": "input",
-      "id": "input.accel-profile",
-      "title": "Pointer Acceleration",
-      "description": "Flat keeps pointer speed constant",
-      "keywords": [
-        "mouse"
-      ],
-      "source": "keyword",
-      "key": "input:accel_profile",
-      "kind": "select",
-      "items": [
-        {
-          "label": "Default",
-          "value": ""
-        },
-        {
-          "label": "Flat",
-          "value": "flat"
-        },
-        {
-          "label": "Adaptive",
-          "value": "adaptive"
-        }
-      ]
-    },
-    {
-      "category": "input",
-      "id": "input.left-handed",
-      "title": "Left-Handed Mouse",
-      "description": "Swap the primary and secondary buttons",
-      "source": "keyword",
-      "key": "input:left_handed",
+      "key": "general:resize_on_border",
       "kind": "toggle"
     },
     {
-      "category": "input",
-      "id": "input.tap-to-click",
-      "title": "Tap to Click (Touchpad)",
-      "description": "A tap counts as a click",
+      "category": "windows",
+      "section": "advanced",
+      "id": "win.tearing",
+      "title": "Allow tearing",
+      "description": "Reduces latency in games; may cause glitches",
       "source": "keyword",
-      "key": "input:touchpad:tap_to_click",
+      "key": "general:allow_tearing",
       "kind": "toggle"
     },
     {
-      "category": "input",
-      "id": "input.dwt",
-      "title": "Disable Touchpad While Typing",
-      "description": "Ignore the touchpad during typing",
+      "category": "windows",
+      "section": "advanced",
+      "id": "win.xwayland",
+      "title": "XWayland",
+      "description": "Support for X11-only applications",
       "source": "keyword",
-      "key": "input:touchpad:disable_while_typing",
+      "key": "xwayland:enabled",
       "kind": "toggle"
     },
     {
-      "category": "input",
-      "id": "input.hide-cursor",
-      "title": "Hide Idle Cursor",
-      "description": "Seconds without movement before the cursor hides",
-      "keywords": [
-        "mouse",
-        "pointer"
-      ],
+      "category": "animations",
+      "section": "general",
+      "id": "anim.master",
+      "title": "Animations",
+      "description": "Turn every animation on or off",
       "source": "keyword",
-      "key": "cursor:inactive_timeout",
-      "kind": "slider",
-      "min": 0,
-      "max": 30,
-      "step": 1,
-      "format": "seconds",
-      "zeroLabel": "Never"
-    },
-    {
-      "category": "input",
-      "id": "input.no-warps",
-      "title": "Keep Cursor in Place",
-      "description": "Keyboard focus changes do not move the cursor",
-      "keywords": [
-        "warp",
-        "mouse"
-      ],
-      "source": "keyword",
-      "key": "cursor:no_warps",
+      "key": "animations:enabled",
       "kind": "toggle"
     },
     {
-      "category": "accessibility",
-      "id": "a11y.zoom",
-      "title": "Screen Zoom",
-      "description": "Magnify around the cursor",
-      "keywords": [
-        "magnifier"
-      ],
-      "source": "keyword",
-      "key": "cursor:zoom_factor",
-      "kind": "slider",
-      "min": 1,
-      "max": 4,
-      "step": 0.1
-    },
-    {
-      "category": "accessibility",
-      "id": "a11y.text-scale",
-      "title": "Text Size",
-      "description": "Scale text in GTK apps",
-      "keywords": [
-        "font",
-        "larger"
-      ],
-      "source": "gtk",
-      "key": "text-scaling-factor",
-      "kind": "slider",
-      "min": 0.75,
-      "max": 2,
-      "step": 0.05
-    },
-    {
-      "category": "sound",
-      "id": "sound.output",
-      "title": "Output Device",
-      "description": "Where sound plays",
-      "keywords": [
-        "speakers",
-        "headphones",
-        "audio"
-      ],
-      "source": "pulse",
-      "key": "output",
-      "kind": "select",
-      "choices": "audio-outputs",
-      "live": "audio"
-    },
-    {
-      "category": "sound",
-      "id": "sound.output-port",
-      "title": "Output Port",
-      "description": "Connector on the output device, e.g. headphones or line out",
-      "keywords": [
-        "jack",
-        "headphones",
-        "speakers"
-      ],
-      "source": "pulse",
-      "key": "output-port",
-      "kind": "select",
-      "choices": "output-ports",
-      "live": "audio"
-    },
-    {
-      "category": "sound",
-      "id": "sound.output-profile",
-      "title": "Output Profile",
-      "description": "Channel layout of the output device's card",
-      "keywords": [
-        "surround",
-        "stereo",
-        "hdmi"
-      ],
-      "source": "pulse",
-      "key": "output-profile",
-      "kind": "select",
-      "choices": "output-profiles",
-      "live": "audio"
-    },
-    {
-      "category": "sound",
-      "id": "sound.input",
-      "title": "Input Device",
-      "description": "Microphone that apps record from",
-      "keywords": [
-        "microphone",
-        "mic",
-        "recording"
-      ],
-      "source": "pulse",
-      "key": "input",
-      "kind": "select",
-      "choices": "audio-inputs",
-      "live": "audio"
-    },
-    {
-      "category": "sound",
-      "id": "sound.input-port",
-      "title": "Input Port",
-      "description": "Connector on the input device",
-      "keywords": [
-        "microphone",
-        "mic",
-        "jack"
-      ],
-      "source": "pulse",
-      "key": "input-port",
-      "kind": "select",
-      "choices": "input-ports",
-      "live": "audio"
-    },
-    {
-      "category": "sound",
-      "id": "sound.mic-level",
-      "title": "Microphone Level",
-      "description": "Recording volume of the input device; above 100 % amplifies in software",
-      "keywords": [
-        "microphone",
-        "mic",
-        "gain"
-      ],
-      "source": "pulse",
-      "key": "mic-level",
-      "kind": "slider",
-      "min": 0,
-      "max": 150,
-      "step": 1,
-      "format": "percent",
-      "live": "audio"
-    },
-    {
-      "category": "network",
-      "id": "network.wifi",
-      "title": "Wi-Fi",
-      "description": "Turn the Wi-Fi radio on or off",
-      "keywords": ["wireless", "wlan", "radio"],
-      "source": "network",
-      "key": "wifi",
-      "kind": "toggle",
-      "live": "network",
-      "inView": true
-    },
-    {
-      "category": "notifications",
-      "id": "notif.timeout",
-      "title": "Default Timeout",
-      "description": "Seconds a toast stays on screen",
-      "source": "swaync",
-      "key": "timeout",
-      "kind": "slider",
-      "min": 1,
-      "max": 15,
-      "step": 1,
-      "default": 5
-    },
-    {
-      "category": "notifications",
-      "id": "notif.timeout-low",
-      "title": "Low Priority Timeout",
-      "description": "Seconds for low-priority toasts",
-      "source": "swaync",
-      "key": "timeout-low",
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.windows",
+      "title": "Windows",
+      "description": "Open and close",
+      "source": "animation",
+      "key": "windows",
       "kind": "slider",
       "min": 1,
       "max": 10,
       "step": 1,
-      "default": 3
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master",
+      "keywords": ["window"]
     },
     {
-      "category": "notifications",
-      "id": "notif.width",
-      "title": "Notification Width",
-      "description": "Toast width in pixels",
-      "source": "swaync",
-      "key": "notification-window-width",
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.windowsIn",
+      "title": "Opening",
+      "source": "animation",
+      "key": "windowsIn",
       "kind": "slider",
-      "min": 200,
-      "max": 600,
-      "step": 10,
-      "default": 400
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master",
+      "keywords": ["window", "windows", "in"]
     },
     {
-      "category": "notifications",
-      "id": "notif.cc-width",
-      "title": "Control Center Width",
-      "description": "Sidebar width in pixels",
-      "source": "swaync",
-      "key": "control-center-width",
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.windowsOut",
+      "title": "Closing",
+      "source": "animation",
+      "key": "windowsOut",
       "kind": "slider",
-      "min": 200,
-      "max": 600,
-      "step": 10,
-      "default": 358
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master",
+      "keywords": ["window", "windows", "out"]
     },
     {
-      "category": "notifications",
-      "id": "notif.transition",
-      "title": "Transition Time",
-      "description": "Animation duration in ms",
-      "source": "swaync",
-      "key": "transition-time",
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.windowsMove",
+      "title": "Moving",
+      "description": "Dragging and tiling",
+      "source": "animation",
+      "key": "windowsMove",
       "kind": "slider",
-      "min": 0,
-      "max": 500,
-      "step": 25,
-      "default": 100
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master",
+      "keywords": ["window", "windows", "move"]
+    },
+    {
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.fade",
+      "title": "Fade",
+      "description": "Opacity transitions",
+      "source": "animation",
+      "key": "fade",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master"
+    },
+    {
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.workspaces",
+      "title": "Workspaces",
+      "description": "Switching slide",
+      "source": "animation",
+      "key": "workspaces",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master"
+    },
+    {
+      "category": "animations",
+      "section": "speed",
+      "id": "anim.border",
+      "title": "Border",
+      "description": "Colour transitions",
+      "source": "animation",
+      "key": "border",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "ends": ["Slow", "Fast"],
+      "invert": true,
+      "dependsOn": "anim.master"
     },
     {
       "category": "notifications",
+      "section": "position",
       "id": "notif.pos-x",
-      "title": "Position X",
-      "description": "Horizontal screen edge for toasts",
+      "title": "Horizontal",
+      "description": "Screen edge for toasts",
       "source": "swaync",
       "key": "positionX",
       "kind": "select",
@@ -1248,9 +1316,10 @@
     },
     {
       "category": "notifications",
+      "section": "position",
       "id": "notif.pos-y",
-      "title": "Position Y",
-      "description": "Vertical screen edge for toasts",
+      "title": "Vertical",
+      "description": "Screen edge for toasts",
       "source": "swaync",
       "key": "positionY",
       "kind": "select",
@@ -1267,221 +1336,380 @@
       ]
     },
     {
-      "category": "monitors",
-      "id": "monitors.vrr",
-      "title": "VRR (Adaptive Sync)",
-      "description": "Variable refresh rate",
+      "category": "notifications",
+      "section": "timing",
+      "id": "notif.timeout",
+      "title": "Show for",
+      "description": "Seconds a toast stays on screen",
+      "source": "swaync",
+      "key": "timeout",
+      "kind": "slider",
+      "min": 1,
+      "max": 15,
+      "step": 1,
+      "default": 5,
+      "keywords": ["timeout"]
+    },
+    {
+      "category": "notifications",
+      "section": "timing",
+      "id": "notif.timeout-low",
+      "title": "Low priority shown for",
+      "description": "Seconds",
+      "source": "swaync",
+      "key": "timeout-low",
+      "kind": "slider",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 3,
+      "keywords": ["timeout"]
+    },
+    {
+      "category": "notifications",
+      "section": "timing",
+      "id": "notif.transition",
+      "title": "Transition",
+      "description": "Animation in milliseconds",
+      "source": "swaync",
+      "key": "transition-time",
+      "kind": "slider",
+      "min": 0,
+      "max": 500,
+      "step": 25,
+      "default": 100
+    },
+    {
+      "category": "notifications",
+      "section": "size",
+      "id": "notif.width",
+      "title": "Toast width",
+      "description": "In pixels",
+      "source": "swaync",
+      "key": "notification-window-width",
+      "kind": "slider",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "default": 400
+    },
+    {
+      "category": "notifications",
+      "section": "size",
+      "id": "notif.cc-width",
+      "title": "Sidebar width",
+      "description": "In pixels",
+      "source": "swaync",
+      "key": "control-center-width",
+      "kind": "slider",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "default": 358,
+      "keywords": ["control center"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.kb-layout",
+      "title": "Layout",
+      "description": "XKB layout, e.g. us or us,it for two",
       "source": "keyword",
-      "key": "misc:vrr",
+      "key": "input:kb_layout",
+      "kind": "text",
+      "check": "xkb-layout",
+      "keywords": ["keymap", "language"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.kb-variant",
+      "title": "Variant",
+      "description": "Optional, one per layout, e.g. intl",
+      "source": "keyword",
+      "key": "input:kb_variant",
+      "kind": "text",
+      "optional": true,
+      "check": "xkb-variant",
+      "keywords": ["keymap"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.kb-options",
+      "title": "Options",
+      "description": "Optional XKB options, e.g. caps:escape",
+      "source": "keyword",
+      "key": "input:kb_options",
+      "kind": "text",
+      "optional": true,
+      "check": "xkb-options",
+      "keywords": ["caps", "compose", "keymap"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.repeat-rate",
+      "title": "Repeat rate",
+      "description": "Repeats per second while a key is held",
+      "source": "keyword",
+      "key": "input:repeat_rate",
+      "kind": "slider",
+      "min": 10,
+      "max": 100,
+      "step": 1,
+      "keywords": ["keyboard", "key"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.repeat-delay",
+      "title": "Repeat delay",
+      "description": "Milliseconds before a held key repeats",
+      "source": "keyword",
+      "key": "input:repeat_delay",
+      "kind": "slider",
+      "min": 150,
+      "max": 1000,
+      "step": 25,
+      "keywords": ["keyboard", "key"]
+    },
+    {
+      "category": "input",
+      "section": "keyboard",
+      "id": "input.numlock",
+      "title": "Num Lock at startup",
+      "source": "keyword",
+      "key": "input:numlock_by_default",
+      "kind": "toggle",
+      "keywords": ["numlock"]
+    },
+    {
+      "category": "input",
+      "section": "mouse",
+      "id": "input.sensitivity",
+      "title": "Pointer speed",
+      "description": "libinput acceleration",
+      "source": "keyword",
+      "key": "input:sensitivity",
+      "kind": "slider",
+      "min": -1,
+      "max": 1,
+      "step": 0.1,
+      "keywords": ["sensitivity", "mouse"],
+      "ends": ["Slow", "Fast"]
+    },
+    {
+      "category": "input",
+      "section": "mouse",
+      "id": "input.accel-profile",
+      "title": "Acceleration",
+      "description": "Flat keeps pointer speed constant",
+      "source": "keyword",
+      "key": "input:accel_profile",
       "kind": "select",
       "items": [
         {
-          "label": "Off",
-          "value": "0"
+          "label": "Default",
+          "value": ""
         },
         {
-          "label": "On",
-          "value": "1"
+          "label": "Flat",
+          "value": "flat"
         },
         {
-          "label": "Fullscreen only",
-          "value": "2"
+          "label": "Adaptive",
+          "value": "adaptive"
         }
-      ]
+      ],
+      "keywords": ["mouse"]
     },
     {
-      "category": "power",
-      "id": "power.lock",
-      "title": "Lock Timeout",
-      "description": "Idle time before hyprlock engages",
-      "source": "idle",
-      "key": "lock",
-      "kind": "slider",
-      "min": 60,
-      "max": 1800,
-      "step": 30,
-      "default": 180,
-      "format": "duration"
-    },
-    {
-      "category": "power",
-      "id": "power.dpms",
-      "title": "Screen Off Timeout",
-      "description": "Idle time before displays power down",
-      "source": "idle",
-      "key": "dpms",
-      "kind": "slider",
-      "min": 120,
-      "max": 3600,
-      "step": 60,
-      "default": 600,
-      "format": "duration"
-    },
-    {
-      "category": "power",
-      "id": "power.profile",
-      "title": "Power Profile",
-      "description": "Performance, balanced or power saving",
-      "keywords": ["battery", "cpu"],
-      "source": "powerprofile",
-      "kind": "select",
-      "choices": "power-profiles"
-    },
-    {
-      "category": "power",
-      "id": "power.suspend",
-      "title": "Suspend After",
-      "description": "Sleep after this long idle; the lock screen engages first",
-      "keywords": ["sleep"],
-      "source": "idle",
-      "key": "suspend",
-      "kind": "slider",
-      "min": 0,
-      "max": 7200,
-      "step": 60,
-      "format": "duration",
-      "zeroLabel": "Never"
-    },
-    {
-      "category": "power",
-      "id": "power.dpms-key",
-      "title": "Wake on Key Press",
-      "description": "Screens power on when a key is pressed",
+      "category": "input",
+      "section": "mouse",
+      "id": "input.left-handed",
+      "title": "Left-handed",
+      "description": "Swap the primary and secondary buttons",
       "source": "keyword",
-      "key": "misc:key_press_enables_dpms",
+      "key": "input:left_handed",
       "kind": "toggle"
     },
     {
-      "category": "power",
-      "id": "power.dpms-mouse",
-      "title": "Wake on Mouse Move",
-      "description": "Screens power on when the mouse moves",
+      "category": "input",
+      "section": "touchpad",
+      "id": "input.tap-to-click",
+      "title": "Tap to click",
+      "description": "A tap counts as a click",
       "source": "keyword",
-      "key": "misc:mouse_move_enables_dpms",
+      "key": "input:touchpad:tap_to_click",
       "kind": "toggle"
     },
     {
-      "category": "power",
-      "id": "power.nightlight-temp",
-      "title": "Night Light Warmth",
-      "description": "Colour temperature applied on the evening schedule",
-      "source": "sunset",
-      "key": "nightTemp",
-      "kind": "slider",
-      "min": 2000,
-      "max": 6000,
-      "step": 100,
-      "default": 4000,
-      "format": "temperature",
-      "keywords": [
-        "hyprsunset",
-        "blue light",
-        "schedule",
-        "nightlight"
-      ]
+      "category": "input",
+      "section": "touchpad",
+      "id": "input.natural-scroll",
+      "title": "Natural scrolling",
+      "description": "Content follows finger direction",
+      "source": "keyword",
+      "key": "input:touchpad:natural_scroll",
+      "kind": "toggle"
     },
     {
-      "category": "power",
-      "id": "power.nightlight-start",
-      "title": "Night Light Starts",
-      "description": "Time of day the warm profile takes over",
-      "source": "sunset",
-      "key": "nightMinutes",
+      "category": "input",
+      "section": "touchpad",
+      "id": "input.scroll-factor",
+      "title": "Scroll speed",
+      "description": "Multiplier",
+      "source": "keyword",
+      "key": "input:touchpad:scroll_factor",
       "kind": "slider",
-      "min": 0,
-      "max": 1410,
-      "step": 30,
-      "default": 1200,
-      "format": "clock",
-      "keywords": [
-        "hyprsunset",
-        "blue light",
-        "schedule",
-        "nightlight"
-      ]
+      "min": 0.1,
+      "max": 2,
+      "step": 0.1,
+      "keywords": ["factor", "touchpad"]
     },
     {
-      "category": "power",
-      "id": "power.nightlight-end",
-      "title": "Night Light Ends",
-      "description": "Time of day the neutral profile takes over",
-      "source": "sunset",
-      "key": "dayMinutes",
+      "category": "input",
+      "section": "touchpad",
+      "id": "input.dwt",
+      "title": "Disable while typing",
+      "source": "keyword",
+      "key": "input:touchpad:disable_while_typing",
+      "kind": "toggle",
+      "keywords": ["dwt"]
+    },
+    {
+      "category": "input",
+      "section": "pointer",
+      "id": "input.hide-cursor",
+      "title": "Hide when idle",
+      "description": "Seconds without movement",
+      "source": "keyword",
+      "key": "cursor:inactive_timeout",
       "kind": "slider",
       "min": 0,
-      "max": 1410,
-      "step": 30,
-      "default": 420,
-      "format": "clock",
-      "keywords": [
-        "hyprsunset",
-        "blue light",
-        "schedule",
-        "nightlight"
-      ]
+      "max": 30,
+      "step": 1,
+      "format": "seconds",
+      "zeroLabel": "Never",
+      "keywords": ["mouse", "pointer", "cursor"]
+    },
+    {
+      "category": "input",
+      "section": "pointer",
+      "id": "input.no-warps",
+      "title": "Keep cursor in place",
+      "description": "Keyboard focus changes do not move the cursor",
+      "source": "keyword",
+      "key": "cursor:no_warps",
+      "kind": "toggle",
+      "keywords": ["warp", "mouse"]
+    },
+    {
+      "category": "accessibility",
+      "section": "vision",
+      "id": "a11y.zoom",
+      "title": "Screen zoom",
+      "description": "Magnify around the cursor",
+      "source": "keyword",
+      "key": "cursor:zoom_factor",
+      "kind": "slider",
+      "min": 1,
+      "max": 4,
+      "step": 0.1,
+      "keywords": ["magnifier"]
+    },
+    {
+      "category": "accessibility",
+      "section": "vision",
+      "id": "a11y.text-scale",
+      "title": "Text size",
+      "description": "Scale text in GTK apps",
+      "source": "gtk",
+      "key": "text-scaling-factor",
+      "kind": "slider",
+      "min": 0.75,
+      "max": 2,
+      "step": 0.05,
+      "keywords": ["font", "larger"]
     },
     {
       "category": "region",
+      "section": "datetime",
       "id": "region.timezone",
-      "title": "Time Zone",
+      "title": "Time zone",
       "description": "Used by the clock, calendars and logs",
-      "keywords": ["timezone", "time", "zone", "tz"],
       "source": "region",
       "key": "timezone",
       "kind": "select",
       "choices": "timezones",
-      "auth": true
+      "auth": true,
+      "keywords": ["timezone", "time", "zone", "tz"]
     },
     {
       "category": "region",
+      "section": "datetime",
       "id": "region.ntp",
-      "title": "Set Time Automatically",
+      "title": "Set time automatically",
       "description": "Keep the clock in sync with internet time servers",
-      "keywords": ["ntp", "sync", "time"],
       "source": "region",
       "key": "ntp",
       "kind": "toggle",
-      "auth": true
+      "auth": true,
+      "keywords": ["ntp", "sync", "time"]
     },
     {
       "category": "region",
+      "section": "datetime",
       "id": "region.clock",
-      "title": "Clock Format",
-      "description": "Bar and lock screen clock",
-      "keywords": ["12", "24", "hour", "am", "pm", "time"],
+      "title": "Clock format",
+      "description": "Bar and lock screen",
       "source": "option",
       "key": "clock",
       "kind": "select",
-      "items": [{ "label": "24-hour (20:30)", "value": "24h" }, { "label": "12-hour (08:30 PM)", "value": "12h" }]
+      "items": [
+        {
+          "label": "24-hour (20:30)",
+          "value": "24h"
+        },
+        {
+          "label": "12-hour (08:30 PM)",
+          "value": "12h"
+        }
+      ],
+      "keywords": ["12", "24", "hour", "am", "pm", "time"]
     },
     {
       "category": "region",
+      "section": "language",
       "id": "region.language",
       "title": "Language",
-      "description": "System language (LANG). Applies to programs started after your next login.",
-      "keywords": ["locale", "lang"],
+      "description": "System language (LANG)",
       "source": "region",
       "key": "language",
       "kind": "select",
       "choices": "locales",
-      "auth": true
+      "auth": true,
+      "keywords": ["locale", "lang"]
     },
     {
       "category": "region",
+      "section": "language",
       "id": "region.formats",
       "title": "Formats",
-      "description": "Dates, numbers, currency, paper and units. Applies to programs started after your next login.",
-      "keywords": ["locale", "date", "number", "currency", "units", "metric"],
+      "description": "Dates, numbers, currency, paper and units",
       "source": "region",
       "key": "formats",
       "kind": "select",
       "choices": "locales",
-      "auth": true
+      "auth": true,
+      "keywords": ["locale", "date", "number", "currency", "units", "metric"]
     },
     {
       "category": "startup",
+      "section": "login",
       "id": "startup.autologin",
-      "title": "Lock on Autologin",
+      "title": "Lock on autologin",
       "description": "Run hyprlock at startup when logged in automatically",
       "source": "option",
       "key": "autologin",
@@ -1489,24 +1717,28 @@
     },
     {
       "category": "startup",
-      "id": "startup.protonvpn",
-      "title": "Proton VPN Auto-connect",
-      "description": "Start Proton VPN minimized at login and use its Auto connect setting",
-      "source": "option",
-      "key": "protonvpn",
-      "kind": "toggle"
-    },
-    {
-      "category": "startup",
+      "section": "login",
       "id": "startup.randomwallpaper",
-      "title": "Random Wallpaper",
+      "title": "Random wallpaper",
       "description": "Pick a random wallpaper and palette on each login",
       "source": "option",
       "key": "randomwallpaper",
       "kind": "toggle"
     },
     {
+      "category": "startup",
+      "section": "login",
+      "id": "startup.protonvpn",
+      "title": "Proton VPN",
+      "description": "Start minimized and use its Auto-connect setting",
+      "source": "option",
+      "key": "protonvpn",
+      "kind": "toggle",
+      "keywords": ["auto-connect", "autoconnect"]
+    },
+    {
       "category": "apps",
+      "section": "applications",
       "id": "apps.browser",
       "title": "Browser",
       "description": "Launched with Super+B",
@@ -1518,6 +1750,7 @@
     },
     {
       "category": "apps",
+      "section": "applications",
       "id": "apps.terminal",
       "title": "Terminal",
       "description": "Launched with Super+Return",
@@ -1529,19 +1762,22 @@
     },
     {
       "category": "apps",
+      "section": "applications",
       "id": "apps.editor",
-      "title": "TUI Editor",
+      "title": "Terminal editor",
       "description": "Used by Super+N and the monitor setup tool",
       "source": "option",
       "key": "editor",
       "kind": "text",
       "check": "command",
-      "reload": true
+      "reload": true,
+      "keywords": ["tui"]
     },
     {
       "category": "apps",
+      "section": "applications",
       "id": "apps.codeeditor",
-      "title": "Code Editor",
+      "title": "Code editor",
       "description": "GUI editor launched with Super+G",
       "source": "option",
       "key": "codeeditor",
@@ -1551,8 +1787,9 @@
     },
     {
       "category": "apps",
+      "section": "applications",
       "id": "apps.filemanager",
-      "title": "File Manager",
+      "title": "File manager",
       "description": "Launched with Super+E",
       "source": "option",
       "key": "filemanager",
@@ -1562,19 +1799,102 @@
     },
     {
       "category": "apps",
-      "id": "apps.aurhelper",
-      "title": "Update Command",
-      "description": "Run by Update system, e.g. paru -Syu",
-      "keywords": ["paru", "yay", "pacman"],
-      "source": "option",
-      "key": "aurhelper",
-      "kind": "text",
-      "check": "command"
+      "section": "filetypes",
+      "id": "mime.folders",
+      "title": "Folders",
+      "description": "Opened from other apps and the desktop",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["inode/directory"]
     },
     {
       "category": "apps",
+      "section": "filetypes",
+      "id": "mime.web",
+      "title": "Web links",
+      "description": "Super+B always uses Browser",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.email",
+      "title": "Email links",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["x-scheme-handler/mailto"],
+      "keywords": ["mailto"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.pdf",
+      "title": "PDF documents",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["application/pdf"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.images",
+      "title": "Images",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/tiff", "image/svg+xml"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.video",
+      "title": "Video",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.audio",
+      "title": "Audio",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/aac", "audio/mp4", "audio/x-opus+ogg"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.text",
+      "title": "Text files",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["text/plain", "text/markdown"]
+    },
+    {
+      "category": "apps",
+      "section": "filetypes",
+      "id": "mime.archives",
+      "title": "Archives",
+      "source": "mime",
+      "kind": "select",
+      "choices": "applications",
+      "mimes": ["application/zip", "application/x-tar", "application/x-7z-compressed", "application/gzip", "application/vnd.rar"]
+    },
+    {
+      "category": "apps",
+      "section": "launcher",
       "id": "apps.launcher",
-      "title": "Launcher Style",
+      "title": "Launcher style",
       "description": "Rofi layout used by Super+Space",
       "source": "option",
       "key": "launchertype",
@@ -1591,94 +1911,16 @@
       ]
     },
     {
-      "category": "filetypes",
-      "id": "mime.folders",
-      "title": "Folders",
-      "description": "Opened from other apps and the desktop",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["inode/directory"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.web",
-      "title": "Web Links",
-      "description": "Links opened from other apps (Super+B uses Browser)",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["x-scheme-handler/http", "x-scheme-handler/https", "text/html", "application/xhtml+xml"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.pdf",
-      "title": "PDF Documents",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["application/pdf"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.images",
-      "title": "Images",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/tiff", "image/svg+xml"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.video",
-      "title": "Video",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["video/mp4", "video/x-matroska", "video/webm", "video/quicktime", "video/x-msvideo"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.audio",
-      "title": "Audio",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/aac", "audio/mp4", "audio/x-opus+ogg"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.text",
-      "title": "Text Files",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["text/plain", "text/markdown"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.archives",
-      "title": "Archives",
-      "description": "Default app",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["application/zip", "application/x-tar", "application/x-7z-compressed", "application/gzip", "application/vnd.rar"]
-    },
-    {
-      "category": "filetypes",
-      "id": "mime.email",
-      "title": "Email Links",
-      "description": "mailto: links",
-      "source": "mime",
-      "kind": "select",
-      "choices": "applications",
-      "mimes": ["x-scheme-handler/mailto"]
+      "category": "apps",
+      "section": "launcher",
+      "id": "apps.aurhelper",
+      "title": "Update command",
+      "description": "e.g. paru -Syu",
+      "source": "option",
+      "key": "aurhelper",
+      "kind": "text",
+      "check": "command",
+      "keywords": ["paru", "yay", "pacman", "update"]
     }
   ]
 }

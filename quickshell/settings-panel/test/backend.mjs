@@ -406,25 +406,26 @@ assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scrip
 await dispatch({op:'set',id:'bar.updates',value:'hidden'})
 assert.equal(files.get(base+'/options/bar-updates'), 'hidden\n')
 assert.ok(catalog.categories.some(c => c.id === 'bar'))
-assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key),
-    ['bar-cpu','bar-memory','bar-gpu','bar-disk','bar-network','bar-updates',
-     'bar-position','bar-style','bar-opacity','bar-border','bar-output','clock-seconds',
-     'bar-workspaces'])
+assert.deepEqual(catalog.rows.filter(r => r.category === 'bar').map(r => r.key).sort(),
+    ['bar-border','bar-cpu','bar-disk','bar-gpu','bar-memory','bar-network','bar-opacity','bar-output',
+     'bar-position','bar-style','bar-updates','bar-workspaces','clock-seconds'])
 files.set(base+'/options/bar-disk','banana\n')
 result = await dispatch({op:'read',ids:['bar.disk','bar.updates']})
 assert.equal(result.values['bar.disk'].value,'always')
 assert.equal(result.values['bar.updates'].value,'hidden')
 console.log('ok: bar rows render the Waybar include')
 
-const layoutRows = catalog.rows.filter(row => row.category === 'bar').slice(6)
-assert.deepEqual(layoutRows.map(row => [row.id, row.title, row.source, row.kind]), [
-    ['bar.position','Position','option','select'],
-    ['bar.style','Style','option','select'],
-    ['bar.opacity','Background opacity','option','slider'],
-    ['bar.border','Border','option','toggle'],
-    ['bar.output','Monitors','option','select'],
-    ['bar.clock-seconds','Clock seconds','option','toggle'],
-    ['bar.workspaces','Workspaces','option','select'],
+// By id: the panel's grouping decides the catalog order, and titles are presentation.
+const layoutRows = ['bar.position','bar.style','bar.opacity','bar.border','bar.output','bar.clock-seconds','bar.workspaces']
+    .map(id => catalog.rows.find(row => row.id === id))
+assert.deepEqual(layoutRows.map(row => [row.id, row.source, row.kind]), [
+    ['bar.position','option','select'],
+    ['bar.style','option','select'],
+    ['bar.opacity','option','slider'],
+    ['bar.border','option','toggle'],
+    ['bar.output','option','select'],
+    ['bar.clock-seconds','option','toggle'],
+    ['bar.workspaces','option','select'],
 ])
 assert.deepEqual(layoutRows.slice(0,2).map(row => row.reload), [true,true])
 const opacityRow = layoutRows[2]

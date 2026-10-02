@@ -111,8 +111,10 @@ ShellRoot {
         const words = query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
         return catalog.rows.filter(row => {
             if (!words.length) return row.category === category && !row.inView;
-            const title = catalog.categories.find(c => c.id === row.category)?.title || "";
-            const hay = [row.title, row.description, title].concat(row.keywords || []).join(" ").toLocaleLowerCase();
+            const page = catalog.categories.find(c => c.id === row.category);
+            // Section titles count too: "night light" or "output" names a group, not each row in it.
+            const section = (page?.sections || []).find(s => s.id === row.section)?.title || "";
+            const hay = [row.title, row.description, page?.title || "", section].concat(row.keywords || []).join(" ").toLocaleLowerCase();
             return words.every(word => hay.includes(word));
         });
     }
