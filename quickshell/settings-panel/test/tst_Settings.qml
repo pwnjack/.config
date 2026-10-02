@@ -127,8 +127,9 @@ Item {
             verify(!findChild(view, "startupRemove-nm-applet.desktop"), "system entries cannot be removed");
             verify(findChild(view, "startupStatus-gnome.desktop").text.indexOf("X-GNOME-Autostart-enabled has no effect under systemd") >= 0);
             const startupSwitch = findChild(view, "startupSwitch-nm-applet.desktop");
-            compare(startupSwitch.indicator.width, 48, "startup uses the panel's switch");
-            compare(String(startupSwitch.indicator.color), String(startupSwitch.checked ? view.accent : view.background));
+            compare(startupSwitch.indicator.width, 38, "startup uses the panel's switch");
+            verify(startupSwitch.checked);
+            compare(String(startupSwitch.indicator.color), String(view.accent));
             mouseClick(startupSwitch);
             compare(controller.calls[controller.calls.length - 1], {op: "autostart", action: "disable", id: "nm-applet.desktop"});
             verify(findChild(view, "startupStatus-arch-update-tray.desktop").text.indexOf("arch-update") >= 0);

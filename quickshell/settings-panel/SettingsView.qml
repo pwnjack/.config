@@ -19,6 +19,16 @@ FocusScope {
     readonly property color accent: controller.accent
     readonly property color accentText: controller.accentText
     readonly property color plate: Qt.tint(background, Qt.rgba(foreground.r, foreground.g, foreground.b, 0.055))
+    function tone(alpha) { return Qt.rgba(foreground.r, foreground.g, foreground.b, alpha); }
+    // Surfaces are opaque tints of the background, so popups drawn with them hide what is under them.
+    readonly property color raised: Qt.tint(background, tone(0.09))
+    readonly property color hover: Qt.tint(background, tone(0.14))
+    readonly property color pressed: Qt.tint(background, tone(0.2))
+    readonly property color sidebar: Qt.tint(background, tone(0.025))
+    readonly property color line: tone(0.08)
+    readonly property color dim: tone(0.62)
+    // Pywal guarantees no alert colour, so errors tint the readable foreground toward red.
+    readonly property color warn: Qt.tint(foreground, Qt.rgba(0.88, 0.42, 0.42, 0.6))
     // Category icons are Material Design glyphs from Symbols Nerd Font (ttf-nerd-fonts-symbols),
     // kept in catalog.json as hex codepoints: text, so they take the label's color.
     readonly property string iconFont: "Symbols Nerd Font"

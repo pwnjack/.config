@@ -3,8 +3,9 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// The panel's dropdown: themed, in-scene popup capped at 320 px, and a value
-// missing from its choices is displayed instead of going blank.
+// The panel's dropdown: a compact popup button sized to its longest choice, with a
+// themed, in-scene popup capped at 320 px. A value missing from its choices is
+// displayed instead of going blank.
 ComboBox {
     id: combo
     required property var theme
@@ -15,7 +16,17 @@ ComboBox {
     readonly property bool open: popup.visible
     signal picked(var value)
     objectName: "select-" + key
-    implicitHeight: 40
+    implicitHeight: 28
+    // Sized to the longest label, within 120–260 px. Measured once per choices change, not per frame.
+    implicitWidth: Math.max(120, Math.min(260, Math.ceil(widest) + 42))
+    readonly property real widest: {
+        let width = metrics.advanceWidth(String(combo.displayText));
+        for (const item of combo.choices) width = Math.max(width, metrics.advanceWidth(String(item.label)));
+        return width;
+    }
+    FontMetrics { id: metrics; font.pixelSize: 13 }
+    hoverEnabled: true
+    opacity: enabled ? 1 : 0.42
     property string filter: ""
     property int filterIndex: -1
     readonly property bool filterable: combo.choices.length > 20
@@ -52,22 +63,24 @@ ComboBox {
         font.pixelSize: 13
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
-        leftPadding: 12
-        rightPadding: 32
+        leftPadding: 10
+        rightPadding: 26
     }
     indicator: Text {
-        x: combo.width - width - 12
+        x: combo.width - width - 8
         y: (combo.height - height) / 2
-        text: "▾"
-        color: combo.theme.foreground
-        font.pixelSize: 16
+        // md-chevron_down
+        text: String.fromCodePoint(0xf0140)
+        font.family: combo.theme.iconFont
+        font.pixelSize: 14
+        color: combo.theme.dim
     }
     delegate: ItemDelegate {
         id: choice
         required property int index
         required property var modelData
-        width: combo.width - 8
-        height: 40
+        width: combo.popup.width - 8
+        height: 32
         hoverEnabled: true
         highlighted: combo.filterable ? combo.filterIndex === index : combo.highlightedIndex === index
         onHoveredChanged: { if (hovered && combo.filterable) combo.filterIndex = index; }
@@ -86,7 +99,11 @@ ComboBox {
         // Keep the popup in the panel scene, independent of platform menus.
         popupType: Popup.Item
         y: combo.height + 4
-        width: combo.width
+        // Never narrower than a readable list; right-aligned under a right-aligned button.
+        width: Math.max(combo.width, 220)
+        x: combo.width - width
+        // Keeps a right-aligned popup inside the window when its combo sits near the left edge.
+        margins: 8
         padding: 4
         implicitHeight: Math.min(contentItem.implicitHeight + topPadding + bottomPadding, 320)
         onOpened: { combo.filter = ""; combo.filterIndex = -1; if (combo.filterable) filterField.forceActiveFocus(); }
@@ -94,7 +111,7 @@ ComboBox {
         background: Rectangle {
             radius: 10
             color: combo.theme.plate
-            border.color: Qt.rgba(combo.theme.foreground.r, combo.theme.foreground.g, combo.theme.foreground.b, 0.25)
+            border.color: Qt.rgba(combo.theme.foreground.r, combo.theme.foreground.g, combo.theme.foreground.b, 0.18)
         }
         contentItem: ColumnLayout {
             spacing: 4
@@ -124,5 +141,10 @@ ComboBox {
             }
         }
     }
-    background: Rectangle { color: combo.theme.background; radius: 8; border.width: combo.activeFocus ? 2 : 1; border.color: combo.activeFocus ? combo.theme.accent : Qt.rgba(combo.theme.foreground.r, combo.theme.foreground.g, combo.theme.foreground.b, 0.25) }
+    background: Rectangle {
+        radius: 7
+        color: combo.down || combo.open ? combo.theme.pressed : combo.hovered ? combo.theme.hover : combo.theme.raised
+        border.width: combo.activeFocus ? 2 : 1
+        border.color: combo.activeFocus ? combo.theme.accent : combo.theme.line
+    }
 }
