@@ -205,8 +205,7 @@ FocusScope {
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 8
-                        AccountCard { Layout.fillWidth: true; controller: view.controller; theme: view }
-                        // Two quiet, centred lines under the card: a footnote, not content.
+                        // Two quiet, centred lines above the card: a footnote, not content.
                         Label {
                             objectName: "accountSystemSummary"
                             readonly property var accountData: view.controller.about || ({})
@@ -227,6 +226,7 @@ FocusScope {
                             horizontalAlignment: Text.AlignHCenter
                             color: view.dim; font.pixelSize: 11; elide: Text.ElideRight
                         }
+                        AccountCard { Layout.fillWidth: true; controller: view.controller; theme: view }
                     }
                 }
             }
