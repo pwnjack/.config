@@ -1340,7 +1340,7 @@
       "section": "timing",
       "id": "notif.timeout",
       "title": "Show for",
-      "description": "Seconds a toast stays on screen",
+      "description": "How long a toast stays on screen",
       "source": "swaync",
       "key": "timeout",
       "kind": "slider",
@@ -1348,14 +1348,14 @@
       "max": 15,
       "step": 1,
       "default": 5,
-      "keywords": ["timeout"]
+      "keywords": ["timeout"],
+      "format": "seconds"
     },
     {
       "category": "notifications",
       "section": "timing",
       "id": "notif.timeout-low",
       "title": "Low priority shown for",
-      "description": "Seconds",
       "source": "swaync",
       "key": "timeout-low",
       "kind": "slider",
@@ -1363,7 +1363,8 @@
       "max": 10,
       "step": 1,
       "default": 3,
-      "keywords": ["timeout"]
+      "keywords": ["timeout"],
+      "format": "seconds"
     },
     {
       "category": "notifications",

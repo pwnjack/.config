@@ -720,10 +720,13 @@ Item {
             field.forceActiveFocus();
             for (const c of "secret123") keyClick(c);
             compare(field.text, "secret123");
-            mouseClick(findChild(view, "wifi-Neighbour")); // collapse
+            // On the name line, as a user does: the middle of an expanded row is the password field,
+            // and layouts settle on the next frame, as they do before any real click.
+            waitForRendering(view);
+            mouseClick(findChild(view, "wifi-Neighbour"), 60, 18); // collapse
             wait(20);
             verify(!field.visible);
-            mouseClick(findChild(view, "wifi-Neighbour")); // reopen
+            mouseClick(findChild(view, "wifi-Neighbour"), 60, 18); // reopen
             wait(20);
             field = findChild(view, "psk-Neighbour");
             compare(field.text, "", "a typed password must not survive a collapse");
