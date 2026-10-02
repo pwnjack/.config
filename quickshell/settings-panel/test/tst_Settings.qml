@@ -842,11 +842,22 @@ Item {
             compare(controller.calls[0], {action:"waybar"});
             tryCompare(view.actionsMenu,"visible",false);
             verify(findChild(view,"moreActions").activeFocus, "focus returns to the menu button");
-            keyClick(Qt.Key_Space);
+            keyClick(Qt.Key_Return);
             tryCompare(view.actionsMenu,"visible",true);
             keyClick(Qt.Key_Escape);
             tryCompare(view.actionsMenu,"visible",false);
             compare(controller.closed,false,"Escape closes the menu, not the panel");
+            // During a save Reload waits, so opening lands on the first entry that can run.
+            controller.busy = true;
+            findChild(view,"moreActions").forceActiveFocus();
+            keyClick(Qt.Key_Space);
+            tryCompare(view.actionsMenu,"visible",true);
+            tryVerify(() => menuItem("restartWaybar").activeFocus, 1000, "the first enabled entry has focus");
+            keyClick(Qt.Key_Down);
+            verify(menuItem("updateSystem").activeFocus);
+            keyClick(Qt.Key_Escape);
+            tryCompare(view.actionsMenu,"visible",false);
+            controller.busy = false;
         }
         function test_close_button_closes() {
             mouseClick(findChild(view,"closeSettings"));

@@ -17,6 +17,9 @@ Button {
     hoverEnabled: true
     opacity: enabled ? 1 : 0.42
     Accessible.name: label
+    // Space activates a Button natively; Return should too.
+    Keys.onReturnPressed: clicked()
+    Keys.onEnterPressed: clicked()
     contentItem: Text {
         text: button.glyph
         font.family: button.theme.iconFont

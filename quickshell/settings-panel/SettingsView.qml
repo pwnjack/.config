@@ -266,7 +266,8 @@ FocusScope {
                         padding: 5
                         // Keyboard users land on the first entry and return to ⋯ afterwards.
                         focus: true
-                        onOpened: reloadEntry.forceActiveFocus()
+                        // The first entry that can run: Reload waits while a save is in flight.
+                        onOpened: ([reloadEntry, restartEntry, updateEntry].find(entry => entry.enabled) || actionsMenu.contentItem).forceActiveFocus()
                         onClosed: moreButton.forceActiveFocus()
                         background: Rectangle { radius: 10; color: view.plate; border.color: view.tone(0.18) }
                         contentItem: ColumnLayout {
