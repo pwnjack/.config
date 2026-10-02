@@ -831,6 +831,23 @@ Item {
             mouseClick(menuItem("updateSystem"));
             compare(controller.calls[1], {action:"update"});
         }
+        function test_actions_menu_works_from_the_keyboard() {
+            findChild(view,"moreActions").forceActiveFocus();
+            keyClick(Qt.Key_Space);
+            tryCompare(view.actionsMenu,"visible",true);
+            tryVerify(() => menuItem("reloadHyprland").activeFocus, 1000, "opening focuses the first entry");
+            keyClick(Qt.Key_Down);
+            verify(menuItem("restartWaybar").activeFocus);
+            keyClick(Qt.Key_Return);
+            compare(controller.calls[0], {action:"waybar"});
+            tryCompare(view.actionsMenu,"visible",false);
+            verify(findChild(view,"moreActions").activeFocus, "focus returns to the menu button");
+            keyClick(Qt.Key_Space);
+            tryCompare(view.actionsMenu,"visible",true);
+            keyClick(Qt.Key_Escape);
+            tryCompare(view.actionsMenu,"visible",false);
+            compare(controller.closed,false,"Escape closes the menu, not the panel");
+        }
         function test_close_button_closes() {
             mouseClick(findChild(view,"closeSettings"));
             compare(controller.closed,true);

@@ -1051,7 +1051,7 @@
           "value": "master"
         }
       ],
-      "keywords": ["dwindle", "master"]
+      "keywords": ["dwindle", "master", "mode"]
     },
     {
       "category": "windows",
@@ -1312,7 +1312,8 @@
           "label": "Right",
           "value": "right"
         }
-      ]
+      ],
+      "keywords": ["position x"]
     },
     {
       "category": "notifications",
@@ -1333,7 +1334,8 @@
           "label": "Bottom",
           "value": "bottom"
         }
-      ]
+      ],
+      "keywords": ["position y"]
     },
     {
       "category": "notifications",
@@ -1348,7 +1350,7 @@
       "max": 15,
       "step": 1,
       "default": 5,
-      "keywords": ["timeout"],
+      "keywords": ["timeout", "default"],
       "format": "seconds"
     },
     {
@@ -1378,7 +1380,8 @@
       "min": 0,
       "max": 500,
       "step": 25,
-      "default": 100
+      "default": 100,
+      "keywords": ["time"]
     },
     {
       "category": "notifications",
@@ -1483,7 +1486,7 @@
       "source": "keyword",
       "key": "input:numlock_by_default",
       "kind": "toggle",
-      "keywords": ["numlock"]
+      "keywords": ["numlock by default"]
     },
     {
       "category": "input",

@@ -27,7 +27,8 @@ FocusScope {
     readonly property color pressed: Qt.tint(background, tone(0.2))
     readonly property color sidebar: Qt.tint(background, tone(0.025))
     readonly property color line: tone(0.08)
-    readonly property color dim: tone(0.62)
+    // 75 %: secondary text stays above 4.5:1 on the plate for light palettes too.
+    readonly property color dim: tone(0.75)
     // Pywal guarantees no alert colour, so errors tint the readable foreground toward red.
     readonly property color warn: Qt.tint(foreground, Qt.rgba(0.88, 0.42, 0.42, 0.6))
     // Glyphs are Material Design icons from Symbols Nerd Font (ttf-nerd-fonts-symbols), kept as
@@ -73,7 +74,8 @@ FocusScope {
     focus: true
     Keys.onEscapePressed: controller.close()
     Shortcut { sequence: "Ctrl+F"; onActivated: search.forceActiveFocus() }
-    Shortcut { sequence: "Escape"; onActivated: view.controller.close() }
+    // While the ⋯ menu is open, Escape closes the menu (its closePolicy), not the panel.
+    Shortcut { sequence: "Escape"; enabled: !actionsMenu.visible; onActivated: view.controller.close() }
     Rectangle { anchors.fill: parent; color: Qt.rgba(view.background.r, view.background.g, view.background.b, 0.24) }
     MouseArea { anchors.fill: parent; onClicked: view.controller.close() }
     Rectangle {
@@ -236,6 +238,7 @@ FocusScope {
                             Layout.rightMargin: 6
                         }
                         IconButton {
+                            id: moreButton
                             objectName: "moreActions"
                             theme: view
                             // md-dots_horizontal
@@ -261,13 +264,19 @@ FocusScope {
                         y: titleBar.height - 8
                         width: 240
                         padding: 5
+                        // Keyboard users land on the first entry and return to ⋯ afterwards.
+                        focus: true
+                        onOpened: reloadEntry.forceActiveFocus()
+                        onClosed: moreButton.forceActiveFocus()
                         background: Rectangle { radius: 10; color: view.plate; border.color: view.tone(0.18) }
                         contentItem: ColumnLayout {
                             spacing: 2
-                            MenuEntry { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && view.actionsIdle; onClicked: view.run("reload") }
-                            MenuEntry { objectName: "restartWaybar"; theme: view; text: "Restart bar"; enabled: view.actionsIdle; onClicked: view.run("waybar") }
+                            MenuEntry { id: reloadEntry; objectName: "reloadHyprland"; theme: view; KeyNavigation.down: restartEntry; text: "Reload Hyprland"; enabled: !view.controller.busy && view.actionsIdle; onClicked: view.run("reload") }
+                            MenuEntry { id: restartEntry; objectName: "restartWaybar"; theme: view; KeyNavigation.up: reloadEntry; KeyNavigation.down: updateEntry; text: "Restart bar"; enabled: view.actionsIdle; onClicked: view.run("waybar") }
                             Rectangle { Layout.fillWidth: true; Layout.leftMargin: 6; Layout.rightMargin: 6; implicitHeight: 1; color: view.line }
                             MenuEntry {
+                                id: updateEntry
+                                KeyNavigation.up: restartEntry
                                 objectName: "updateSystem"; theme: view; text: "Update system…"
                                 hint: view.controller.values["apps.aurhelper"]?.value || ""
                                 enabled: view.actionsIdle
@@ -448,6 +457,8 @@ FocusScope {
         hoverEnabled: true
         opacity: enabled ? 1 : 0.42
         readonly property bool lit: hovered || activeFocus
+        Keys.onReturnPressed: clicked()
+        Keys.onEnterPressed: clicked()
         contentItem: RowLayout {
             spacing: 12
             Text { text: menuEntry.text; color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.foreground; font.pixelSize: 13; Layout.fillWidth: true }
