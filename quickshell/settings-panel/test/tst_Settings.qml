@@ -107,8 +107,8 @@ Item {
             wait(20);
             const a = findChild(view,"device-a-value"), b = findChild(view,"device-b-value"), c = findChild(view,"device-c-value");
             verify(a.font.bold); verify(c.font.bold); verify(!b.font.bold);
-            compare(a.color, controller.accent); compare(c.color, controller.accent);
-            verify(b.color !== controller.accent);
+            compare(String(a.color), String(view.warn)); compare(String(c.color), String(view.warn));
+            verify(String(b.color) !== String(view.warn));
             compare(findChild(view,"device-b-state").text, "Charging");
             controller.query = "blur"; wait(20);
             verify(!findChild(view,"devicesView").visible, "a search query hides the page");
@@ -378,6 +378,11 @@ Item {
         function test_row_error_is_shown() {
             controller.values = Object.assign({}, controller.values, {size:{error:"Hyprland said no"}}); wait(20);
             compare(findChild(view,"error-size").text, "Hyprland said no");
+        }
+        function test_dropdown_fits_its_longest_label() {
+            controller.values = Object.assign({}, controller.values, {theme:{value:"B",choices:[{label:"Headphones (front jack)",value:"B"}]}}); wait(20);
+            const combo = findChild(view,"select-theme");
+            verify(!combo.contentItem.truncated, "the selected label is not elided: " + combo.contentItem.width + " px for " + combo.contentItem.implicitWidth);
         }
         function test_dropdown_popup_theme_and_keyboard_selection() {
             controller.select("input"); wait(20);

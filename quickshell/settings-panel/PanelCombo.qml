@@ -17,6 +17,10 @@ ComboBox {
     signal picked(var value)
     objectName: "select-" + key
     implicitHeight: 28
+    // The text item carries its own insets (10 left, 26 right for the chevron); the style's
+    // padding, which reserves room for the indicator again, would truncate a label that fits.
+    leftPadding: 0
+    rightPadding: 0
     // Sized to the longest label, within 120–260 px. Measured once per choices change, not per frame.
     implicitWidth: Math.max(120, Math.min(260, Math.ceil(widest) + 42))
     readonly property real widest: {

@@ -416,7 +416,7 @@ FocusScope {
                                 theme: view
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: 2
-                                    Label { text: "monitors.lua"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium }
+                                    Label { text: "monitors.lua"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium; Layout.fillWidth: true }
                                     Label { text: "Per-machine rules written by this page, kept outside the repo"; color: view.dim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                                 }
                                 PanelButton { objectName: "editDisplaysFile"; theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
@@ -426,7 +426,7 @@ FocusScope {
                                 divider: true
                                 ColumnLayout {
                                     Layout.fillWidth: true; spacing: 2
-                                    Label { text: "Main display"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium }
+                                    Label { text: "Main display"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium; Layout.fillWidth: true }
                                     Label { text: view.controller.mainMonitor ? "Set to " + view.controller.mainMonitor : "Automatic: the first display Hyprland reports"; color: view.dim; font.pixelSize: 12 }
                                 }
                                 PanelButton { objectName: "automaticMainDisplay"; theme: view; text: "Use automatic"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }

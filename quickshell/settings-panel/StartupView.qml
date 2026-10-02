@@ -3,8 +3,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-// Hyprland's own session (read-only, parsed from autostart.lua) and the XDG
-// autostart set that uwsm's systemd generator launches at login.
+// The XDG autostart set that uwsm's systemd generator launches at login, and
+// Hyprland's own session (read-only, parsed from autostart.lua).
 ColumnLayout {
     id: page
     required property var controller
@@ -16,71 +16,50 @@ ColumnLayout {
     // Remove asks twice: the row waiting for its second click, until anything else happens.
     property string confirming: ""
     property int confirmMs: 5000
-    spacing: 8
+    spacing: 22
     onModelChanged: confirming = ""
     Timer { id: confirmTimer; interval: page.confirmMs; onTriggered: page.confirming = "" }
 
-    Label { visible: !page.model; text: "Reading startup apps…"; color: page.theme.foreground; opacity: 0.75 }
+    Label { visible: !page.model; text: "Reading startup apps…"; color: page.theme.dim; font.pixelSize: 13 }
     Label {
         objectName: "startupError"
         visible: !!page.model && !!page.model.error
         text: page.model && page.model.error ? "Could not read startup apps: " + page.model.error : ""
-        color: page.theme.foreground; wrapMode: Text.Wrap; Layout.fillWidth: true
+        color: page.theme.warn; font.pixelSize: 13; wrapMode: Text.Wrap; Layout.fillWidth: true
     }
 
-    RowLayout {
+    SettingsSection {
         visible: page.ready
-        Layout.fillWidth: true
-        Label { text: "Started by Hyprland's config"; color: page.theme.foreground; font.pixelSize: 16; font.bold: true; Layout.fillWidth: true }
-        PanelButton { objectName: "editAutostartLua"; theme: page.theme; text: "Edit file"; onClicked: page.controller.action("autostart-file") }
-    }
-    Repeater {
-        model: page.ready ? page.model.session : []
-        delegate: Label {
-            required property var modelData
-            required property int index
-            objectName: "session-" + index
-            text: modelData
-            color: page.theme.foreground; opacity: 0.85; font.family: "monospace"; font.pixelSize: 12
-            Layout.fillWidth: true; elide: Text.ElideRight
-        }
-    }
-
-    RowLayout {
-        visible: page.ready
-        Layout.fillWidth: true; Layout.topMargin: 12
-        Label { text: "Apps"; color: page.theme.foreground; font.pixelSize: 16; font.bold: true; Layout.fillWidth: true }
-        Label { text: "Takes effect at next login"; color: page.theme.foreground; opacity: 0.75; font.pixelSize: 12 }
-    }
-    Repeater {
-        model: page.ready ? page.model.apps : []
-        delegate: Rectangle {
-            id: app
-            required property var modelData
-            objectName: "startup-" + modelData.id
-            Layout.fillWidth: true
-            implicitHeight: appRow.implicitHeight + 16
-            radius: 10; color: page.theme.plate
-            RowLayout {
-                id: appRow
-                anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; anchors.margins: 8
+        theme: page.theme
+        title: "Apps"
+        footer: "Changes take effect at next login."
+        Repeater {
+            model: page.ready ? page.model.apps : []
+            delegate: PanelRow {
+                id: app
+                required property var modelData
+                required property int index
+                objectName: "startup-" + modelData.id
+                theme: page.theme
+                divider: index > 0
                 ColumnLayout {
                     Layout.fillWidth: true; spacing: 2
-                    Label { text: app.modelData.name; color: page.theme.foreground; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                    Label { text: app.modelData.name; color: page.theme.foreground; font.pixelSize: 13; font.weight: Font.Medium; elide: Text.ElideRight; Layout.fillWidth: true }
                     Label {
                         objectName: "startupStatus-" + app.modelData.id
                         text: [app.modelData.scope, app.modelData.status.label,
                             app.modelData.ignoredGnomeFlag ? "X-GNOME-Autostart-enabled has no effect under systemd" : "",
                             app.modelData.link ? "A link; edit it by hand" : "",
                             app.modelData.origin === "user" ? "In ~/.config/autostart" : app.modelData.origin === "override" && !app.modelData.staleOverride && app.modelData.enabled ? "Your version in ~/.config/autostart" : ""].filter(Boolean).join(" · ")
-                        color: page.theme.foreground; opacity: 0.75; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true
+                        color: page.theme.dim; font.pixelSize: 12; elide: Text.ElideRight; Layout.fillWidth: true
                     }
                 }
                 Loader {
                     active: !!app.modelData.removable && !app.modelData.link
                     sourceComponent: PanelButton {
                         objectName: "startupRemove-" + app.modelData.id
-                        theme: page.theme; text: page.confirming === app.modelData.id ? (app.modelData.origin === "override" ? "Confirm: starts again at login" : "Confirm remove") : "Remove"
+                        theme: page.theme
+                        text: page.confirming === app.modelData.id ? (app.modelData.origin === "override" ? "Confirm: starts again at login" : "Confirm remove") : "Remove"
                         enabled: !page.controller.busy
                         onClicked: {
                             if (page.confirming !== app.modelData.id) { page.confirming = app.modelData.id; confirmTimer.restart(); return }
@@ -104,16 +83,49 @@ ColumnLayout {
                 }
             }
         }
+        PanelRow {
+            visible: page.ready && page.model.available.length > 0
+            theme: page.theme
+            divider: page.ready && page.model.apps.length > 0
+            Label { text: "Start another app at login"; color: page.theme.foreground; font.pixelSize: 13; Layout.fillWidth: true }
+            PanelCombo {
+                theme: page.theme
+                key: "startupAdd"
+                choices: page.ready ? page.model.available.map(item => ({label: item.name, value: item.id})) : []
+                value: ""
+                displayText: "Add an app…"
+                Accessible.name: "Add a startup app"
+                onPicked: value => { page.confirming = ""; page.controller.submit({op: "autostartAdd", app: value}) }
+            }
+        }
     }
-    PanelCombo {
-        visible: page.ready && page.model.available.length > 0
-        Layout.fillWidth: true
+
+    SettingsSection {
+        visible: page.ready
         theme: page.theme
-        key: "startupAdd"
-        choices: page.ready ? page.model.available.map(item => ({label: item.name, value: item.id})) : []
-        value: ""
-        displayText: "Add an app…"
-        Accessible.name: "Add a startup app"
-        onPicked: value => { page.confirming = ""; page.controller.submit({op: "autostartAdd", app: value}) }
+        title: "Started by Hyprland"
+        footer: "Read from autostart.lua."
+        Repeater {
+            model: page.ready ? page.model.session : []
+            delegate: PanelRow {
+                id: command
+                required property var modelData
+                required property int index
+                theme: page.theme
+                divider: index > 0
+                Label {
+                    objectName: "session-" + command.index
+                    text: command.modelData
+                    color: page.theme.foreground; font.family: "monospace"; font.pixelSize: 12
+                    elide: Text.ElideRight; Layout.fillWidth: true
+                }
+            }
+        }
+        PanelRow {
+            theme: page.theme
+            divider: true
+            Item { Layout.fillWidth: true }
+            PanelButton { objectName: "editAutostartLua"; theme: page.theme; text: "Edit file"; onClicked: page.controller.action("autostart-file") }
+        }
     }
 }
