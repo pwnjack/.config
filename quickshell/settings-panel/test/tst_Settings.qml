@@ -921,12 +921,16 @@ Item {
             compare(controller.calls[1], {action:"update"});
         }
         function test_actions_menu_works_from_the_keyboard() {
-            findChild(view,"moreActions").forceActiveFocus();
+            // Arrive at ⋯ by keyboard, as Tab does: focus moves there fresh, with a keyboard reason.
+            findChild(view,"settingsSearch").forceActiveFocus();
+            findChild(view,"moreActions").forceActiveFocus(Qt.TabFocusReason);
             keyClick(Qt.Key_Space);
             tryCompare(view.actionsMenu,"visible",true);
             tryVerify(() => menuItem("reloadHyprland").activeFocus, 1000, "opening focuses the first entry");
+            verify(menuItem("reloadHyprland").lit, "a keyboard opening shows where focus is");
             keyClick(Qt.Key_Down);
             verify(menuItem("restartWaybar").activeFocus);
+            verify(menuItem("restartWaybar").lit, "arrows move the highlight");
             keyClick(Qt.Key_Return);
             compare(controller.calls[0], {action:"waybar"});
             tryCompare(view.actionsMenu,"visible",false);
@@ -938,7 +942,7 @@ Item {
             compare(controller.closed,false,"Escape closes the menu, not the panel");
             // During a save Reload waits, so opening lands on the first entry that can run.
             controller.busy = true;
-            findChild(view,"moreActions").forceActiveFocus();
+            findChild(view,"moreActions").forceActiveFocus(Qt.TabFocusReason);
             keyClick(Qt.Key_Space);
             tryCompare(view.actionsMenu,"visible",true);
             tryVerify(() => menuItem("restartWaybar").activeFocus, 1000, "the first enabled entry has focus");
@@ -951,6 +955,14 @@ Item {
         function test_actions_menu_entries_have_icons() {
             compare(menuItem("reloadHyprland-icon").text.codePointAt(0), 0xf0450);
             compare(menuItem("updateSystem-icon").text.codePointAt(0), 0xf03d5);
+        }
+        function test_mouse_opening_highlights_nothing() {
+            mouseClick(findChild(view,"moreActions"));
+            tryCompare(view.actionsMenu,"visible",true);
+            tryVerify(() => menuItem("reloadHyprland").activeFocus, 1000, "focus still lands inside for the arrows");
+            verify(!menuItem("reloadHyprland").lit, "no entry is highlighted until hover");
+            keyClick(Qt.Key_Escape);
+            tryCompare(view.actionsMenu,"visible",false);
         }
         function test_close_button_closes() {
             mouseClick(findChild(view,"closeSettings"));

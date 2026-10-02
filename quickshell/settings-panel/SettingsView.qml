@@ -272,7 +272,8 @@ FocusScope {
                             glyph: view.glyph("f01d8")
                             label: "More actions"
                             active: actionsMenu.visible
-                            onClicked: actionsMenu.visible ? actionsMenu.close() : actionsMenu.open()
+                            // Read before opening: the popup takes focus, and with it the button's visualFocus.
+                            onClicked: { actionsMenu.byKeyboard = visualFocus; actionsMenu.visible ? actionsMenu.close() : actionsMenu.open(); }
                         }
                         IconButton {
                             objectName: "closeSettings"
@@ -291,11 +292,17 @@ FocusScope {
                         y: titleBar.height - 8
                         width: 240
                         padding: 5
+                        property bool byKeyboard: false
                         // Keyboard users land on the first entry and return to ⋯ afterwards.
                         focus: true
                         // The first entry that can run: Reload waits while a save is in flight.
-                        onOpened: ([reloadEntry, restartEntry, updateEntry].find(entry => entry.enabled) || actionsMenu.contentItem).forceActiveFocus()
-                        onClosed: moreButton.forceActiveFocus()
+                        // Focus always lands inside so arrows work, but only a keyboard opening (⋯ reached
+                        // with Tab) shows it: a mouse opening highlights nothing until hover.
+                        onOpened: ([reloadEntry, restartEntry, updateEntry].find(entry => entry.enabled) || actionsMenu.contentItem)
+                            .forceActiveFocus(actionsMenu.byKeyboard ? Qt.TabFocusReason : Qt.OtherFocusReason)
+                        // Hand focus back the way the menu came, so a keyboard user can reopen it
+                        // (Space) and still get the highlight.
+                        onClosed: moreButton.forceActiveFocus(actionsMenu.byKeyboard ? Qt.TabFocusReason : Qt.OtherFocusReason)
                         background: Rectangle { radius: 10; color: view.plate; border.color: view.tone(0.18) }
                         contentItem: ColumnLayout {
                             spacing: 2
@@ -494,7 +501,7 @@ FocusScope {
         leftPadding: 10; rightPadding: 10
         hoverEnabled: true
         opacity: enabled ? 1 : 0.42
-        readonly property bool lit: hovered || activeFocus
+        readonly property bool lit: hovered || visualFocus
         Keys.onReturnPressed: clicked()
         Keys.onEnterPressed: clicked()
         contentItem: RowLayout {
