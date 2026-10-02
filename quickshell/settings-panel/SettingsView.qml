@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "pages.mjs" as Pages
 
 FocusScope {
     id: view
@@ -29,13 +30,21 @@ FocusScope {
     readonly property color dim: tone(0.62)
     // Pywal guarantees no alert colour, so errors tint the readable foreground toward red.
     readonly property color warn: Qt.tint(foreground, Qt.rgba(0.88, 0.42, 0.42, 0.6))
-    // Category icons are Material Design glyphs from Symbols Nerd Font (ttf-nerd-fonts-symbols),
-    // kept in catalog.json as hex codepoints: text, so they take the label's color.
+    // Glyphs are Material Design icons from Symbols Nerd Font (ttf-nerd-fonts-symbols), kept as
+    // hex code points: text, so they take the label's colour.
     readonly property string iconFont: "Symbols Nerd Font"
     function glyph(hex) { return hex ? String.fromCodePoint(parseInt(hex, 16)) : ""; }
+    readonly property bool searching: !!controller.query.trim()
     readonly property var page: controller.catalog.categories.find(c => c.id === controller.category)
+    // The page drawn by its own view, if any; a search shows rows only.
+    readonly property string customPage: !searching && Pages.CUSTOM_PAGES.includes(controller.category) ? controller.category : ""
+    readonly property var sections: Pages.pageSections(controller.catalog.categories, controller.visibleRows, searching)
+    // Maintenance waits while a display change is pending: a reload would undo it.
+    readonly property bool actionsIdle: !controller.pendingDisplay
+    property alias actionsMenu: actionsMenu
     property double now: Date.now()
     property double autoRevertedFor: 0
+    property bool justSaved: false
     // The visible countdown. systemd's guard reverts at 20 s even if this never fires.
     Timer {
         interval: 250; repeat: true
@@ -50,6 +59,17 @@ FocusScope {
             }
         }
     }
+    Connections {
+        target: view.controller
+        // "Saved" for a moment after the queue drains without a problem.
+        function onBusyChanged() {
+            if (view.controller.busy) view.justSaved = false;
+            else if (!view.controller.problem) { view.justSaved = true; savedTimer.restart(); }
+        }
+        function onCategoryChanged() { scroll.contentItem.contentY = 0; pageFade.restart(); }
+    }
+    Timer { id: savedTimer; interval: 1500; onTriggered: view.justSaved = false }
+    function run(action) { actionsMenu.close(); controller.action(action); }
     focus: true
     Keys.onEscapePressed: controller.close()
     Shortcut { sequence: "Ctrl+F"; onActivated: search.forceActiveFocus() }
@@ -60,146 +80,251 @@ FocusScope {
         id: panel
         objectName: "settingsPanel"
         anchors.centerIn: parent
-        width: Math.min(1000, parent.width - 48)
-        height: Math.min(740, parent.height - 48)
-        radius: 24
+        width: Math.min(1080, parent.width - 48)
+        height: Math.min(760, parent.height - 48)
+        radius: 20
         color: view.background
-        border.color: Qt.rgba(view.foreground.r, view.foreground.g, view.foreground.b, 0.2)
+        border.color: view.tone(0.14)
         MouseArea { anchors.fill: parent } // Keep clicks inside the panel from closing it.
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 20
-            spacing: 24
-            ColumnLayout {
-                Layout.preferredWidth: 205
+            anchors.margins: 1
+            spacing: 0
+            Rectangle {
+                Layout.preferredWidth: 236
                 Layout.fillHeight: true
-                spacing: 8
-                RowLayout {
-                    spacing: 10
-                    Layout.bottomMargin: 12
-                    Text {
-                        objectName: "panelIcon"
-                        // md-cog_outline, the glyph of Waybar's custom/settings button.
-                        text: view.glyph("f08bb")
-                        font.family: view.iconFont; font.pixelSize: 28
+                color: view.sidebar
+                radius: 19
+                // Only the panel's outer corners are round: square off the sidebar's right side.
+                Rectangle { anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.right: parent.right; width: parent.radius; color: parent.color }
+                Rectangle { anchors.top: parent.top; anchors.bottom: parent.bottom; anchors.right: parent.right; width: 1; color: view.line }
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12; anchors.rightMargin: 12; anchors.topMargin: 16; anchors.bottomMargin: 12
+                    spacing: 12
+                    TextField {
+                        id: search
+                        objectName: "settingsSearch"
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 4; Layout.rightMargin: 4
+                        implicitHeight: 32
+                        leftPadding: 30; rightPadding: 10; topPadding: 0; bottomPadding: 0
+                        verticalAlignment: TextInput.AlignVCenter
+                        font.pixelSize: 13
+                        placeholderText: "Search"
+                        text: view.controller.query
+                        onTextEdited: view.controller.query = text
                         color: view.foreground
-                        Accessible.ignored: true
-                    }
-                    Label { text: "Settings"; color: view.foreground; font.pixelSize: 27; font.bold: true }
-                }
-                TextField {
-                    id: search
-                    objectName: "settingsSearch"
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 44
-                    placeholderText: "Search · Ctrl+F"
-                    text: view.controller.query
-                    onTextEdited: view.controller.query = text
-                    color: view.foreground
-                    placeholderTextColor: Qt.rgba(view.foreground.r, view.foreground.g, view.foreground.b, 0.7)
-                    selectByMouse: true
-                    Accessible.name: "Search settings"
-                    background: Rectangle { color: view.plate; radius: 10; border.color: search.activeFocus ? view.accent : "transparent"; border.width: 2 }
-                }
-                // Scrolls within the space left over, so a longer catalog never
-                // pushes Close and the footer out of the panel.
-                ListView {
-                    id: categoryList
-                    objectName: "categoryList"
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    spacing: 8
-                    boundsBehavior: Flickable.StopAtBounds
-                    // Always shown while the list overflows, so hidden categories are discoverable.
-                    ScrollBar.vertical: ScrollBar { policy: categoryList.contentHeight > categoryList.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff }
-                    model: view.controller.catalog.categories
-                    delegate: Button {
-                        id: nav
-                        required property var modelData
-                        width: ListView.view.width
-                        height: 44
-                        text: modelData.title
-                        readonly property bool selected: view.controller.category === modelData.id && !view.controller.query.trim()
-                        onClicked: view.controller.select(modelData.id)
-                        contentItem: RowLayout {
-                            spacing: 10
+                        placeholderTextColor: view.dim
+                        selectionColor: view.accent
+                        selectedTextColor: view.accentText
+                        selectByMouse: true
+                        Accessible.name: "Search settings"
+                        background: Rectangle {
+                            color: view.raised; radius: 8
+                            border.width: search.activeFocus ? 2 : 0
+                            border.color: view.accent
                             Text {
-                                visible: !!nav.modelData.icon
-                                text: view.glyph(nav.modelData.icon)
-                                font.family: view.iconFont; font.pixelSize: 18
-                                color: nav.selected ? view.accentText : view.foreground
-                                Layout.leftMargin: 12
-                                Layout.preferredWidth: 20
-                                horizontalAlignment: Text.AlignHCenter
+                                // md-magnify
+                                x: 9; anchors.verticalCenter: parent.verticalCenter
+                                text: view.glyph("f0349"); font.family: view.iconFont; font.pixelSize: 15
+                                color: view.dim
                                 Accessible.ignored: true
                             }
                             Text {
-                                text: nav.text; color: nav.selected ? view.accentText : view.foreground; font.pixelSize: 14; font.bold: nav.selected
-                                Layout.fillWidth: true; Layout.leftMargin: nav.modelData.icon ? 0 : 12; elide: Text.ElideRight
+                                visible: !search.text && !search.activeFocus
+                                anchors.right: parent.right; anchors.rightMargin: 9; anchors.verticalCenter: parent.verticalCenter
+                                text: "Ctrl F"; font.pixelSize: 11; color: view.dim
+                                Accessible.ignored: true
                             }
                         }
-                        background: Rectangle { radius: 10; color: nav.selected ? view.accent : nav.hovered ? view.plate : "transparent"; border.color: nav.activeFocus ? view.foreground : "transparent"; border.width: 2 }
+                    }
+                    ListView {
+                        id: categoryList
+                        objectName: "categoryList"
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        spacing: 2
+                        boundsBehavior: Flickable.StopAtBounds
+                        // Only an overflowing list shows a bar, so hidden pages stay discoverable.
+                        ScrollBar.vertical: ScrollBar { policy: categoryList.contentHeight > categoryList.height ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff }
+                        model: Pages.navEntries(view.controller.catalog.categories)
+                        delegate: Item {
+                            id: entry
+                            required property var modelData
+                            width: ListView.view.width
+                            // A new group starts after a 10 px gap, as macOS separates its sidebar clusters.
+                            height: nav.height + (modelData.gapBefore ? 10 : 0)
+                            Button {
+                                id: nav
+                                objectName: "nav-" + entry.modelData.id
+                                anchors.bottom: parent.bottom
+                                width: parent.width
+                                height: 32
+                                text: entry.modelData.title
+                                hoverEnabled: true
+                                readonly property bool selected: view.controller.category === entry.modelData.id && !view.searching
+                                onClicked: view.controller.select(entry.modelData.id)
+                                contentItem: RowLayout {
+                                    spacing: 10
+                                    Rectangle {
+                                        Layout.leftMargin: 6
+                                        implicitWidth: 22; implicitHeight: 22; radius: 6
+                                        color: nav.selected ? Qt.rgba(view.accentText.r, view.accentText.g, view.accentText.b, 0.16)
+                                            : Qt.rgba(view.accent.r, view.accent.g, view.accent.b, 0.22)
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: view.glyph(entry.modelData.icon)
+                                            font.family: view.iconFont; font.pixelSize: 14
+                                            color: nav.selected ? view.accentText : view.accent
+                                            Accessible.ignored: true
+                                        }
+                                    }
+                                    Text {
+                                        text: nav.text
+                                        color: nav.selected ? view.accentText : view.foreground
+                                        font.pixelSize: 13; font.weight: nav.selected ? Font.DemiBold : Font.Normal
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+                                background: Rectangle {
+                                    radius: 7
+                                    color: nav.selected ? view.accent : nav.hovered ? view.tone(0.06) : "transparent"
+                                    border.width: nav.activeFocus ? 2 : 0
+                                    border.color: nav.selected ? view.accentText : view.accent
+                                    Behavior on color { ColorAnimation { duration: 100 } }
+                                }
+                            }
+                        }
                     }
                 }
-                PanelButton { objectName: "closeSettings"; text: "Close"; theme: view; Layout.fillWidth: true; onClicked: view.controller.close() }
             }
-            Rectangle { Layout.fillHeight: true; implicitWidth: 1; color: view.foreground; opacity: 0.13 }
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 12
-                RowLayout {
-                    spacing: 12
-                    Text {
-                        objectName: "pageIcon"
-                        // Search results get a magnifier; a page without an icon gets none.
-                        readonly property string code: view.controller.query.trim() ? "f0349" : (view.page?.icon || "")
-                        visible: !!code
-                        text: view.glyph(code)
-                        font.family: view.iconFont; font.pixelSize: 26
-                        color: view.accent
-                        Accessible.ignored: true
-                    }
-                    Label {
-                        objectName: "pageTitle"
-                        text: view.controller.query.trim() ? "Search results" : (view.page?.title || "Settings")
-                        color: view.foreground; font.pixelSize: 24; font.bold: true
-                    }
-                }
-                Label {
-                    text: view.controller.query.trim() ? view.controller.visibleRows.length + " matching settings" : (view.page?.description || "")
-                    Layout.fillWidth: true; color: view.foreground; opacity: 0.75; wrapMode: Text.WordWrap; font.pixelSize: 13
-                }
-                Rectangle {
-                    visible: !!view.controller.problem
+                spacing: 0
+                Item {
+                    id: titleBar
                     Layout.fillWidth: true
-                    implicitHeight: errorLabel.implicitHeight + 24
-                    radius: 10; color: view.plate; border.color: view.foreground
-                    Label { id: errorLabel; anchors.fill: parent; anchors.margins: 12; text: view.controller.problem; color: view.foreground; wrapMode: Text.Wrap; Accessible.role: Accessible.AlertMessage }
-                }
-                Rectangle {
-                    objectName: "authPending"
-                    visible: !!view.controller.authPending
-                    Layout.fillWidth: true
-                    implicitHeight: authLabel.implicitHeight + 24
-                    radius: 10; color: view.plate; border.color: view.accent; border.width: 2
-                    Label { id: authLabel; anchors.fill: parent; anchors.margins: 12; text: "Waiting for authentication…"; color: view.foreground; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
-                }
-                Rectangle {
-                    id: pendingBanner
-                    objectName: "displayPending"
-                    visible: !!view.controller.pendingDisplay
-                    readonly property int secondsLeft: view.controller.pendingDisplay ? Math.max(0, Math.ceil((view.controller.pendingDisplay.deadline - view.now) / 1000)) : 0
-                    Layout.fillWidth: true
-                    implicitHeight: pendingRow.implicitHeight + 24
-                    radius: 10; color: view.plate; border.color: view.accent; border.width: 2
+                    implicitHeight: 52
                     RowLayout {
-                        id: pendingRow
-                        anchors.fill: parent; anchors.margins: 12
-                        Label { objectName: "displayCountdown"; text: "Keep this display layout? Reverting in " + pendingBanner.secondsLeft + " s"; color: view.foreground; Layout.fillWidth: true; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
-                        PanelButton { objectName: "keepDisplay"; theme: view; text: "Keep"; enabled: !view.controller.busy; onClicked: view.controller.keepDisplay() }
-                        PanelButton { objectName: "revertDisplay"; theme: view; text: "Revert"; enabled: !view.controller.busy; onClicked: view.controller.revertDisplay() }
+                        anchors.fill: parent
+                        anchors.leftMargin: 28; anchors.rightMargin: 14
+                        spacing: 8
+                        Label {
+                            objectName: "pageTitle"
+                            text: view.searching ? "Search results" : (view.page?.title || "Settings")
+                            color: view.foreground; font.pixelSize: 16; font.bold: true
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                        // Transient status beside the buttons. It keeps its last text while fading
+                        // out, so nothing shifts as a save or read starts or ends.
+                        Label {
+                            objectName: "panelStatus"
+                            // "Saved" outranks the read every write triggers, or that read would hide it.
+                            readonly property string current: view.controller.busy ? "Saving…" : view.justSaved ? "Saved" : view.controller.loading ? "Reading settings…" : ""
+                            property string shown: ""
+                            onCurrentChanged: if (current) shown = current
+                            Component.onCompleted: shown = current
+                            text: shown
+                            opacity: current ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: 200 } }
+                            color: view.dim; font.pixelSize: 12
+                            Layout.rightMargin: 6
+                        }
+                        IconButton {
+                            objectName: "moreActions"
+                            theme: view
+                            // md-dots_horizontal
+                            glyph: view.glyph("f01d8")
+                            label: "More actions"
+                            active: actionsMenu.visible
+                            onClicked: actionsMenu.visible ? actionsMenu.close() : actionsMenu.open()
+                        }
+                        IconButton {
+                            objectName: "closeSettings"
+                            theme: view
+                            // md-close
+                            glyph: view.glyph("f0156")
+                            label: "Close"
+                            onClicked: view.controller.close()
+                        }
+                    }
+                    Popup {
+                        id: actionsMenu
+                        objectName: "actionsMenu"
+                        popupType: Popup.Item
+                        x: titleBar.width - width - 14
+                        y: titleBar.height - 8
+                        width: 240
+                        padding: 5
+                        background: Rectangle { radius: 10; color: view.plate; border.color: view.tone(0.18) }
+                        contentItem: ColumnLayout {
+                            spacing: 2
+                            MenuEntry { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && view.actionsIdle; onClicked: view.run("reload") }
+                            MenuEntry { objectName: "restartWaybar"; theme: view; text: "Restart bar"; enabled: view.actionsIdle; onClicked: view.run("waybar") }
+                            Rectangle { Layout.fillWidth: true; Layout.leftMargin: 6; Layout.rightMargin: 6; implicitHeight: 1; color: view.line }
+                            MenuEntry {
+                                objectName: "updateSystem"; theme: view; text: "Update system…"
+                                hint: view.controller.values["apps.aurhelper"]?.value || ""
+                                enabled: view.actionsIdle
+                                onClicked: view.run("update")
+                            }
+                        }
+                    }
+                }
+                Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: view.line }
+                ColumnLayout {
+                    visible: !!view.controller.problem || !!view.controller.authPending || !!view.controller.pendingDisplay
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 28; Layout.rightMargin: 28; Layout.topMargin: 16
+                    spacing: 8
+                    Rectangle {
+                        visible: !!view.controller.problem
+                        Layout.fillWidth: true
+                        implicitHeight: problemRow.implicitHeight + 20
+                        radius: 10; color: view.plate; border.color: view.warn
+                        RowLayout {
+                            id: problemRow
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 14; anchors.rightMargin: 14
+                            spacing: 8
+                            Text { text: view.glyph("f002a"); font.family: view.iconFont; font.pixelSize: 15; color: view.warn; Accessible.ignored: true }
+                            Label { text: view.controller.problem; color: view.foreground; wrapMode: Text.Wrap; Layout.fillWidth: true; font.pixelSize: 13; Accessible.role: Accessible.AlertMessage }
+                        }
+                    }
+                    Rectangle {
+                        objectName: "authPending"
+                        visible: !!view.controller.authPending
+                        Layout.fillWidth: true
+                        implicitHeight: authLabel.implicitHeight + 20
+                        radius: 10
+                        color: Qt.rgba(view.accent.r, view.accent.g, view.accent.b, 0.14)
+                        border.color: Qt.rgba(view.accent.r, view.accent.g, view.accent.b, 0.4)
+                        Label { id: authLabel; anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; anchors.margins: 14; text: "Waiting for authentication…"; color: view.foreground; font.pixelSize: 13; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
+                    }
+                    Rectangle {
+                        id: pendingBanner
+                        objectName: "displayPending"
+                        visible: !!view.controller.pendingDisplay
+                        readonly property int secondsLeft: view.controller.pendingDisplay ? Math.max(0, Math.ceil((view.controller.pendingDisplay.deadline - view.now) / 1000)) : 0
+                        Layout.fillWidth: true
+                        implicitHeight: pendingRow.implicitHeight + 20
+                        radius: 10
+                        color: Qt.rgba(view.accent.r, view.accent.g, view.accent.b, 0.14)
+                        border.color: Qt.rgba(view.accent.r, view.accent.g, view.accent.b, 0.4)
+                        RowLayout {
+                            id: pendingRow
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 14; anchors.rightMargin: 10
+                            spacing: 8
+                            Label { objectName: "displayCountdown"; text: "Keep this display layout? Reverting in " + pendingBanner.secondsLeft + " s"; color: view.foreground; font.pixelSize: 13; Layout.fillWidth: true; wrapMode: Text.WordWrap; Accessible.role: Accessible.AlertMessage }
+                            PanelButton { objectName: "revertDisplay"; theme: view; text: "Revert"; enabled: !view.controller.busy; onClicked: view.controller.revertDisplay() }
+                            PanelButton { objectName: "keepDisplay"; theme: view; primary: true; text: "Keep"; enabled: !view.controller.busy; onClicked: view.controller.keepDisplay() }
+                        }
                     }
                 }
                 ScrollView {
@@ -210,13 +335,17 @@ FocusScope {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     contentWidth: availableWidth
+                    contentHeight: content.implicitHeight + 40
                     clip: true
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ColumnLayout {
-                        width: scroll.availableWidth
-                        spacing: 8
+                        id: content
+                        x: 28; y: 20
+                        width: scroll.availableWidth - 56
+                        spacing: 22
+                        NumberAnimation { id: pageFade; target: content; property: "opacity"; from: 0; to: 1; duration: 150 }
                         Repeater {
-                            model: view.controller.category === "monitors" && !view.controller.query.trim() ? view.controller.monitors : []
+                            model: view.customPage === "monitors" ? view.controller.monitors : []
                             delegate: DisplayCard {
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -225,73 +354,105 @@ FocusScope {
                                 controller: view.controller
                             }
                         }
-                        Flow {
-                            visible: view.controller.category === "monitors" && !view.controller.query.trim()
-                            Layout.fillWidth: true; spacing: 8
-                            PanelButton { objectName: "editDisplaysFile"; theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
-                            PanelButton { objectName: "automaticMainDisplay"; theme: view; text: "Automatic main display"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
-                        }
                         NetworkView {
-                            visible: view.controller.category === "network" && !view.controller.query.trim()
+                            visible: view.customPage === "network"
                             Layout.fillWidth: true
                             controller: view.controller
                             theme: view
                         }
                         StartupView {
-                            visible: view.controller.category === "startup" && !view.controller.query.trim()
+                            visible: view.customPage === "startup"
                             Layout.fillWidth: true
                             controller: view.controller
                             theme: view
                         }
                         DevicesView {
-                            visible: view.controller.category === "devices" && !view.controller.query.trim()
+                            visible: view.customPage === "devices"
                             Layout.fillWidth: true
                             controller: view.controller
                             theme: view
                         }
                         Label {
                             objectName: "noSettingsMatch"
-                            // Never under a custom view (Network, Displays): its rows are
-                            // legitimately empty of generic controls, that is not "no results".
-                            visible: !view.controller.loading && !view.controller.visibleRows.length &&
-                                (!!view.controller.query.trim() || (view.controller.category !== "monitors" && view.controller.category !== "network" && view.controller.category !== "devices"))
-                            text: "No settings match your search."; color: view.foreground; Layout.topMargin: 24
+                            // Never under a custom view: its rows are legitimately empty of generic controls.
+                            visible: !view.controller.loading && !view.controller.visibleRows.length && (view.searching || !view.customPage)
+                            text: "No settings match your search."
+                            color: view.dim; font.pixelSize: 13
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 40
                         }
                         Repeater {
-                            model: view.controller.visibleRows
-                            delegate: SettingControl {
+                            model: view.sections
+                            delegate: SettingsSection {
+                                id: group
                                 required property var modelData
-                                Layout.fillWidth: true
-                                row: modelData
+                                objectName: "section-" + modelData.key
                                 theme: view
-                                settingState: view.controller.values[modelData.id] || ({})
-                                controller: view.controller
+                                title: modelData.title
+                                footer: modelData.footer
+                                actions: modelData.actions
+                                actionsEnabled: view.actionsIdle
+                                onTriggered: action => view.controller.action(action)
+                                Repeater {
+                                    model: group.modelData.rows
+                                    delegate: SettingControl {
+                                        required property var modelData
+                                        required property int index
+                                        divider: index > 0
+                                        row: modelData
+                                        theme: view
+                                        settingState: view.controller.values[modelData.id] || ({})
+                                        controller: view.controller
+                                    }
+                                }
+                            }
+                        }
+                        // Displays: the per-machine rules file and the automatic main display, last.
+                        SettingsSection {
+                            visible: view.customPage === "monitors"
+                            theme: view
+                            title: "Display rules"
+                            PanelRow {
+                                theme: view
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 2
+                                    Label { text: "monitors.lua"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium }
+                                    Label { text: "Per-machine rules written by this page, kept outside the repo"; color: view.dim; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                                }
+                                PanelButton { objectName: "editDisplaysFile"; theme: view; text: "Edit file"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("displays-file") }
+                            }
+                            PanelRow {
+                                theme: view
+                                divider: true
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 2
+                                    Label { text: "Main display"; color: view.foreground; font.pixelSize: 13; font.weight: Font.Medium }
+                                    Label { text: view.controller.mainMonitor ? "Set to " + view.controller.mainMonitor : "Automatic: the first display Hyprland reports"; color: view.dim; font.pixelSize: 12 }
+                                }
+                                PanelButton { objectName: "automaticMainDisplay"; theme: view; text: "Use automatic"; enabled: !!view.controller.mainMonitor && !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.submit({op: "mainMonitor", value: ""}) }
                             }
                         }
                     }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 12
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: 8
-                        // A reload would undo a display change still awaiting Keep or Revert.
-                        PanelButton { objectName: "reloadHyprland"; theme: view; text: "Reload Hyprland"; enabled: !view.controller.busy && !view.controller.pendingDisplay; onClicked: view.controller.action("reload") }
-                        PanelButton { objectName: "restartWaybar"; theme: view; text: "Restart Waybar"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("waybar") }
-                        PanelButton { objectName: "updateSystem"; theme: view; text: "Update system"; enabled: !view.controller.pendingDisplay; onClicked: view.controller.action("update") }
-                    }
-                    // Transient status, bottom right beside the actions. Hidden rather than
-                    // removed when idle, so the buttons never shift as a save or read starts.
-                    Label {
-                        objectName: "panelStatus"
-                        text: view.controller.busy ? "Saving changes…" : "Reading settings…"
-                        opacity: view.controller.busy || view.controller.loading ? 0.75 : 0
-                        color: view.foreground; font.pixelSize: 12
-                        Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                    }
-                }
             }
         }
+    }
+    // A row of the ⋯ menu. Inline components cannot see this file's ids, so it takes the theme.
+    component MenuEntry: Button {
+        id: menuEntry
+        required property var theme
+        property string hint: ""
+        Layout.fillWidth: true
+        implicitHeight: 30
+        leftPadding: 10; rightPadding: 10
+        hoverEnabled: true
+        opacity: enabled ? 1 : 0.42
+        readonly property bool lit: hovered || activeFocus
+        contentItem: RowLayout {
+            spacing: 12
+            Text { text: menuEntry.text; color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.foreground; font.pixelSize: 13; Layout.fillWidth: true }
+            Text { visible: !!menuEntry.hint; text: menuEntry.hint; color: menuEntry.lit ? menuEntry.theme.accentText : menuEntry.theme.dim; font.pixelSize: 11; elide: Text.ElideLeft; Layout.maximumWidth: 110 }
+        }
+        background: Rectangle { radius: 6; color: menuEntry.lit ? menuEntry.theme.accent : "transparent" }
     }
 }

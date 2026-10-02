@@ -63,6 +63,8 @@ Item {
     TestCase {
         name: "Settings"
         when: windowShown
+        // The ⋯ menu lives in a Popup, outside the view's item tree until opened.
+        function menuItem(name) { return findChild(view.actionsMenu.contentItem, name); }
         function startupFixture() {
             return {session: ["waybar", "systemctl --user start …"],
                 apps: [
@@ -309,27 +311,23 @@ Item {
             controller.loading = false;
             wait(20);
             compare(scroll.y,y); compare(scroll.height,height);
-            compare(findChild(view,"closeSettings").text,"Close");
+            compare(findChild(view,"closeSettings").label,"Close");
         }
         function test_status_line_only_while_saving_or_reading() {
             const status = findChild(view,"panelStatus");
             const height = status.height;
-            const reloadX = findChild(view,"reloadHyprland").x;
-            controller.busy = false; controller.loading = false; wait(20);
-            compare(status.opacity,0);
+            controller.busy = false; controller.loading = false; wait(1700);
+            tryCompare(status,"opacity",0);
             controller.busy = true; wait(20);
-            compare(status.text,"Saving changes…");
-            verify(status.opacity > 0);
+            compare(status.text,"Saving…");
+            tryVerify(() => status.opacity > 0);
             compare(status.height,height,"showing a status does not shift the layout");
-            compare(findChild(view,"reloadHyprland").x,reloadX,"the actions stay put");
+            // Every write is followed by a refresh: "Saved" must survive it, then give way.
             controller.busy = false; controller.loading = true; wait(20);
-            compare(status.text,"Reading settings…");
-            controller.loading = false; wait(20);
-        }
-        function test_panel_title_has_waybar_cog() {
-            const icon = findChild(view,"panelIcon");
-            verify(icon.visible);
-            compare(icon.text.codePointAt(0),0xf08bb);
+            compare(status.text,"Saved");
+            tryCompare(status,"text","Reading settings…",2500);
+            controller.loading = false; wait(1700);
+            tryCompare(status,"opacity",0);
         }
         function test_zero_label() {
             controller.select("input"); wait(20);
@@ -571,13 +569,15 @@ Item {
         function test_everything_else_waits_while_a_display_change_is_pending() {
             controller.pendingDisplay = {output:"DP-1",deadline:Date.now() + 60000}; wait(20);
             verify(!findChild(view,"toggle-blur").enabled);
-            verify(!findChild(view,"reloadHyprland").enabled);
+            verify(!menuItem("reloadHyprland").enabled);
             controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
-            for (const name of ["mainDisplay-DP-1","editDisplaysFile","automaticMainDisplay","applyDisplay-DP-1","automaticDisplay-DP-1","restartWaybar","updateSystem"])
+            for (const name of ["mainDisplay-DP-1","editDisplaysFile","automaticMainDisplay","applyDisplay-DP-1","automaticDisplay-DP-1"])
                 verify(!findChild(view,name).enabled, name + " waits");
+            for (const name of ["restartWaybar","updateSystem"])
+                verify(!menuItem(name).enabled, name + " waits");
             controller.pendingDisplay = null; controller.select("appearance"); wait(20);
             verify(findChild(view,"toggle-blur").enabled);
-            verify(findChild(view,"reloadHyprland").enabled);
+            verify(menuItem("reloadHyprland").enabled);
         }
         function test_staged_edits_survive_a_refresh() {
             controller.monitors = [pg279q()]; controller.select("monitors"); wait(20);
@@ -792,21 +792,12 @@ Item {
             mouseClick(findChild(view, "wifi-Office"));
             compare(controller.calls[controller.calls.length - 1], {op: "wifiConnect", ssid: "Office"});
         }
-        function test_page_icon_follows_category_and_search() {
-            const saved = controller.catalog;
-            controller.catalog = ({categories: [{id:"appearance",title:"Appearance",description:"",icon:"f0e0c"}, {id:"input",title:"Input",description:""}], rows: saved.rows});
-            controller.select("appearance"); wait(20);
-            const icon = findChild(view,"pageIcon");
-            verify(icon.visible);
-            compare(icon.text.codePointAt(0),0xf0e0c);
+        function test_page_title_follows_category_and_search() {
             controller.select("input"); wait(20);
-            verify(!icon.visible, "a category without an icon shows none");
+            compare(findChild(view,"pageTitle").text,"Input");
             controller.query = "blur"; wait(20);
-            compare(icon.text.codePointAt(0),0xf0349);
-            controller.query = "";
-            controller.catalog = saved;
-            controller.select("appearance");
-            wait(20);
+            compare(findChild(view,"pageTitle").text,"Search results");
+            controller.query = ""; controller.select("appearance"); wait(20);
         }
         function test_many_categories_stay_inside_the_panel() {
             const saved = controller.catalog;
@@ -815,11 +806,54 @@ Item {
             controller.catalog = ({categories: categories, rows: saved.rows});
             wait(50);
             const panel = findChild(view,"settingsPanel");
-            const close = findChild(view,"closeSettings");
-            const bottom = close.mapToItem(panel,0,close.height).y;
-            verify(bottom <= panel.height, "Close ends at " + bottom + " inside a " + panel.height + " px panel");
+            const list = findChild(view,"categoryList");
+            const bottom = list.mapToItem(panel,0,list.height).y;
+            verify(bottom <= panel.height, "the sidebar ends at " + bottom + " inside a " + panel.height + " px panel");
             controller.catalog = saved;
             wait(20);
+        }
+        function test_actions_menu_runs_maintenance() {
+            mouseClick(findChild(view,"moreActions"));
+            tryCompare(view.actionsMenu,"visible",true);
+            mouseClick(menuItem("reloadHyprland"));
+            compare(controller.calls[0], {action:"reload"});
+            tryCompare(view.actionsMenu,"visible",false);
+            mouseClick(findChild(view,"moreActions"));
+            tryCompare(view.actionsMenu,"visible",true);
+            mouseClick(menuItem("updateSystem"));
+            compare(controller.calls[1], {action:"update"});
+        }
+        function test_close_button_closes() {
+            mouseClick(findChild(view,"closeSettings"));
+            compare(controller.closed,true);
+        }
+        function test_sections_render_in_declared_order_with_actions() {
+            const saved = controller.catalog;
+            const rows = saved.rows.map(row => row.category === "appearance"
+                ? Object.assign({}, row, {section: row.kind === "toggle" ? "late" : "early"}) : row);
+            controller.catalog = ({categories: [Object.assign({}, saved.categories[0], {sections: [
+                {id:"early",title:"Early"}, {id:"late",title:"Late",actions:[{label:"Restart bar",action:"waybar"}]}]})].concat(saved.categories.slice(1)), rows: rows});
+            wait(50);
+            const early = findChild(view,"section-appearance/early"), late = findChild(view,"section-appearance/late");
+            verify(early && late);
+            verify(early.y < late.y, "declared order, not row order");
+            mouseClick(findChild(late,"sectionAction-waybar"));
+            compare(controller.calls[controller.calls.length - 1], {action:"waybar"});
+            controller.query = "blur"; wait(20);
+            const result = findChild(view,"section-appearance/late");
+            verify(result.title.indexOf("Appearance › Late") === 0);
+            controller.query = ""; controller.catalog = saved; wait(20);
+        }
+        function test_sidebar_groups_open_a_gap() {
+            const saved = controller.catalog;
+            controller.catalog = ({categories: [
+                {id:"appearance",title:"Appearance",group:"look"}, {id:"input",title:"Input",group:"look"},
+                {id:"monitors",title:"Displays",group:"hardware"}], rows: saved.rows});
+            wait(50);
+            const a = findChild(view,"nav-appearance"), b = findChild(view,"nav-input"), c = findChild(view,"nav-monitors");
+            const step = b.mapToItem(view,0,0).y - a.mapToItem(view,0,0).y;
+            compare(c.mapToItem(view,0,0).y - b.mapToItem(view,0,0).y, step + 10);
+            controller.catalog = saved; wait(20);
         }
     }
 }
