@@ -121,6 +121,18 @@ wheel scrolls by pixels only on overflow, and Esc or a click closes it.
 balancing), tested by node; the view is tested offscreen by qmltestrunner. See
 `docs/keybinds-overlay.md`.
 
+### Update popover (Waybar custom/updates)
+
+`quickshell/updates/shell.qml` is the on-demand update card started by
+`scripts/hyprland/updates-popover.sh` when the bar's updates module is clicked
+(lock, IPC toggle, cursor-anchored, exits on close). Update starts
+`scripts/updates/updates-run.sh` under `setsid`: it runs the root helper
+`/usr/local/bin/system-update` (installed from `updates/system-update-root.sh`
+by `updates/setup-sudo.sh`, one no-argument NOPASSWD rule), then Flatpak, and
+`fold.mjs` folds the stream into `$XDG_RUNTIME_DIR/updates/state.json` through
+the pure `model.mjs` the card also imports, so card and bar agree. AUR updates
+stay in the terminal (`scripts/updates/terminal.sh`). See `docs/updates.md`.
+
 ### Settings panel (Super+I)
 
 `quickshell/settings-panel/shell.qml` starts on demand through
@@ -325,6 +337,7 @@ scripts/doctor/
 │   ├── binaries.sh          # check_binaries   — from Lua keybind/autostart hl.exec_cmd() calls
 │   ├── services.sh          # check_services   — from autostart daemons, D-Bus roles, install.sh arrays
 │   ├── sddm.sh              # check_sddm       — from sddm/setup-sudo.sh and the live SDDM configuration
+│   ├── updates.sh           # check_updates    — from updates/setup-sudo.sh and sudo -l
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
 │   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
 │   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
@@ -333,6 +346,6 @@ scripts/doctor/
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_way_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

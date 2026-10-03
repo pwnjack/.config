@@ -29,6 +29,8 @@ weakauras-companion
 # LOG FILES
 # -------------------------------------------------------------------------------
 *.log
+# Update card test fixtures are runner logs the suite replays
+!quickshell/updates/test/fixtures/*.log
 logs/
 **/logs/
 

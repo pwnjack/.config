@@ -1,0 +1,261 @@
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import * as model from '../model.mjs'
+
+const fixture = name => readFileSync(new URL(`./fixtures/${name}.log`, import.meta.url), 'utf8')
+
+// Fold a log 100 ms per line, starting at epoch 1000 s, and record every
+// intermediate progress value so monotonicity can be checked.
+function fold(name) {
+    let state = model.initialState(1000)
+    const seen = []
+    fixture(name).split('\n').forEach((line, i) => {
+        state = model.foldLine(state, line, 1000 * 1000 + i * 100)
+        seen.push(state.progress)
+    })
+    return { state, snap: model.snapshot(state), seen }
+}
+
+// Every fixture: progress only moves forward and stays within [0, 1].
+for (const name of ['routine', 'kernel', 'conflict', 'midfail', 'busy', 'sudo', 'nothing', 'flatpak', 'verbose', 'mirror', 'depfail', 'fetchfail', 'captured']) {
+    const { seen } = fold(name)
+    seen.forEach((p, i) => {
+        assert.ok(p >= 0 && p <= 1, `${name}: progress ${p} out of range`)
+        if (i) assert.ok(p >= seen[i - 1], `${name}: progress went back at line ${i + 1}`)
+    })
+}
+
+// Routine run: done, full bar, counts from the Packages header.
+{
+    const { snap } = fold('routine')
+    assert.equal(snap.status, 'done')
+    assert.equal(snap.progress, 1)
+    assert.equal(snap.total, 3)
+    assert.equal(snap.done, 3)
+    assert.equal(snap.totalBytes, 115867648)
+    assert.equal(snap.errorKind, '')
+}
+
+// A real run captured on this machine (VerbosePkgLists header, both kernel
+// flavours replaced, DKMS and initramfs hooks; machine-id zeroed): it must
+// fold to a full bar and name the running flavour's new kernel.
+{
+    const { snap } = fold('captured')
+    assert.equal(snap.status, 'restart')
+    assert.equal(snap.restart, '7.2.9-1-cachyos')
+    assert.equal(snap.progress, 1)
+    assert.equal(snap.total, 6)
+    assert.equal(snap.done, 6)
+    assert.ok(snap.totalBytes > 400 * 1024 ** 2, `captured: download size ${snap.totalBytes}`)
+}
+
+// Phase weights at the boundaries the card relies on.
+{
+    let s = model.initialState(0)
+    const step = line => { s = model.foldLine(s, line, 0); return s.progress }
+    step(':: Synchronizing package databases...')
+    assert.equal(step(':: Starting full system upgrade...'), 0.03)
+    step('Total Download Size:    100.00 MiB')
+    step(':: Retrieving packages...')
+    assert.ok(Math.abs(step('@@bytes 52428800') - 0.24) < 1e-9, 'half the bytes is 3% + 21%')
+    assert.equal(step('checking keyring...'), 0.45)
+    step('Packages (4) a-1 b-1 c-1 d-1')
+    assert.equal(step(':: Processing package changes...'), 0.47)
+    assert.ok(Math.abs(step('upgrading a...') - (0.47 + 0.45 / 4)) < 1e-9)
+    assert.equal(s.line, 'Installing a · 1 of 4')
+    assert.equal(step(':: Running post-transaction hooks...'), 0.92)
+    assert.ok(Math.abs(step('(1/2) Arming ConditionNeedsUpdate...') - 0.95) < 1e-9)
+    assert.equal(s.line, 'Arming ConditionNeedsUpdate')
+}
+
+// The status line: download text carries sizes and a smoothed rate. The
+// first sample at t=0 must count as a baseline.
+{
+    let s = model.initialState(0)
+    s = model.foldLine(s, 'Total Download Size:    400.00 MiB', 0)
+    s = model.foldLine(s, ':: Retrieving packages...', 0)
+    s = model.foldLine(s, '@@bytes 0', 0)
+    s = model.foldLine(s, '@@bytes 10485760', 1000)
+    assert.equal(s.key, 'download')
+    assert.equal(s.line, 'Downloading · 10 MiB of 400 MiB · 10.0 MiB/s')
+}
+
+// Pre-transaction hook lines show their description without moving the bar.
+{
+    let s = model.initialState(0)
+    s = model.foldLine(s, 'checking for file conflicts...', 0)
+    const before = s.progress
+    s = model.foldLine(s, '(1/1) Performing snapper pre snapshots for the following configurations...', 0)
+    assert.equal(s.progress, before)
+    assert.equal(s.line, 'Performing snapper pre snapshots for the following configurations')
+    assert.equal(s.key, 'pre1')
+}
+
+// Kernel replaced: restart, with the new module directory name.
+{
+    const { snap } = fold('kernel')
+    assert.equal(snap.status, 'restart')
+    assert.equal(snap.restart, '7.2.9-1-cachyos')
+    assert.equal(model.result(snap).title, 'Restart to finish')
+}
+
+// Conflict before the transaction: attention, nothing changed, pacman's words.
+{
+    const { snap } = fold('conflict')
+    assert.equal(snap.status, 'attention')
+    assert.equal(snap.errorKind, 'pacman')
+    assert.equal(snap.error, 'failed to commit transaction (conflicting files)')
+    assert.match(snap.detail, /exists in filesystem/)
+    const r = model.result(snap)
+    assert.equal(r.subtitle, 'The update stopped before changing anything.')
+    assert.equal(r.terminal, 'pacman')
+}
+
+// An unrecorded outcome is never described as "nothing changed".
+{
+    const r = model.result({ status: 'attention', errorKind: 'unknown', error: 'x', detail: '', startedAt: 0, finishedAt: 5, total: 0, done: 0 })
+    assert.equal(r.title, 'Update status unknown')
+    assert.match(r.subtitle, /progress was not recorded/)
+    assert.doesNotMatch(r.subtitle, /before changing anything/)
+    assert.equal(r.terminal, 'pacman')
+}
+
+// Failure inside the transaction never claims nothing changed.
+{
+    const { snap } = fold('midfail')
+    assert.equal(snap.status, 'failed')
+    assert.equal(snap.error, 'could not extract /usr/lib/libc.so.6 (Write failed)')
+    assert.equal(model.result(snap).title, 'The update did not finish')
+    assert.doesNotMatch(model.result(snap).subtitle, /before changing anything/)
+}
+
+// VerbosePkgLists header: the total is still learned, and the run ends done.
+{
+    const { snap } = fold('verbose')
+    assert.equal(snap.status, 'done')
+    assert.equal(snap.total, 2)
+    assert.equal(snap.done, 2)
+    assert.match(model.result(snap).subtitle, /^2 packages updated in /)
+    // Even if the total were missed, the installed count still reads as updated.
+    assert.match(model.result({ ...snap, total: 0 }).subtitle, /^2 packages updated in /)
+}
+
+// A failing mirror is not the error; the later real conflict is.
+{
+    const { snap } = fold('mirror')
+    assert.equal(snap.error, 'failed to commit transaction (conflicting files)')
+    assert.match(snap.detail, /exists in filesystem/)
+}
+
+// Dependency explanations arrive as "::" lines; they are the detail.
+{
+    const { snap } = fold('depfail')
+    assert.equal(snap.status, 'attention')
+    assert.equal(snap.error, 'failed to prepare transaction (could not satisfy dependencies)')
+    assert.equal(snap.detail, "installing foo (2-1) breaks dependency 'foo=1' required by bar")
+}
+
+// When downloads truly fail, the last retrieval failure is the reason.
+{
+    const { snap } = fold('fetchfail')
+    assert.equal(snap.error, 'failed to commit transaction (failed to retrieve some files)')
+    assert.match(snap.detail, /^failed retrieving file 'b-1-1-any\.pkg\.tar\.zst'/)
+}
+
+// Detail never grabs a progress line, and loses pacman's "error: " prefix.
+{
+    assert.equal(fold('midfail').snap.detail, 'problem occurred while upgrading glibc')
+    let s = model.initialState(0)
+    s = model.foldLine(s, 'error: something odd', 0)
+    s = model.foldLine(s, 'checking keyring...', 0)
+    assert.equal(s.detail, '')
+}
+
+// A new kernel keeps its restart prompt when Flatpak fails too.
+{
+    let s = model.initialState(1000)
+    for (const l of ['@@helper-exit 0', '@@restart 7.2.9-1-cachyos', '@@phase flatpak', 'error: no bus', '@@flatpak-exit 1'])
+        s = model.foldLine(s, l, 0)
+    assert.equal(model.snapshot(s).status, 'running')
+    assert.equal(model.snapshot(s).errorKind, '')
+    assert.equal(model.result(model.snapshot(s)), null)
+    s = model.foldLine(s, '@@end', 5000)
+    const snap = model.snapshot(s)
+    assert.equal(snap.status, 'restart')
+    assert.equal(snap.errorKind, 'flatpak')
+    const r = model.result(snap)
+    assert.match(r.subtitle, /Flatpak apps did not update\.$/)
+    assert.equal(r.terminal, 'flatpak')
+}
+
+// Busy, sudo, flatpak and nothing-to-do outcomes.
+assert.equal(fold('busy').snap.errorKind, 'busy')
+assert.equal(model.result(fold('busy').snap).title, 'Already updating')
+assert.equal(fold('sudo').snap.errorKind, 'sudo')
+assert.equal(model.result(fold('sudo').snap).title, 'One-click updates are not set up')
+assert.equal(fold('flatpak').snap.status, 'attention')
+assert.equal(fold('flatpak').snap.errorKind, 'flatpak')
+assert.equal(model.result(fold('flatpak').snap).terminal, 'flatpak')
+assert.equal(fold('nothing').snap.status, 'done')
+assert.equal(fold('nothing').snap.nothing, true)
+assert.equal(model.result(fold('nothing').snap).subtitle, 'Nothing needed updating')
+
+// A stream that ends without the helper's exit is not left running once the fold closes it.
+{
+    let s = model.initialState(0)
+    s = model.foldLine(s, ':: Processing package changes...', 0)
+    s = model.foldLine(s, '@@end', 5000)
+    assert.equal(model.snapshot(s).status, 'failed')
+}
+
+// Done copy uses the run's duration.
+{
+    const snap = { ...fold('routine').snap, startedAt: 1000, finishedAt: 1102 }
+    assert.equal(model.result(snap).subtitle, '3 packages updated in 1m 42s')
+}
+
+// Summary copy.
+assert.deepEqual(model.summary(null), { title: 'Checking for updates…', subtitle: 'Syncing package databases', count: 0, repo: 0, canUpdate: false, aur: '' })
+{
+    const plan = { repo: [{ name: 'a' }, { name: 'b' }], aur: [{ name: 'c' }], bytes: 434110464, kernel: true }
+    assert.deepEqual(model.summary(plan), {
+        title: '3 updates', subtitle: '414 MiB to download · restart needed after',
+        count: 3, repo: 2, canUpdate: true, aur: '1 of them from the AUR',
+    })
+    assert.equal(model.summary({ ...plan, bytes: 0 }).subtitle, 'Already downloaded · restart needed after')
+    assert.equal(model.summary({ repo: [], aur: [{ name: 'c' }], bytes: 0, kernel: false }).canUpdate, false)
+    assert.equal(model.summary({ repo: [], aur: [], bytes: 0, kernel: false }).title, 'Up to date')
+    assert.equal(model.summary(null, 'checkupdates failed').title, 'Could not check for updates')
+}
+
+// Version tail: only the changed part, backed up to the start of its token.
+assert.deepEqual(model.versionTail('1:26.2.1-1', '1:26.2.2-1'), ['1:26.2.', '2-1'])
+assert.deepEqual(model.versionTail('152.0-1', '152.0.1-1'), ['152.', '0.1-1'])
+assert.deepEqual(model.versionTail('580.95.05-1', '580.105.08-1'), ['580.', '105.08-1'])
+assert.deepEqual(model.versionTail('8.17.0-1', '8.17.0-2'), ['8.17.0-', '2'])
+assert.equal(model.versionMarkup('1.0-1', '1.0-2', '#6097a1'), '1.0-<font color="#6097a1">2</font>')
+assert.equal(model.versionMarkup('1<2', '1<3', '#fff'), '1&lt;<font color="#fff">3</font>')
+
+// A warning between the error and its explanation does not swallow the explanation.
+{
+    let s = model.initialState(0)
+    for (const line of ['error: failed to commit transaction (invalid or corrupted package)',
+                        'warning: something', 'x.pkg is invalid or corrupted'])
+        s = model.foldLine(s, line, 0)
+    assert.equal(s.detail, 'x.pkg is invalid or corrupted')
+}
+
+// Sizes and durations.
+assert.equal(model.mib(0), '0 MiB')
+assert.equal(model.mib(512 * 1024), '512 KiB')
+assert.equal(model.mib(434110464), '414 MiB')
+assert.equal(model.mib(1.5 * 1024 ** 3), '1.5 GiB')
+assert.equal(model.duration(42), '42s')
+assert.equal(model.duration(102), '1m 42s')
+
+// Glide: eases toward the target, never backward, snaps when close.
+assert.equal(model.glide(0.5, 0.4, 0.016), 0.5)
+assert.ok(model.glide(0, 1, 0.016) > 0 && model.glide(0, 1, 0.016) < 0.1)
+assert.equal(model.glide(0.9996, 1, 0.016), 1)
+
+console.log('model: ok')
