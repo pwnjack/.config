@@ -98,6 +98,15 @@ for (const name of ['routine', 'kernel', 'conflict', 'midfail', 'busy', 'sudo', 
     assert.equal(r.terminal, 'pacman')
 }
 
+// An unrecorded outcome is never described as "nothing changed".
+{
+    const r = model.result({ status: 'attention', errorKind: 'unknown', error: 'x', detail: '', startedAt: 0, finishedAt: 5, total: 0, done: 0 })
+    assert.equal(r.title, 'Update status unknown')
+    assert.match(r.subtitle, /progress was not recorded/)
+    assert.doesNotMatch(r.subtitle, /before changing anything/)
+    assert.equal(r.terminal, 'pacman')
+}
+
 // Failure inside the transaction never claims nothing changed.
 {
     const { snap } = fold('midfail')

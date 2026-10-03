@@ -64,7 +64,7 @@ newest_modules() {
 # snapshot_fallback — a terminal state.json written without the model, for when
 # every fold failed. Same fields as model.snapshot().
 snapshot_fallback() {
-    printf '{"status":"attention","phase":"sync","key":"sync","line":"","progress":0,"done":0,"total":0,"bytes":0,"totalBytes":0,"error":"The update ran, but its progress could not be recorded","detail":"See run.log","errorKind":"pacman","restart":"","nothing":false,"startedAt":%s,"finishedAt":%s}\n' \
+    printf '{"status":"attention","phase":"sync","key":"sync","line":"","progress":0,"done":0,"total":0,"bytes":0,"totalBytes":0,"error":"The update ran, but its progress was not recorded","detail":"See run.log","errorKind":"unknown","restart":"","nothing":false,"startedAt":%s,"finishedAt":%s}\n' \
         "$started" "$(date +%s)" > "$state_dir/state.json.fallback" \
         && mv -f "$state_dir/state.json.fallback" "$state_dir/state.json"
 }
@@ -97,5 +97,12 @@ if [ "${pipe[2]}" -ne 0 ] || grep -q '"status":"running"' "$state_dir/state.json
     if [ ! -e "$state_dir/state.json" ] || grep -q '"status":"running"' "$state_dir/state.json"; then
         snapshot_fallback
     fi
+fi
+
+# Release the lock BEFORE the last signal: fold.mjs signals Waybar on its final
+# write while the lock is still held, and the bar reads a held lock as running.
+exec 8>&-
+if [ "${UPDATES_SIGNAL-}" != none ]; then
+    pkill -RTMIN+9 waybar >/dev/null 2>&1 || true
 fi
 exit 0

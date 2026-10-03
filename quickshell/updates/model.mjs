@@ -254,6 +254,10 @@ export function result(snap) {
     case 'flatpak':
         return { kind: 'attention', tone: 'warn', title: 'Flatpak apps did not update',
                  subtitle: 'System packages are up to date.', reason: reasonText(snap), terminal: 'flatpak' }
+    case 'unknown':
+        return { kind: 'attention', tone: 'warn', title: 'Update status unknown',
+                 subtitle: 'The update ran, but its progress was not recorded. Check run.log or a terminal.',
+                 reason: reasonText(snap), terminal: 'pacman' }
     }
     return { kind: 'attention', tone: 'warn', title: 'Needs your attention',
              subtitle: 'The update stopped before changing anything.', reason: reasonText(snap), terminal: 'pacman' }

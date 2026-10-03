@@ -65,7 +65,16 @@ fi
 # later, and after a SIGKILL the file still says running with the lock free.
 # So a held lock means running (0% until a snapshot exists), and a "running"
 # file with a free lock is stale.
-if [ -e "$STATE_DIR/run.lock" ] && ! flock -n "$STATE_DIR/run.lock" true 2>/dev/null; then
+# The probe reads /proc/locks (as quickshell/updates/shell.qml does) instead of
+# trying the lock: a momentary flock -n here could make a starting runner find
+# the lock taken and exit as busy.
+lock_held() {
+    local f=$1 maj min ino
+    [ -e "$f" ] || return 1
+    read -r maj min ino < <(stat -L -c '%Hd %Ld %i' -- "$f") || return 1
+    grep -q " $(printf '%02x:%02x:%s' "$maj" "$min" "$ino") " /proc/locks 2>/dev/null
+}
+if lock_held "$STATE_DIR/run.lock"; then
     run_status=running
 elif [ "$run_status" = running ]; then
     run_status=''

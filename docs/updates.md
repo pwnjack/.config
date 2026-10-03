@@ -83,7 +83,7 @@ The helper's markers, folded unprivileged (keep the root file small):
 
 | Marker | Meaning |
 |---|---|
-| `@@phase download` / `install` | before `pacman -Syuw` / `pacman -Su` |
+| `@@phase download` / `install` | before `pacman -Syuw` / `pacman -Su`; `download` is informational, the model enters the download phase from pacman's `:: Retrieving packages` line |
 | `@@bytes <n>` | every 0.5 s while downloading: bytes added to the cache |
 | `@@busy` | another update holds `/run/system-update.lock` (exit 75) |
 
@@ -92,8 +92,9 @@ The runner adds `@@helper-exit <n>`, `@@phase flatpak`, `@@flatpak-exit <n>`,
 
 `state.json` is `model.snapshot()`: `status` (`running`, `done`, `restart`,
 `failed`, `attention`), `phase`, `key`, `line`, `progress` (0–1), `done`,
-`total`, `bytes`, `totalBytes`, `error`, `detail`, `errorKind` (`pacman`,
-`busy`, `sudo`, `flatpak`), `restart` (the kernel to boot), `nothing`,
+`total`, `bytes`, `totalBytes`, `error`, `detail`, `errorKind` (`''` while
+running or on success, `pacman`, `transaction`, `busy`, `sudo`, `flatpak`,
+`unknown`), `restart` (the kernel to boot), `nothing`,
 `startedAt`, `finishedAt`. `fold.mjs` replaces the file by rename and signals
 Waybar. `ack` sits beside it and holds the `finishedAt` of the last result the
 card showed; the bar keeps an unseen restart or attention class until

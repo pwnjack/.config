@@ -63,7 +63,7 @@ ShellRoot {
     // The run is dead and state.json does not say how it ended.
     function showLost() {
         const now = Math.floor(Date.now() / 1000);
-        run = { status: "failed", errorKind: "transaction", progress: 0, total: 0, done: 0, restart: "",
+        run = { status: "attention", errorKind: "unknown", progress: 0, total: 0, done: 0, restart: "",
                 error: "The update stopped without reporting how it ended.",
                 detail: "Its log is " + stateDir + "/run.log",
                 startedAt: requestedAt || now, finishedAt: now };

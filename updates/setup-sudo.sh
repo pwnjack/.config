@@ -33,8 +33,8 @@ if [[ ! -f "$ROOT_SCRIPT" ]]; then
 fi
 
 # The exact command sudo lists for this rule: the helper followed by "",
-# sudoers' spelling of "no arguments allowed". Task 9 confirms the spelling
-# against the live `sudo -l`.
+# sudoers' spelling of "no arguments allowed". The spelling is confirmed on
+# first setup: the final check fails loudly if sudo lists it differently.
 GRANTED_COMMAND="$INSTALLED_HELPER \"\""
 
 listing_has_current_grant() {

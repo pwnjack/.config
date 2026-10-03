@@ -173,6 +173,27 @@ printf '%s\n' ':: Starting full system upgrade...' '@@helper-exit 0' \
     | UPDATES_SIGNAL=none node "$FOLD_JS" "$TMP/fold/state.json" 1000
 assert_json_field "$(cat "$TMP/fold/state.json")" .status "done" "a stream ending without @@end is closed by the fold"
 
+echo "final bar signal"
+# A fake pkill (first on PATH, so fold.mjs's signals reach it too) records
+# whether run.lock is held at each call; the last call is the runner's own.
+mkdir -p "$TMP/pbin"
+cat > "$TMP/pbin/pkill" <<'FAKE'
+#!/bin/bash
+echo "$*" > "$TMP_SIGNAL/args"
+if flock -n "$TMP_SIGNAL/state/run.lock" true; then echo free > "$TMP_SIGNAL/lock"; else echo held > "$TMP_SIGNAL/lock"; fi
+FAKE
+chmod +x "$TMP/pbin/pkill"
+export TMP_SIGNAL="$TMP/sig"
+helper 0 ':: Processing package changes...' 'upgrading foo...'
+rm -rf "$TMP/sig" "$TMP/state" "$TMP/modules"
+mkdir -p "$TMP/sig" "$TMP/modules/$UPDATES_KERNEL" "$TMP/state"
+ln -s "$TMP/state" "$TMP/sig/state"
+env -u UPDATES_SIGNAL PATH="$TMP/pbin:$PATH" UPDATES_HELPER="$TMP/helper" UPDATES_STATE_DIR="$TMP/state" \
+    UPDATES_MODULES_DIR="$TMP/modules" bash "$RUNNER"
+assert_eq "$(cat "$TMP/sig/lock" 2>/dev/null)" free "the final bar signal comes after run.lock is released"
+assert_eq "$(cat "$TMP/sig/args" 2>/dev/null)" "-RTMIN+9 waybar" "and is the bar's refresh signal"
+rm -rf "$TMP/sig"
+
 echo "flatpak"
 cat > "$TMP/flatpak" <<'EOF'
 #!/bin/bash
