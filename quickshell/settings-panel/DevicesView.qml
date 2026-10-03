@@ -12,7 +12,7 @@ SettingsSection {
     objectName: "devicesView"
     readonly property var model: controller.devices
     readonly property bool ready: Array.isArray(model)
-    readonly property var glyphs: ({gamepad: 0xF0297, mouse: 0xF037D, keyboard: 0xF030C, other: 0xF0FB0})
+    readonly property var glyphs: ({gamepad: 0xF0297, mouse: 0xF037D, keyboard: 0xF030C, headset: 0xF02CB, other: 0xF0FB0})
     function value(d) {
         if (d.percent !== null && d.percent !== undefined) return d.percent + "%";
         if (d.level) return d.level.charAt(0).toUpperCase() + d.level.slice(1);

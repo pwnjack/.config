@@ -27,6 +27,33 @@ supply() {
     [ "$dev" = - ] || ln -s "../../../devices/$dev" "$r/sys/class/power_supply/$name/device"
 }
 run() { DEVICES_SYSFS="$1/sys" DEVICES_UDEV="$1/udev" bash "$DEVICES"; }
+# Fixtures never ask a real headset; headset tests name a stand-in.
+export DEVICES_HEADSETCONTROL=
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/headsetcontrol" <<'STUB'
+#!/bin/sh
+[ "$*" = "--timeout 1000 -b -o json" ] || exit 2
+[ -n "${HC_SLEEP:-}" ] && sleep "$HC_SLEEP"
+cat "$HC_JSON"
+STUB
+chmod +x "$TMP/bin/headsetcontrol"
+# dongle <root> <usbpath> <vid> <pid> — a USB device listed on the USB bus
+dongle() {
+    usb "$1" "$2" "Headset Dongle"
+    echo "$3" > "$1/sys/devices/$2/idVendor"; echo "$4" > "$1/sys/devices/$2/idProduct"
+    mkdir -p "$1/sys/bus/usb/devices"
+    ln -s "../../../devices/$2" "$1/sys/bus/usb/devices/${2##*/}"
+}
+# headset <status> <level> [device-status] [capability] [count] — headsetcontrol
+# JSON for count identical G533s (one by default)
+headset() {
+    local one i out=""
+    one=$(printf '{"status":"%s","device":"Logitech G533","id_vendor":"0x046d","id_product":"0x0A66","capabilities":["CAP_SIDETONE","%s"],"battery":{"status":"%s","level":%s}}' \
+        "${3:-success}" "${4:-CAP_BATTERY_STATUS}" "$1" "$2")
+    for ((i = 0; i < ${5:-1}; i++)); do out+="${out:+,}$one"; done
+    printf '{"devices":[%s]}' "$out" > "$TMP/hc.json"
+}
+hc() { DEVICES_HEADSETCONTROL="$TMP/bin/headsetcontrol" HC_JSON="$TMP/hc.json" run "$@"; }
 field() { jq -r --arg id "$2" ".[] | select(.id == \$id) | .$3" <<<"$1"; }
 
 echo "devices.sh"
@@ -131,5 +158,61 @@ input "$r" usb1/1-9/hid.1 9 MOUSE
 usb "$r" usb1/1-2 "Earlier Receiver"
 input "$r" usb1/1-2/hid.2 2 KEYBOARD
 assert_eq "$(run "$r" | jq -c 'map(.id)')" '["a_battery","z_battery","1-2","1-9"]' "sorted batteries precede sorted receivers"
+
+r=$(root)
+dongle "$r" usb1/1-2 046d 0a66
+input "$r" usb1/1-2/1-2:1.3/hid.1 5 KEY KEYBOARD
+headset BATTERY_AVAILABLE 80
+out=$(hc "$r")
+assert_eq "$(jq -c 'map(.id)' <<<"$out")" '["1-2"]' "a headset is named by its dongle and replaces the dongle's receiver row"
+assert_eq "$(field "$out" 1-2 kind)" headset "a headsetcontrol device is a headset"
+assert_eq "$(field "$out" 1-2 name)" "Logitech G533" "headset name is headsetcontrol's device"
+assert_eq "$(field "$out" 1-2 percent)" 80 "headset percent is read"
+assert_eq "$(field "$out" 1-2 state)" connected "a headset with a level is connected"
+assert_eq "$(field "$out" 1-2 charging)" false "available is not charging"
+
+headset BATTERY_CHARGING 65
+assert_eq "$(field "$(hc "$r")" 1-2 charging)" true "BATTERY_CHARGING is charging"
+headset BATTERY_AVAILABLE 8
+assert_eq "$(field "$(hc "$r")" 1-2 alert)" critical "a headset under 10% alerts critical"
+
+# headsetcontrol 4.0's shape for a headset that is off, timed out or erroring.
+headset BATTERY_UNAVAILABLE -1 partial
+out=$(hc "$r")
+assert_eq "$(field "$out" 1-2 state)" asleep "a partial headset without a level is asleep"
+assert_eq "$(field "$out" 1-2 percent)" null "-1 is no level"
+assert_eq "$(field "$out" 1-2 alert)" none "an asleep headset never alerts"
+headset BATTERY_HIDERROR 40
+assert_eq "$(field "$(hc "$r")" 1-2 state)" asleep "an error status ignores its level"
+
+headset BATTERY_AVAILABLE 80 failure
+assert_eq "$(jq -c 'map(.id)' <<<"$(hc "$r")")" '["1-2"]' "a failed headsetcontrol device leaves the plain receiver row"
+assert_eq "$(field "$(hc "$r")" 1-2 kind)" keyboard "the dongle keeps its own classification"
+headset BATTERY_UNAVAILABLE -1 success CAP_LIGHTS
+assert_eq "$(field "$(hc "$r")" 1-2 kind)" keyboard "a device that cannot report a battery is not a headset row"
+
+r=$(root)
+headset BATTERY_AVAILABLE 50
+assert_eq "$(jq -c 'map(.id)' <<<"$(hc "$r")")" '["headset-046d-0a66"]' "an unmatched headset is named by its USB id"
+headset BATTERY_AVAILABLE 50 success CAP_BATTERY_STATUS 2
+assert_eq "$(jq -c 'map(.id)' <<<"$(hc "$r")")" '["headset-046d-0a66","headset-046d-0a66-2"]' "identical unmatched headsets keep distinct ids"
+
+r=$(root)
+dongle "$r" usb1/1-3 046d 0a66
+input "$r" usb1/1-3/1-3:1.2/hid.1 6 MOUSE
+supply "$r" hidpp_battery_1 usb1/1-3/1-3:1.2/hid.1 TYPE=Battery SCOPE=Device CAPACITY=40
+headset BATTERY_AVAILABLE 50
+assert_eq "$(jq -c 'map(.id)' <<<"$(hc "$r")")" '["headset-046d-0a66","hidpp_battery_1"]' "a dongle already holding a battery is not claimed twice"
+
+r=$(root)
+supply "$r" m - TYPE=Battery SCOPE=Device CAPACITY=50
+printf 'not json' > "$TMP/hc.json"
+assert_eq "$(jq -c 'map(.id)' <<<"$(DEVICES_HEADSETCONTROL="$TMP/bin/headsetcontrol" HC_JSON="$TMP/hc.json" run "$r")")" '["m"]' "unreadable headsetcontrol output adds nothing"
+assert_eq "$(jq -c 'map(.id)' <<<"$(DEVICES_HEADSETCONTROL="$TMP/missing" run "$r")")" '["m"]' "a missing headsetcontrol adds nothing"
+headset BATTERY_AVAILABLE 50
+start=$SECONDS
+out=$(HC_SLEEP=10 hc "$r")
+assert_eq "$(jq -c 'map(.id)' <<<"$out")" '["m"]' "a hung headsetcontrol is abandoned"
+if ((SECONDS - start < 5)); then pass "a hung headsetcontrol costs at most its timeout"; else fail "a hung headsetcontrol costs at most its timeout" "took $((SECONDS - start)) s"; fi
 
 test_summary

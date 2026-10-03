@@ -107,6 +107,8 @@ PACKAGES=(
     # Applets and controls
     "pavucontrol" "blueman" "nm-connection-editor"
     "gnome-calculator"
+    # Headset battery, for scripts/devices/devices.sh
+    "headsetcontrol"
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
     # Isolated deployment/hook fixtures and panel persistence tests

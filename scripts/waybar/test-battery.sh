@@ -286,6 +286,18 @@ ln -s ../../../devices/usb1/1-13 "$root/sys/class/power_supply/gip0.0/device"
 out=$(DEVICES_SYSFS="$root/sys" DEVICES_UDEV="$root/udev" run "$root/sys/class/power_supply")
 assert_json_contains "$out" '.text' $'\U000f0297' "joystick input renders a gamepad glyph"
 
+# A headset reports through headsetcontrol, never sysfs.
+mkdir -p "$TMP/hc"
+cat > "$TMP/hc/headsetcontrol" <<'STUB'
+#!/bin/sh
+echo '{"devices":[{"status":"success","device":"Logitech G533","id_vendor":"0x046d","id_product":"0x0a66","capabilities":["CAP_BATTERY_STATUS"],"battery":{"status":"BATTERY_AVAILABLE","level":5}}]}'
+STUB
+chmod +x "$TMP/hc/headsetcontrol"
+r=$(fixture)
+out=$(DEVICES_SYSFS="$TMP/empty-sys" DEVICES_HEADSETCONTROL="$TMP/hc/headsetcontrol" run "$r")
+assert_json_contains "$out" '.text' $'\U000f02cb' "a low headset renders a headphones glyph"
+assert_silent "$(DEVICES_SYSFS="$TMP/empty-sys" PATH="$TMP/hc:$PATH" run "$r")" "a fixture never asks a real headset"
+
 r=$(fixture)
 supply "$r" BAT0 POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_CAPACITY=64
 supply "$r" pad POWER_SUPPLY_TYPE=Battery POWER_SUPPLY_SCOPE=Device POWER_SUPPLY_CAPACITY_LEVEL=Full 'POWER_SUPPLY_MODEL_NAME=Pad'

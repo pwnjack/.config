@@ -4,7 +4,7 @@
 # reader behind the Waybar battery module, its low-battery notification and
 # the settings panel's Devices page, so the three can never disagree.
 #
-# One row per physical device, from two sources:
+# One row per physical device, from three sources:
 #   power_supply  SCOPE=Device nodes: a battery the kernel can read. CAPACITY
 #                 is a percentage; xone reports only CAPACITY_LEVEL.
 #   USB/BT input  an input device whose physical device holds no such battery:
@@ -14,6 +14,7 @@
 #                 Bluetooth (an hciN:M connection); BLE HID arrives through
 #                 uhid with neither parent, so a battery-less BLE device has
 #                 no row -- its battery, when it reports one, still does.
+#   headsetcontrol  USB headsets, whose battery only it can read.
 #
 # kind comes from udev's input classification, never from product names. A
 # gaming mouse also exposes a keyboard interface and a keyboard receiver a
@@ -24,7 +25,8 @@
 # keeps its last reading (ONLINE=0 is the only honest field), so it never
 # alerts.
 #
-# DEVICES_SYSFS, DEVICES_SUPPLY and DEVICES_UDEV move the roots for tests.
+# DEVICES_SYSFS, DEVICES_SUPPLY and DEVICES_UDEV move the roots for tests;
+# DEVICES_HEADSETCONTROL swaps in a stand-in binary.
 
 SYSFS=$(readlink -f "${DEVICES_SYSFS:-/sys}") || exit 1
 SUPPLY="${DEVICES_SUPPLY:-$SYSFS/class/power_supply}"
@@ -98,6 +100,54 @@ for uevent in "$SUPPLY"/*/uevent; do
     model=${model//$'\n'/ }
     rows+="${dir##*/}"$'\t'"${model//$'\t'/ }"$'\t'"$kind"$'\t'"$cap"$'\t'"$level"$'\t'"$charging"$'\t'"$state"$'\n'
 done
+
+# Headsets report their battery over a vendor HID protocol the kernel does not
+# speak, so they never get a power_supply node; headsetcontrol speaks it, and
+# without it there are simply no headset rows. Each headset is matched to its
+# dongle by USB id, which names the row and keeps the dongle out of the
+# receiver rows below. Only devices that can report a battery count. A
+# headset that is switched off, times out or errors comes back "partial" with
+# level -1 (headsetcontrol's "no level") and is asleep, like a sleeping mouse.
+# --timeout keeps headsetcontrol's own HID wait (5 s by default) inside the
+# 2 s hard stop, so a silent headset still reports itself as timed out.
+# DEVICES_HEADSETCONTROL names the binary; empty disables the source.
+HEADSETCONTROL=${DEVICES_HEADSETCONTROL-headsetcontrol}
+if [ -n "$HEADSETCONTROL" ] && command -v "$HEADSETCONTROL" >/dev/null 2>&1; then
+    declare -A unmatched=()
+    # Every field is non-empty: a tab-delimited read collapses empty fields.
+    while IFS=$'\t' read -r vid pid name status level; do
+        usb=""
+        for dev in "$SYSFS"/bus/usb/devices/*; do
+            [ -r "$dev/idVendor" ] && [ -r "$dev/idProduct" ] || continue
+            [ "$(<"$dev/idVendor")" = "$vid" ] && [ "$(<"$dev/idProduct")" = "$pid" ] || continue
+            dev=$(readlink -f "$dev") || continue
+            [ -z "${held[$dev]:-}" ] || continue
+            usb=$dev; break
+        done
+        if [ -n "$usb" ]; then
+            held[$usb]=1; id=${usb##*/}
+        else
+            id="headset-$vid-$pid" n=1
+            while [ -n "${unmatched[$id]:-}" ]; do n=$((n + 1)); id="headset-$vid-$pid-$n"; done
+            unmatched[$id]=1
+        fi
+        case "$level" in *[!0-9]*) level="" ;; esac
+        if [ -n "$level" ] && [[ $status == BATTERY_AVAILABLE || $status == BATTERY_CHARGING ]]; then
+            charging=false; [ "$status" = BATTERY_CHARGING ] && charging=true
+            rows+="$id"$'\t'"$name"$'\theadset\t'"$level"$'\t\t'"$charging"$'\tconnected\n'
+        else
+            rows+="$id"$'\t'"$name"$'\theadset\t\t\tfalse\tasleep\n'
+        fi
+    done < <(timeout -k 1 2 "$HEADSETCONTROL" --timeout 1000 -b -o json 2>/dev/null | jq -r '
+        .devices[]? | select(.status == "success" or .status == "partial")
+        | select(.capabilities // [] | index("CAP_BATTERY_STATUS")) | [
+            (.id_vendor // "" | ltrimstr("0x") | ascii_downcase | if . == "" then "-" else . end),
+            (.id_product // "" | ltrimstr("0x") | ascii_downcase | if . == "" then "-" else . end),
+            (.device // .product // "" | gsub("[\t\n]"; " ") | if . == "" then "Headset" else . end),
+            (.battery.status // "BATTERY_UNAVAILABLE"),
+            (.battery.level // -1 | tostring)
+        ] | join("\t")' 2>/dev/null)
+fi
 
 declare -A seen=()
 for i in "${!in_path[@]}"; do

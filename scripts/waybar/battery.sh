@@ -149,6 +149,8 @@ for uevent in "$SYSFS"/*/uevent; do
 done
 shopt -u nullglob
 
+# A fixture never asks a real headset, unless a test names a stand-in.
+[ -n "${BATTERY_SYSFS+x}" ] && export DEVICES_HEADSETCONTROL="${DEVICES_HEADSETCONTROL-}"
 devices=$(DEVICES_SUPPLY="$SYSFS" bash "$script_dir/../devices/devices.sh")
 # Keep notification delivery outside Waybar's exec and close its output fds.
 # Ordinary fixtures and forced screenshots never notify.
@@ -168,6 +170,7 @@ while IFS= read -r device; do
         gamepad) icon=$ICON_GAMEPAD ;;
         mouse) icon=$ICON_MOUSE ;;
         keyboard) icon=$ICON_KEYBOARD ;;
+        headset) icon=$ICON_HEADSET ;;
         *) icon=$(device_icon "$name") ;;
     esac
     tips+=("$name  $value")
