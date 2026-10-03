@@ -1,0 +1,12 @@
+@@phase download
+:: Synchronizing package databases...
+:: Starting full system upgrade...
+ there is nothing to do
+@@phase install
+:: Starting full system upgrade...
+ there is nothing to do
+@@helper-exit 0
+@@phase flatpak
+error: Unable to connect to system bus
+@@flatpak-exit 1
+@@end

@@ -1,0 +1,13 @@
+@@phase download
+:: Synchronizing package databases...
+:: Starting full system upgrade...
+Packages (2) a-1-1  b-1-1
+Total Download Size:    2.00 MiB
+:: Retrieving packages...
+error: failed retrieving file 'a-1-1-any.pkg.tar.zst' from mirror-a.example : Connection timed out
+error: failed retrieving file 'b-1-1-any.pkg.tar.zst' from mirror-b.example : The requested URL returned error: 404
+warning: failed to retrieve some files
+error: failed to commit transaction (failed to retrieve some files)
+Errors occurred, no packages were upgraded.
+@@helper-exit 1
+@@end
