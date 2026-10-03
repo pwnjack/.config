@@ -106,7 +106,9 @@ function isProgressLine(line) {
 }
 
 export function foldLine(prev, raw, nowMs = 0) {
-    const s = { ...prev }
+    // Object.assign, not object spread: Qt's V4 engine (the card imports this
+    // file) rejects `{ ...prev }` as a syntax error.
+    const s = Object.assign({}, prev)
     const line = String(raw).replace(/\r$/, '')
     let m
     // The line after pacman's first "error:" says why (the conflicting file,
