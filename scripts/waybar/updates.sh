@@ -5,8 +5,9 @@
 # There is no update notifier on this machine. The arch-update tray entry in
 # ~/.config/autostart names a binary that is not installed, and Discover's
 # notifier carries OnlyShowIn=KDE so it never starts under Hyprland. This
-# module is the replacement, and it does not duplicate the updater:
-# scripts/settings/update.sh already exists and is what the click opens.
+# module is the replacement, and it does not duplicate the updater: a click
+# opens the update card (scripts/hyprland/updates-popover.sh), and the terminal
+# path for AUR updates is scripts/updates/terminal.sh.
 #
 # THE EXIT-STATUS TRAP. Both count commands use exit status to mean "nothing
 # found", with different codes:
@@ -23,8 +24,8 @@
 # "paru -Syu"), never hardcoded. A hardcoded name would be a second source of
 # truth beside the file the settings panel and update.sh already read.
 #
-# UPDATES_REPO_CMD, UPDATES_AUR_CMD and UPDATES_AURHELPER are the test seam;
-# test-updates.sh drives them the way test-battery.sh drives BATTERY_SYSFS.
+# UPDATES_REPO_CMD, UPDATES_AUR_CMD, UPDATES_AURHELPER, UPDATES_STATE_DIR,
+# UPDATES_DB and UPDATES_LOCK_TIMEOUT are the test seam; test-updates.sh drives them the way test-battery.sh drives BATTERY_SYSFS.
 #
 
 REPO_CMD="${UPDATES_REPO_CMD:-checkupdates}"
@@ -39,27 +40,6 @@ AURHELPER_FILE="${UPDATES_AURHELPER-}"
 
 ICON=$'\U000f06b0'   # Nerd Font, Material Design: update (󰚰)
 
-# `update` verb: open the updater that already exists, then refresh the module
-# the moment it exits instead of waiting out the 30-minute interval. Signal 9
-# is this module's; custom/nightlight uses 8 for the same purpose.
-#
-# The signal is raised from INSIDE the launched command, not after the
-# launcher returns. Measured: `ghostty -e sleep 4` does block for 4s, so
-# signalling outside would work for the terminal configured today -- but
-# options/terminal is a user preference, and a single-instance or client-style
-# terminal returns the moment it hands the window off, which would fire the
-# refresh before the update had even started and then leave a stale count
-# until the next interval. Tying it to update.sh's own exit removes the
-# dependency on how the terminal behaves.
-if [ "${1-}" = "update" ]; then
-    term=$(cat "$HOME/.config/options/terminal" 2>/dev/null)
-    [ -n "$term" ] || term=ghostty
-    # shellcheck disable=SC2016  # $0 must expand in the INNER bash, not here
-    "$term" -e bash -c '"$0"; pkill -RTMIN+9 waybar' \
-        "$HOME/.config/scripts/settings/update.sh"
-    exit 0
-fi
-
 # The Bar page's mode (options/bar-updates): pending, or hidden. Hidden
 # returns before checkupdates, which syncs a pacman DB over the network.
 BAR_OPTIONS="${BAR_OPTIONS-}"
@@ -67,6 +47,58 @@ BAR_OPTIONS="${BAR_OPTIONS-}"
 mode=''
 read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-updates"
 [ "$mode" = hidden ] && exit 0
+
+# The update card's run state (scripts/updates/updates-run.sh writes it).
+# While a run is active, show its progress and return BEFORE checkupdates.
+# A finished run the card has not shown yet (ack != finishedAt) keeps a
+# class so the result is not missed: restart replaces the module, attention
+# marks the normal count.
+STATE_DIR="${UPDATES_STATE_DIR-}"
+[ -n "$STATE_DIR" ] || STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$UID}/updates"
+run_status='' run_progress=0 run_finished=0
+if [ -r "$STATE_DIR/state.json" ]; then
+    IFS=$'\t' read -r run_status run_progress run_finished < <(
+        jq -r '[.status // "", (.progress // 0), (.finishedAt // 0)] | @tsv' "$STATE_DIR/state.json" 2>/dev/null)
+fi
+# Liveness comes from run.lock, not from state.json: the runner deletes the
+# state right after taking the lock and the first snapshot follows a moment
+# later, and after a SIGKILL the file still says running with the lock free.
+# So a held lock means running (0% until a snapshot exists), and a "running"
+# file with a free lock is stale.
+if [ -e "$STATE_DIR/run.lock" ] && ! flock -n "$STATE_DIR/run.lock" true 2>/dev/null; then
+    run_status=running
+elif [ "$run_status" = running ]; then
+    run_status=''
+fi
+run_seen=false
+[ "$(cat "$STATE_DIR/ack" 2>/dev/null)" = "$run_finished" ] && run_seen=true
+
+# Nerd Font Material circle-slice-1..8, one per eighth of the run.
+SLICES=($'\U000f0a9e' $'\U000f0a9f' $'\U000f0aa0' $'\U000f0aa1'
+        $'\U000f0aa2' $'\U000f0aa3' $'\U000f0aa4' $'\U000f0aa5')
+RESTART_ICON=$'\U000f0709'   # restart
+
+if [ "$run_status" = running ]; then
+    pct=$(awk -v p="$run_progress" 'BEGIN { v = int(p * 100); if (v < 0) v = 0; if (v > 99) v = 99; print v }')
+    slice=${SLICES[$(( pct * 8 / 100 ))]}
+    jq -nc --arg text "<span size=\"large\">$slice</span> $pct%" --arg tooltip "Updating · $pct%" \
+        '{text: $text, tooltip: $tooltip, class: "running"}'
+    exit 0
+fi
+if [ "$run_status" = restart ] && ! $run_seen; then
+    jq -nc --arg text "<span size=\"large\">$RESTART_ICON</span>" \
+        '{text: $text, tooltip: "Restart to finish the update", class: "restart"}'
+    exit 0
+fi
+class=""
+case "$run_status" in attention | failed) $run_seen || class=attention ;; esac
+
+# checkupdates shares one private sync DB with scripts/updates/updates-plan.sh;
+# concurrent runs race on db.lck and one silently returns nothing, so both take
+# the same flock.
+DB="${UPDATES_DB:-${TMPDIR:-/tmp}/checkup-db-${UID}}"
+LOCK="$DB.lock"
+LOCK_TIMEOUT="${UPDATES_LOCK_TIMEOUT:-120}"
 
 # count <command> [args...] — lines of output, exit status ignored on purpose.
 count() {
@@ -78,7 +110,7 @@ count() {
 
 # repo count
 if command -v "$REPO_CMD" >/dev/null 2>&1; then
-    repo=$(count "$REPO_CMD")
+    repo=$(CHECKUPDATES_DB="$DB" count flock -w "$LOCK_TIMEOUT" "$LOCK" "$REPO_CMD")
 else
     repo=0
 fi
@@ -100,7 +132,15 @@ total=$((repo + ${aur:-0}))
 # Nothing pending: print nothing and let waybar hide the module -- the idiom
 # battery.sh and custom/media already use. The module APPEARING is the signal,
 # which is what keeps this stateless with nothing to remember or expire.
-[ "$total" -gt 0 ] || exit 0
+if [ "$total" -eq 0 ]; then
+    # An unseen failed run stays visible even with nothing pending (pacman
+    # fine, Flatpak failed): the alert class is the only trace of it.
+    if [ -n "$class" ]; then
+        jq -nc --arg text "<span size=\"large\">$ICON</span>" \
+            '{text: $text, tooltip: "The last update needs attention", class: "attention"}'
+    fi
+    exit 0
+fi
 
 # Only non-zero sides are named. "0 repo · 1 AUR" reads as a fault report
 # rather than a count, and the zero carries nothing the total does not.
@@ -129,5 +169,5 @@ text="<span size=\"large\">$ICON</span> $total"
 # Both fields are ours -- a glyph and digits, no package names, no vendor
 # strings -- so unlike battery.sh's tooltip there is no arbitrary text to
 # escape for Pango here.
-jq -nc --arg text "$text" --arg tooltip "$tooltip" \
-    '{text: $text, tooltip: $tooltip}'
+jq -nc --arg text "$text" --arg tooltip "$tooltip" --arg class "$class" \
+    '{text: $text, tooltip: $tooltip} + (if $class == "" then {} else {class: $class} end)'

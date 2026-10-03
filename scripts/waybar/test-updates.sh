@@ -25,6 +25,10 @@ trap 'rm -rf "$TMP"' EXIT
 # The user's own Bar page choice must not steer the baseline: an empty options
 # directory means the default mode. The mode test below sets its own.
 export BAR_OPTIONS="$TMP/no-options"
+# A live update run's state must not steer the baseline either.
+export UPDATES_STATE_DIR="$TMP/no-state"
+# Nor may the real checkupdates DB lock.
+export UPDATES_DB="$TMP/db"
 
 # fake <name> <exit> <line>... — a stub command on PATH that prints the given
 # lines and exits with the given status.
@@ -180,7 +184,85 @@ printf '#!/bin/bash\ntouch "%s/ran"\necho "linux 6.1 -> 6.2"\n' "$TMP" > "$TMP/b
 chmod +x "$TMP/bin/checkupdates-probe"
 out=$(BAR_OPTIONS="$TMP/opt" UPDATES_REPO_CMD="$TMP/bin/checkupdates-probe" UPDATES_AUR_CMD='' bash "$UPDATES")
 assert_eq "$out" "" "hidden prints nothing even with updates pending"
-[ ! -e "$TMP/ran" ]; assert_eq "$?" 0 "hidden never runs checkupdates"
+[ -e "$TMP/ran" ] && ran=1 || ran=0
+assert_eq "$ran" 0 "hidden never runs checkupdates"
+
+# --- the update card's run state (scripts/updates/updates-run.sh) ----------
+# While a run is active the module must not run checkupdates: it would sync a
+# DB while pacman holds the real one, and the count is about to change anyway.
+mkdir -p "$TMP/state"
+probe_ran() { [ -e "$TMP/ran" ]; }
+rm -f "$TMP/ran"
+run_state() {
+    UPDATES_STATE_DIR="$TMP/state" UPDATES_REPO_CMD="$TMP/bin/checkupdates-probe" UPDATES_AUR_CMD='' \
+        bash "$UPDATES"
+}
+
+# A live runner holds run.lock; fd 9 here plays that part (children inherit
+# the open file description, and a second flock -n on the file still fails).
+exec 9>"$TMP/state/run.lock"
+flock -n 9
+
+printf '{"status":"running","progress":0.5,"finishedAt":0}\n' > "$TMP/state/state.json"
+out=$(run_state)
+assert_json_contains "$out" .text "50%" "a running update shows its percentage"
+assert_json_field "$out" .class running "with the running class"
+probe_ran; assert_eq "$?" 1 "and never runs checkupdates"
+
+# A "running" file whose runner is gone (SIGKILL) must not stick on the bar.
+exec 9>&-
+out=$(run_state)
+assert_json_lacks "$out" .class running "a running state with no live runner is stale"
+assert_total "$out" "1" "and the module goes back to counting"
+probe_ran; assert_eq "$?" 0 "which runs checkupdates again"
+rm -f "$TMP/ran"
+
+printf '{"status":"restart","progress":1,"finishedAt":1700}\n' > "$TMP/state/state.json"
+rm -f "$TMP/state/ack"
+out=$(run_state)
+assert_json_field "$out" .class restart "an unseen restart flags the module"
+assert_json_contains "$out" .tooltip "Restart" "and says why"
+probe_ran; assert_eq "$?" 1 "without running checkupdates"
+
+echo 1700 > "$TMP/state/ack"
+out=$(run_state)
+assert_json_lacks "$out" .class restart "a seen restart is back to normal"
+rm -f "$TMP/ran"
+
+printf '{"status":"attention","progress":0.4,"finishedAt":1800}\n' > "$TMP/state/state.json"
+rm -f "$TMP/state/ack"
+out=$(run_state)
+assert_json_field "$out" .class attention "an unseen problem flags the count"
+assert_total "$out" "1" "and still counts what is pending"
+rm -f "$TMP/state/state.json" "$TMP/ran"
+
+# A held lock with no state.json yet (the runner just cleared it) is running.
+exec 9>"$TMP/state/run.lock"
+flock -n 9
+rm -f "$TMP/state/state.json" "$TMP/ran"
+out=$(run_state)
+assert_json_field "$out" .class running "a held lock with no state.json is still running"
+assert_json_contains "$out" .text "0%" "at 0%"
+probe_ran; assert_eq "$?" 1 "without running checkupdates"
+exec 9>&-
+
+# An unseen failure shows even when nothing is pending.
+fake checkupdates 2
+printf '{"status":"failed","progress":0.4,"finishedAt":1900}\n' > "$TMP/state/state.json"
+rm -f "$TMP/state/ack"
+out=$(UPDATES_STATE_DIR="$TMP/state" UPDATES_REPO_CMD=checkupdates UPDATES_AUR_CMD='' PATH="$TMP/bin:$PATH" bash "$UPDATES")
+assert_json_field "$out" .class attention "an unseen failure shows with nothing pending"
+assert_json_contains "$out" .tooltip "attention" "and says so"
+echo 1900 > "$TMP/state/ack"
+out=$(UPDATES_STATE_DIR="$TMP/state" UPDATES_REPO_CMD=checkupdates UPDATES_AUR_CMD='' PATH="$TMP/bin:$PATH" bash "$UPDATES")
+assert_eq "$out" "" "a seen failure with nothing pending is hidden again"
+rm -f "$TMP/state/state.json" "$TMP/state/ack"
+
+# checkupdates must run under the lock updates-plan.sh takes on the same DB.
+printf '#!/bin/bash\nflock -n "%s.lock" true; echo $? > "%s/lockrc"\necho "linux 6.1 -> 6.2"\n' "$TMP/db" "$TMP" > "$TMP/bin/checkupdates-lock"
+chmod +x "$TMP/bin/checkupdates-lock"
+UPDATES_REPO_CMD="$TMP/bin/checkupdates-lock" UPDATES_AUR_CMD='' bash "$UPDATES" >/dev/null
+assert_eq "$(cat "$TMP/lockrc" 2>/dev/null)" 1 "checkupdates runs while the shared DB lock is held"
 
 # --- summary ---------------------------------------------------------------
 

@@ -401,3 +401,18 @@ tooltip label {
    Emphasis comes from weight, not size, so the clock stays in the
    text tier. The weight is on the time alone, as <b> markup in the
    format scripts/waybar/clock-format.sh renders; the date stays regular. */
+
+/* ── UPDATES ─────────────────────────────────────────────────────────
+   States from scripts/waybar/updates.sh while the update card works.
+   running and restart are activity, so they take the accent like any
+   active module. */
+#custom-updates.running,
+#custom-updates.restart {
+    color: @color4;
+}
+
+/* ALERT EXCEPTION — see #pulseaudio.muted. Fixed amber, the same rung as
+   #custom-battery.low, for the same reason. */
+#custom-updates.attention {
+    color: #ffb86c;
+}

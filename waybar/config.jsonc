@@ -334,14 +334,15 @@
   // notice, the same stateless grammar custom/battery uses for peripherals.
   // The interval is long because checkupdates syncs a private pacman DB over
   // the network on every run; signal 9 is what makes a finished update clear
-  // the count immediately rather than up to half an hour later.
+  // the count immediately rather than up to half an hour later. A click opens
+  // the update card.
   "custom/updates": {
     "format": "{}",
     "return-type": "json",
     "interval": 1800,
     "signal": 9,
     "exec": "~/.config/scripts/waybar/updates.sh",
-    "on-click": "~/.config/scripts/waybar/updates.sh update",
+    "on-click": "~/.config/scripts/hyprland/updates-popover.sh",
     "on-click-right": "pkill -RTMIN+9 waybar",
   },
 
