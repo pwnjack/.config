@@ -1,0 +1,334 @@
+@@phase download
+:: Synchronizing package databases...
+ cachyos-v3 downloading...
+ cachyos-core-v3 downloading...
+ cachyos-extra-v3 downloading...
+ cachyos downloading...
+ core downloading...
+ extra downloading...
+ multilib downloading...
+ chaotic-aur downloading...
+@@bytes 0
+@@bytes 0
+@@bytes 0
+@@bytes 0
+:: Starting full system upgrade...
+@@bytes 0
+@@bytes 0
+@@bytes 0
+resolving dependencies...
+
+Package (6)                               Old Version  New Version  Net Change  Download Size
+
+cachyos-v3/linux-cachyos                  7.2.8-2      7.2.9-1        0.05 MiB     160.24 MiB
+cachyos-v3/linux-cachyos-headers          7.2.8-2      7.2.9-1        0.07 MiB      32.42 MiB
+cachyos-v3/linux-cachyos-lts              6.18.52-1    6.18.55-1      0.24 MiB     161.53 MiB
+cachyos-v3/linux-cachyos-lts-headers      6.18.52-1    6.18.55-1      2.93 MiB      59.96 MiB
+cachyos-v3/linux-cachyos-lts-nvidia-open  6.18.52-1    6.18.55-1      0.00 MiB       9.74 MiB
+cachyos-v3/linux-cachyos-nvidia-open      7.2.8-2      7.2.9-1       -0.02 MiB       9.30 MiB
+
+Total Download Size:  433.17 MiB
+
+:: Proceed with download? [Y/n] 
+:: Retrieving packages...
+ linux-cachyos-lts-6.18.55-1-x86_64_v3 downloading...
+ linux-cachyos-7.2.9-1-x86_64_v3 downloading...
+ linux-cachyos-lts-headers-6.18.55-1-x86_64_v3 downloading...
+ linux-cachyos-headers-7.2.9-1-x86_64_v3 downloading...
+ linux-cachyos-lts-nvidia-open-6.18.55-1-x86_64_v3 downloading...
+ linux-cachyos-nvidia-open-7.2.9-1-x86_64_v3 downloading...
+@@bytes 2088960
+@@bytes 5545984
+@@bytes 9019392
+@@bytes 12460032
+@@bytes 15933440
+@@bytes 19390464
+@@bytes 22880256
+@@bytes 26353664
+@@bytes 29777920
+@@bytes 33267712
+@@bytes 36708352
+@@bytes 40198144
+@@bytes 43655168
+@@bytes 47095808
+@@bytes 50569216
+@@bytes 54047024
+@@bytes 57504048
+@@bytes 60983431
+@@bytes 64440455
+@@bytes 67913863
+@@bytes 70256775
+@@bytes 73713799
+@@bytes 77187207
+@@bytes 80660615
+@@bytes 84101255
+@@bytes 87574663
+@@bytes 91031687
+@@bytes 94488711
+@@bytes 97962119
+@@bytes 101419143
+@@bytes 104876167
+@@bytes 108333191
+@@bytes 111806599
+@@bytes 115263623
+@@bytes 118720647
+@@bytes 122194055
+@@bytes 125651079
+@@bytes 129108103
+@@bytes 132581511
+@@bytes 136054919
+@@bytes 138414215
+@@bytes 141887623
+@@bytes 145344647
+@@bytes 148834439
+@@bytes 152239654
+@@bytes 155713062
+@@bytes 159153702
+@@bytes 162610726
+@@bytes 166084134
+@@bytes 169557542
+@@bytes 173014566
+@@bytes 176471590
+@@bytes 179928614
+@@bytes 183385638
+@@bytes 186859046
+@@bytes 190332454
+@@bytes 193773094
+@@bytes 197246502
+@@bytes 200719910
+@@bytes 204176934
+@@bytes 207420966
+@@bytes 210845222
+@@bytes 214302246
+@@bytes 217759270
+@@bytes 221232678
+@@bytes 224673318
+@@bytes 228146726
+@@bytes 231620134
+@@bytes 235077158
+@@bytes 238480539
+@@bytes 241937563
+@@bytes 245410971
+@@bytes 248867995
+@@bytes 252341403
+@@bytes 255798427
+@@bytes 259255451
+@@bytes 262728859
+@@bytes 266185883
+@@bytes 269659291
+@@bytes 273116315
+@@bytes 276589723
+@@bytes 280046747
+@@bytes 283503771
+@@bytes 286960795
+@@bytes 290434203
+@@bytes 293907611
+@@bytes 297364635
+@@bytes 300838043
+@@bytes 301821083
+@@bytes 303836315
+@@bytes 307309723
+@@bytes 310766747
+@@bytes 314223771
+@@bytes 317697179
+@@bytes 321170587
+@@bytes 324627611
+@@bytes 328084635
+@@bytes 331558043
+@@bytes 335015067
+@@bytes 338472091
+@@bytes 341945499
+@@bytes 345402523
+@@bytes 348875931
+@@bytes 352332955
+@@bytes 355789979
+@@bytes 359230619
+@@bytes 362720411
+@@bytes 366177435
+@@bytes 369601691
+@@bytes 372403355
+@@bytes 375860379
+@@bytes 379301019
+@@bytes 382741659
+@@bytes 386215067
+@@bytes 389590171
+@@bytes 393129115
+@@bytes 396602523
+@@bytes 400059547
+@@bytes 403532955
+@@bytes 406973595
+@@bytes 410447003
+@@bytes 413920411
+@@bytes 417361051
+@@bytes 420834459
+@@bytes 424307867
+@@bytes 427781275
+@@bytes 431221915
+@@bytes 434359193
+@@bytes 437832601
+@@bytes 441289625
+@@bytes 444746649
+@@bytes 448203673
+@@bytes 451677081
+checking keyring...
+checking package integrity...
+@@bytes 454215571
+@@bytes 454215571
+@@phase install
+:: Starting full system upgrade...
+resolving dependencies...
+looking for conflicting packages...
+
+Package (6)                               Old Version  New Version  Net Change
+
+cachyos-v3/linux-cachyos                  7.2.8-2      7.2.9-1        0.05 MiB
+cachyos-v3/linux-cachyos-headers          7.2.8-2      7.2.9-1        0.07 MiB
+cachyos-v3/linux-cachyos-lts              6.18.52-1    6.18.55-1      0.24 MiB
+cachyos-v3/linux-cachyos-lts-headers      6.18.52-1    6.18.55-1      2.93 MiB
+cachyos-v3/linux-cachyos-lts-nvidia-open  6.18.52-1    6.18.55-1      0.00 MiB
+cachyos-v3/linux-cachyos-nvidia-open      7.2.8-2      7.2.9-1       -0.02 MiB
+
+Total Installed Size:  776.44 MiB
+Net Upgrade Size:        3.28 MiB
+
+:: Proceed with installation? [Y/n] 
+checking keyring...
+checking package integrity...
+loading package files...
+checking for file conflicts...
+checking available disk space...
+:: Running pre-transaction hooks...
+(1/5) Performing snapper pre snapshots for the following configurations...
+==> root: 773
+(2/5) Waiting for limine-snapper-sync to finish...
+(3/5) Record kernels marked for removal in Limine
+(4/5) Removing linux initcpios...
+(5/5) Remove DKMS modules
+==> dkms remove --no-depmod xone/0.5.8 -k 6.18.52-1-cachyos-lts
+==> dkms remove --no-depmod xone/0.5.8 -k 7.2.8-2-cachyos
+==> depmod 6.18.52-1-cachyos-lts
+==> depmod 7.2.8-2-cachyos
+:: Processing package changes...
+upgrading linux-cachyos...
+upgrading linux-cachyos-headers...
+upgrading linux-cachyos-lts...
+upgrading linux-cachyos-lts-headers...
+upgrading linux-cachyos-lts-nvidia-open...
+upgrading linux-cachyos-nvidia-open...
+:: Running post-transaction hooks...
+(1/8) Arming ConditionNeedsUpdate...
+(2/8) Updating module dependencies...
+(3/8) Install DKMS modules
+==> dkms install --no-depmod xone/0.5.8 -k 7.2.9-1-cachyos
+==> dkms install --no-depmod xone/0.5.8 -k 6.18.55-1-cachyos-lts
+==> depmod 6.18.55-1-cachyos-lts
+==> depmod 7.2.9-1-cachyos
+(4/8) Clean Limine boot entries of removed kernels
+(5/8) Updating linux initcpios...
+Building initramfs for linux-cachyos-lts (6.18.55-1-cachyos-lts)
+==> Using drop-in configuration file: '10-chwd.conf'
+==> Using drop-in configuration file: '10-limine-snapper-sync.conf'
+==> Starting build: '6.18.55-1-cachyos-lts'
+  -> Running build hook: [base]
+  -> Running build hook: [udev]
+  -> Running build hook: [autodetect]
+  -> Running build hook: [microcode]
+  -> Running build hook: [kms]
+  -> Running build hook: [modconf]
+  -> Running build hook: [block]
+  -> Running build hook: [keyboard]
+  -> Running build hook: [keymap]
+  -> Running build hook: [consolefont]
+==> WARNING: consolefont: no font found in configuration
+  -> Running build hook: [plymouth]
+  -> Running build hook: [filesystems]
+  -> Running build hook: [btrfs-overlayfs]
+==> Generating module dependencies
+==> Creating zstd-compressed initcpio image: '/tmp/limine-mkinitcpio.g7MJcI/initramfs'
+  -> Early uncompressed CPIO image generation successful
+==> Initcpio image generation successful
+Copied: /tmp/limine-mkinitcpio.g7MJcI/initramfs -> /boot/00000000000000000000000000000000/linux-cachyos-lts/initramfs
+Copied: /usr/lib/modules/6.18.55-1-cachyos-lts/vmlinuz -> /boot/00000000000000000000000000000000/linux-cachyos-lts/vmlinuz
+Updated: /boot/limine.conf
+Building initramfs for linux-cachyos-lts (6.18.55-1-cachyos-lts)
+==> Using drop-in configuration file: '10-chwd.conf'
+==> Using drop-in configuration file: '10-limine-snapper-sync.conf'
+==> Starting build: '6.18.55-1-cachyos-lts'
+  -> Running build hook: [base]
+  -> Running build hook: [udev]
+  -> Running build hook: [autodetect]
+  -> Running build hook: [microcode]
+  -> Running build hook: [kms]
+  -> Running build hook: [modconf]
+  -> Running build hook: [block]
+  -> Running build hook: [keyboard]
+  -> Running build hook: [keymap]
+  -> Running build hook: [consolefont]
+==> WARNING: consolefont: no font found in configuration
+  -> Running build hook: [plymouth]
+  -> Running build hook: [filesystems]
+  -> Running build hook: [btrfs-overlayfs]
+==> Generating module dependencies
+==> Creating zstd-compressed initcpio image: '/tmp/limine-mkinitcpio.g7MJcI/initramfs'
+  -> Early uncompressed CPIO image generation successful
+==> Initcpio image generation successful
+Updated: /boot/limine.conf
+Building initramfs for linux-cachyos (7.2.9-1-cachyos)
+==> Using drop-in configuration file: '10-chwd.conf'
+==> Using drop-in configuration file: '10-limine-snapper-sync.conf'
+==> Starting build: '7.2.9-1-cachyos'
+  -> Running build hook: [base]
+  -> Running build hook: [udev]
+  -> Running build hook: [autodetect]
+  -> Running build hook: [microcode]
+  -> Running build hook: [kms]
+  -> Running build hook: [modconf]
+  -> Running build hook: [block]
+  -> Running build hook: [keyboard]
+  -> Running build hook: [keymap]
+  -> Running build hook: [consolefont]
+==> WARNING: consolefont: no font found in configuration
+  -> Running build hook: [plymouth]
+  -> Running build hook: [filesystems]
+  -> Running build hook: [btrfs-overlayfs]
+==> Generating module dependencies
+==> Creating zstd-compressed initcpio image: '/tmp/limine-mkinitcpio.g7MJcI/initramfs'
+  -> Early uncompressed CPIO image generation successful
+==> Initcpio image generation successful
+Copied: /tmp/limine-mkinitcpio.g7MJcI/initramfs -> /boot/00000000000000000000000000000000/linux-cachyos/initramfs
+Copied: /usr/lib/modules/7.2.9-1-cachyos/vmlinuz -> /boot/00000000000000000000000000000000/linux-cachyos/vmlinuz
+Updated: /boot/limine.conf
+Building initramfs for linux-cachyos (7.2.9-1-cachyos)
+==> Using drop-in configuration file: '10-chwd.conf'
+==> Using drop-in configuration file: '10-limine-snapper-sync.conf'
+==> Starting build: '7.2.9-1-cachyos'
+  -> Running build hook: [base]
+  -> Running build hook: [udev]
+  -> Running build hook: [autodetect]
+  -> Running build hook: [microcode]
+  -> Running build hook: [kms]
+  -> Running build hook: [modconf]
+  -> Running build hook: [block]
+  -> Running build hook: [keyboard]
+  -> Running build hook: [keymap]
+  -> Running build hook: [consolefont]
+==> WARNING: consolefont: no font found in configuration
+  -> Running build hook: [plymouth]
+  -> Running build hook: [filesystems]
+  -> Running build hook: [btrfs-overlayfs]
+==> Generating module dependencies
+==> Creating zstd-compressed initcpio image: '/tmp/limine-mkinitcpio.g7MJcI/initramfs'
+  -> Early uncompressed CPIO image generation successful
+==> Initcpio image generation successful
+Updated: /boot/limine.conf
+(6/8) Check if user should be informed about rebooting after certain system package upgrades.
+==> INFO: Reboot is recommended due to the upgrade of core system package(s).
+(7/8) Checking which packages need to be rebuilt
+foreign	python-backports-zstd
+foreign	python-dicttoxml
+foreign	python-unicodecsv
+(8/8) Performing snapper post snapshots for the following configurations...
+==> root: 774
+@@helper-exit 0
+@@restart 7.2.9-1-cachyos
+@@end

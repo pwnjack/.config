@@ -17,7 +17,7 @@ function fold(name) {
 }
 
 // Every fixture: progress only moves forward and stays within [0, 1].
-for (const name of ['routine', 'kernel', 'conflict', 'midfail', 'busy', 'sudo', 'nothing', 'flatpak', 'verbose', 'mirror', 'depfail', 'fetchfail']) {
+for (const name of ['routine', 'kernel', 'conflict', 'midfail', 'busy', 'sudo', 'nothing', 'flatpak', 'verbose', 'mirror', 'depfail', 'fetchfail', 'captured']) {
     const { seen } = fold(name)
     seen.forEach((p, i) => {
         assert.ok(p >= 0 && p <= 1, `${name}: progress ${p} out of range`)
@@ -34,6 +34,19 @@ for (const name of ['routine', 'kernel', 'conflict', 'midfail', 'busy', 'sudo', 
     assert.equal(snap.done, 3)
     assert.equal(snap.totalBytes, 115867648)
     assert.equal(snap.errorKind, '')
+}
+
+// A real run captured on this machine (VerbosePkgLists header, both kernel
+// flavours replaced, DKMS and initramfs hooks; machine-id zeroed): it must
+// fold to a full bar and name the running flavour's new kernel.
+{
+    const { snap } = fold('captured')
+    assert.equal(snap.status, 'restart')
+    assert.equal(snap.restart, '7.2.9-1-cachyos')
+    assert.equal(snap.progress, 1)
+    assert.equal(snap.total, 6)
+    assert.equal(snap.done, 6)
+    assert.ok(snap.totalBytes > 400 * 1024 ** 2, `captured: download size ${snap.totalBytes}`)
 }
 
 // Phase weights at the boundaries the card relies on.
