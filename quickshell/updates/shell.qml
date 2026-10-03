@@ -24,9 +24,10 @@ ShellRoot {
     readonly property bool barAtBottom: Quickshell.env("UPDATES_BAR_POSITION") === "bottom"
     // The runner's test seam, honoured here too: the demo replay must not poke Waybar.
     readonly property bool signalBar: Quickshell.env("UPDATES_SIGNAL") !== "none"
-    // 1080p sizes scaled to the output, as the keybinds overlay does.
-    readonly property real uiScale: window.screen
-        ? Math.max(1, Math.min(1.6, Math.min(window.screen.height, window.screen.width * 9 / 16) / 1000)) : 1
+    // A popover belongs to the bar, so it keeps the bar's own pixel sizes (the
+    // mockup's px, at Waybar's 14px text) instead of scaling with the output
+    // like the full-screen keybinds overlay: scaled, it was oversized at 1440p.
+    readonly property real uiScale: 1
 
     property bool opened: false
     property bool closing: false
