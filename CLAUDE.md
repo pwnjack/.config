@@ -121,6 +121,18 @@ wheel scrolls by pixels only on overflow, and Esc or a click closes it.
 balancing), tested by node; the view is tested offscreen by qmltestrunner. See
 `docs/keybinds-overlay.md`.
 
+### Update popover (Waybar custom/updates)
+
+`quickshell/updates/shell.qml` is the on-demand update card started by
+`scripts/hyprland/updates-popover.sh` when the bar's updates module is clicked
+(lock, IPC toggle, cursor-anchored, exits on close). Update starts
+`scripts/updates/updates-run.sh` under `setsid`: it runs the root helper
+`/usr/local/bin/system-update` (installed from `updates/system-update-root.sh`
+by `updates/setup-sudo.sh`, one no-argument NOPASSWD rule), then Flatpak, and
+`fold.mjs` folds the stream into `$XDG_RUNTIME_DIR/updates/state.json` through
+the pure `model.mjs` the card also imports, so card and bar agree. AUR updates
+stay in the terminal (`scripts/updates/terminal.sh`). See `docs/updates.md`.
+
 ### Settings panel (Super+I)
 
 `quickshell/settings-panel/shell.qml` starts on demand through
