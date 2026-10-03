@@ -1,5 +1,6 @@
--- This file is also the source of truth for the Super+H cheatsheet. Keep one
--- hl.bind() per line and use a trailing `--` comment as its human label.
+-- This file is also the source of truth for the Super+H keybindings overlay and
+-- docs/keybindings.md. Keep one hl.bind() per line and use a trailing `--`
+-- comment as its human label.
 
 return function(apps)
     -- ## Applications
@@ -34,7 +35,6 @@ return function(apps)
     hl.bind("SUPER + C", hl.dsp.exec_cmd("~/.config/rofi/clipboard.sh")) -- Clipboard history
     hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("~/.config/scripts/hyprland/colorpicker.sh")) -- Colour picker (copies hex)
     hl.bind("SUPER + period", hl.dsp.exec_cmd("rofi -modi emoji -show emoji")) -- Emoji picker
-    hl.bind("SUPER + H", hl.dsp.exec_cmd("~/.config/rofi/keybinds-cheatsheet.sh")) -- This cheatsheet
 
     -- ## Notifications
     hl.bind("SUPER + SHIFT + N", hl.dsp.exec_cmd("swaync-client -t -sw")) -- Toggle notification sidebar
@@ -45,6 +45,7 @@ return function(apps)
 
     -- ## Settings & Utilities
     hl.bind("SUPER + I", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/settings-panel.sh")) -- Settings panel
+    hl.bind("SUPER + H", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/keybinds-overlay.sh")) -- Keybindings
     hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("waypaper --random")) -- Random wallpaper
     hl.bind("SUPER + CTRL + W", hl.dsp.exec_cmd("$HOME/.config/scripts/hyprland/wallpaper-carousel.sh")) -- Wallpaper carousel
     hl.bind("CTRL + SHIFT + ESCAPE", hl.dsp.exec_cmd("resources")) -- System monitor
@@ -74,21 +75,21 @@ return function(apps)
     hl.bind("SUPER + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = true })) -- Move window to workspace
     hl.bind("SUPER + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = true })) -- Move window to workspace
 
-    hl.bind("SUPER + CTRL + SHIFT + 1", hl.dsp.window.move({ workspace = 1, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 2", hl.dsp.window.move({ workspace = 2, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 3", hl.dsp.window.move({ workspace = 3, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 4", hl.dsp.window.move({ workspace = 4, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 5", hl.dsp.window.move({ workspace = 5, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 6", hl.dsp.window.move({ workspace = 6, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 7", hl.dsp.window.move({ workspace = 7, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 8", hl.dsp.window.move({ workspace = 8, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window to workspace silently
-    hl.bind("SUPER + CTRL + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window to workspace silently
+    hl.bind("SUPER + CTRL + SHIFT + 1", hl.dsp.window.move({ workspace = 1, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 2", hl.dsp.window.move({ workspace = 2, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 3", hl.dsp.window.move({ workspace = 3, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 4", hl.dsp.window.move({ workspace = 4, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 5", hl.dsp.window.move({ workspace = 5, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 6", hl.dsp.window.move({ workspace = 6, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 7", hl.dsp.window.move({ workspace = 7, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 8", hl.dsp.window.move({ workspace = 8, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window, stay here
+    hl.bind("SUPER + CTRL + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window, stay here
 
     hl.bind("SUPER + CTRL + left", hl.dsp.focus({ workspace = "r-1" })) -- Previous/next workspace
     hl.bind("SUPER + CTRL + right", hl.dsp.focus({ workspace = "r+1" })) -- Previous/next workspace
-    hl.bind("SUPER + CTRL + SHIFT + left", hl.dsp.window.move({ workspace = "r-1", follow = true })) -- Move window to prev/next workspace and follow
-    hl.bind("SUPER + CTRL + SHIFT + right", hl.dsp.window.move({ workspace = "r+1", follow = true })) -- Move window to prev/next workspace and follow
+    hl.bind("SUPER + CTRL + SHIFT + left", hl.dsp.window.move({ workspace = "r-1", follow = true })) -- Move window to prev/next
+    hl.bind("SUPER + CTRL + SHIFT + right", hl.dsp.window.move({ workspace = "r+1", follow = true })) -- Move window to prev/next
     hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" })) -- Scroll through workspaces
     hl.bind("SUPER + mouse_up", hl.dsp.focus({ workspace = "e-1" })) -- Scroll through workspaces
 
@@ -124,7 +125,7 @@ return function(apps)
     hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true, repeating = true }) -- Mute microphone
     hl.bind("XF86Calculator", hl.dsp.exec_cmd("gnome-calculator")) -- Calculator
     hl.bind("XF86AudioNext", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh next"), { locked = true }) -- Next track
-    hl.bind("XF86AudioPause", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh play-pause"), { locked = true }) -- Play/pause
     hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh play-pause"), { locked = true }) -- Play/pause
+    hl.bind("XF86AudioPause", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh play-pause"), { locked = true }) -- Play/pause
     hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("~/.config/scripts/hyprland/mediactl.sh previous"), { locked = true }) -- Previous track
 end

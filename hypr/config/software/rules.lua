@@ -130,3 +130,4 @@ layer("blur-swaync-control-center", "^(swaync-control-center)$", { blur = true, 
 layer("blur-swaync-notifications", "^(swaync-notification-window)$", { blur = true, ignore_alpha = 0.1 })
 layer("blur-settings-panel", "^(settings-panel)$", { blur = true, ignore_alpha = 0.1 })
 layer("blur-wallpaper-carousel", "^(wallpaper-carousel)$", { blur = true, ignore_alpha = 0.1, xray = false })
+layer("blur-keybinds-overlay", "^(keybinds-overlay)$", { blur = true, ignore_alpha = 0.1, xray = false })

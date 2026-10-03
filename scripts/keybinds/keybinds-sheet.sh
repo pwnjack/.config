@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 #
-# Keybinds Cheatsheet
+# Keybinds sheet
 #
-# Renders hypr/config/software/keybinds.lua into a searchable rofi list, so
-# the sheet cannot disagree with the bindings it documents. It used to be a
-# hand-written printf block, and it had drifted: it advertised a mouse-scroll
-# workspace bind that does not exist, omitted every silent-move binding, and
-# named Ghostty and Zen in text while the binds resolved $terminal and $browser
-# from options/.
+# Renders hypr/config/software/keybinds.lua for the Super+H keybindings overlay
+# and for docs/keybindings.md, so neither can disagree with the bindings it
+# documents. It used to be a hand-written printf block, and it had drifted: it
+# advertised a mouse-scroll workspace bind that does not exist, omitted every
+# silent-move binding, and named Ghostty and Zen in text while the binds
+# resolved $terminal and $browser from options/.
 #
-# Usage: keybinds-cheatsheet.sh [--print|--markdown]
-#   --print      write the sheet to stdout instead of opening rofi
-#   --markdown   write the same rows as markdown tables, for docs/keybindings.md
+# Usage: keybinds-sheet.sh --print|--markdown|--json
+#   --print      aligned plain text, for a quick look in a terminal
+#   --markdown   markdown tables, for docs/keybindings.md
+#   --json       {"sections":[{"name","rows":[{"keys":[...],"label"}]}]},
+#                read by quickshell/keybinds-overlay
 #
 # How a line becomes a row:
 #
@@ -30,20 +32,28 @@
 set -uo pipefail
 
 self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-root="$(dirname "$self_dir")"
+root="$(cd "$self_dir/../.." && pwd)"
 
-# shellcheck source=../scripts/lib/hypr-vars.sh
+# shellcheck source=../lib/hypr-vars.sh
 source "$root/scripts/lib/hypr-vars.sh"
 
-conf="$root/hypr/config/software/keybinds.lua"
-theme="$self_dir/themes/keybinds/main.rasi"
+# KEYBINDS_CONF is the test seam: test-keybinds-sheet.sh points it at a fixture.
+conf="${KEYBINDS_CONF:-$root/hypr/config/software/keybinds.lua}"
 
 # Read before the parse, because it changes how labels are built rather than
 # only how they are printed -- see _expand_vars.
 mode="${1:-}"
 
+case "$mode" in
+    --print|--markdown|--json) ;;
+    *)
+        echo "Usage: keybinds-sheet.sh --print|--markdown|--json" >&2
+        exit 2
+        ;;
+esac
+
 if [ ! -f "$conf" ]; then
-    echo "keybinds-cheatsheet: no keybinds at $conf" >&2
+    echo "keybinds-sheet: no keybinds at $conf" >&2
     exit 1
 fi
 
@@ -77,11 +87,21 @@ _key_display() {
         comma)                  printf ',' ;;
         slash)                  printf '/' ;;
         BACKSPACE)              printf 'Backspace' ;;
-        mouse:272)              printf 'Mouse1' ;;
-        mouse:273)              printf 'Mouse2' ;;
-        mouse_up)               printf 'Scroll up' ;;
-        mouse_down)             printf 'Scroll down' ;;
+        mouse:272)              printf 'Left button' ;;
+        mouse:273)              printf 'Right button' ;;
+        mouse_up)               printf 'Wheel up' ;;
+        mouse_down)             printf 'Wheel down' ;;
         left|right|up|down)     local k="$1"; printf '%s' "${k^}" ;;
+        # Media keys carry their legend, not their keysym: nobody's keyboard
+        # says "AudioRaiseVolume".
+        XF86AudioRaiseVolume)   printf 'Volume Up' ;;
+        XF86AudioLowerVolume)   printf 'Volume Down' ;;
+        XF86AudioMute)          printf 'Mute' ;;
+        XF86AudioMicMute)       printf 'Mic Mute' ;;
+        XF86AudioPlay)          printf 'Play' ;;
+        XF86AudioPause)         printf 'Pause' ;;
+        XF86AudioNext)          printf 'Next' ;;
+        XF86AudioPrev)          printf 'Previous' ;;
         XF86*)                  printf '%s' "${1#XF86}" ;;
         *)                      printf '%s' "$1" ;;
     esac
@@ -102,7 +122,7 @@ _mods_display() {
 # This is what lets `# Terminal ($terminal)` read "Terminal (ghostty)".
 #
 # Markdown mode deliberately does NOT resolve the options-backed variables.
-# The rofi sheet is read by the person whose options/ it just read, so naming
+# The overlay is read by the person whose options/ it just read, so naming
 # their terminal is exactly right; docs/keybindings.md is committed and read by
 # everyone, where "ghostty" would freeze one machine's preference into the repo
 # as though it were fixed. Naming the file instead is true on every checkout,
@@ -138,6 +158,17 @@ _format_keys() {
             printf 'Arrows'
             return
         fi
+    fi
+
+    # Pairs that read as one key whatever order the binds are written in:
+    # both wheel directions are the wheel, and play/pause is one media key.
+    if [ "$n" -eq 2 ]; then
+        local pair
+        pair="$(printf '%s\n' "${keys[@]}" | sort | tr '\n' ' ')"
+        case "$pair" in
+            "Wheel down Wheel up ") printf 'Wheel'; return ;;
+            "Pause Play ")          printf 'Play/Pause'; return ;;
+        esac
     fi
 
     i=0
@@ -178,7 +209,8 @@ RS=$'\x1e'
 declare -A ROW_SECTION=() ROW_MODS=() ROW_KEYS=() ROW_DESC=() ROW_LABEL=() ROW_N=()
 declare -a ORDER=()
 
-section=""
+# Binds above the first `## Heading` still need a section a reader can name.
+section="Other"
 while IFS= read -r line || [ -n "$line" ]; do
     if [[ "$line" =~ ^[[:space:]]*--[[:space:]]*##[[:space:]]+(.*)$ ]]; then
         section="$(_trim "${BASH_REMATCH[1]}")"
@@ -230,11 +262,13 @@ done < "$conf"
 
 # Two passes: the first settles the key column's width so the descriptions
 # line up, the second prints. Both walk ORDER, so file order is preserved.
-declare -a COMBOS=() LABELS=() SECTIONS=()
+# MODS and KEYTXT keep the combo's parts apart for the JSON skin.
+declare -a COMBOS=() LABELS=() SECTIONS=() MODS=() KEYTXT=()
 width=0
 for sig in "${ORDER[@]}"; do
     IFS="$RS" read -r -a keys <<< "${ROW_KEYS[$sig]}"
-    combo="$(_format_keys "${keys[@]}")"
+    keytxt="$(_format_keys "${keys[@]}")"
+    combo="$keytxt"
     [ -n "${ROW_MODS[$sig]}" ] && combo="${ROW_MODS[$sig]} + $combo"
     combo="  $combo"
 
@@ -247,6 +281,8 @@ for sig in "${ORDER[@]}"; do
     COMBOS+=("$combo")
     LABELS+=("$text")
     SECTIONS+=("${ROW_SECTION[$sig]}")
+    MODS+=("${ROW_MODS[$sig]}")
+    KEYTXT+=("$keytxt")
     [ "${#combo}" -gt "$width" ] && width="${#combo}"
 done
 
@@ -264,7 +300,7 @@ render() {
 }
 
 # Markdown skin over the same ORDER walk render() uses, so docs/keybindings.md
-# and the rofi sheet come from one parse and cannot disagree. Only the
+# and the overlay come from one parse and cannot disagree. Only the
 # presentation differs: sections become `##` headings, the padding render()
 # needs for a monospace list is dropped, and a table replaces the columns.
 render_markdown() {
@@ -285,24 +321,55 @@ render_markdown() {
     done
 }
 
-case "${1:-}" in
-    --print)
-        render
-        exit 0
-        ;;
-    --markdown)
-        render_markdown
-        exit 0
-        ;;
-esac
+# _json_str <text> -> REPLY holds the text as a JSON string literal. It sets a
+# variable rather than printing because render_json calls it a few hundred
+# times, and a command substitution forks on every call. Labels come from
+# config comments, so quotes and backslashes must not end the string early.
+_json_str() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\t'/\\t}"
+    s="${s//[[:cntrl:]]/}"
+    REPLY="\"$s\""
+}
 
-render | rofi -dmenu \
-    -p "Keybinds" \
-    -theme "$theme" \
-    -i \
-    -no-custom \
-    -select "" \
-    -kb-custom-1 "" \
-    -kb-accept-entry "" \
-    -kb-accept-alt "" \
-    -kb-row-select ""
+# JSON skin over the same ORDER walk, for quickshell/keybinds-overlay. Keys are
+# a list: each modifier, then the formatted key, so the overlay draws one cap
+# per part without re-parsing "Super + Shift + Q".
+render_json() {
+    local i prev="" open=0 row_sep="" key_sep rest
+    printf '{"sections":['
+    for i in "${!COMBOS[@]}"; do
+        if [ "$open" -eq 0 ] || [ "${SECTIONS[i]}" != "$prev" ]; then
+            if [ "$open" -eq 1 ]; then printf ']},'; fi
+            _json_str "${SECTIONS[i]}"
+            printf '{"name":%s,"rows":[' "$REPLY"
+            prev="${SECTIONS[i]}"
+            open=1
+            row_sep=""
+        fi
+        printf '%s{"keys":[' "$row_sep"
+        row_sep=","
+        key_sep=""
+        rest="${MODS[i]}"
+        while [ -n "$rest" ]; do
+            _json_str "${rest%% + *}"
+            printf '%s%s' "$key_sep" "$REPLY"
+            key_sep=","
+            if [[ "$rest" == *" + "* ]]; then rest="${rest#* + }"; else rest=""; fi
+        done
+        _json_str "${KEYTXT[i]}"
+        printf '%s%s],"label":' "$key_sep" "$REPLY"
+        _json_str "${LABELS[i]}"
+        printf '%s}' "$REPLY"
+    done
+    if [ "$open" -eq 1 ]; then printf ']}'; fi
+    printf ']}\n'
+}
+
+case "$mode" in
+    --print)    render ;;
+    --markdown) render_markdown ;;
+    --json)     render_json ;;
+esac

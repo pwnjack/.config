@@ -110,6 +110,17 @@ and the SDDM watcher unchanged. Waypaper cannot persist percent signs, and the
 query/INI boundary cannot represent line breaks; the helper rejects those names
 before submission. See `docs/wallpaper-carousel.md` for checks and measurements.
 
+### Keybindings overlay (Super+H)
+
+`quickshell/keybinds-overlay/shell.qml` is an on-demand, read-only Quickshell
+HUD started by `scripts/hyprland/keybinds-overlay.sh` (lock, IPC toggle,
+daemonize; exits on close). It reads `scripts/keybinds/keybinds-sheet.sh --json`
+on every open. Typing filters in place under a prompt whose line never moves, the
+wheel scrolls by pixels only on overflow, and Esc or a click closes it.
+`sheet.mjs` is the pure model (filter, highlight, contrast fallback, column
+balancing), tested by node; the view is tested offscreen by qmltestrunner. See
+`docs/keybinds-overlay.md`.
+
 ### Settings panel (Super+I)
 
 `quickshell/settings-panel/shell.qml` starts on demand through
@@ -292,8 +303,8 @@ Stored in `~/.config/.env` (git-ignored). Template at `.env.example`. Loaded by 
 - Config is Arch/CachyOS-specific — package management uses `pacman` and `paru`/`yay` for AUR.
 - Every window and workspace keybinding carries `Super`, so `Alt`/`Ctrl` + arrows stay free for apps (browser back/forward, shell word jumps, TUI prompts). On the arrows: `Super` focuses, `+ Shift` moves, `+ Alt` resizes, `+ Ctrl` switches workspace. Keep new navigation binds on that grammar.
 - `.gitignore` is aggressive (~318 lines) — only essential Hyprland/shell/utility configs are tracked. Application data directories (Obsidian, game launchers, Electron apps, etc.) are excluded.
-- `rofi/keybinds-cheatsheet.sh` (Super+H) renders itself from `keybinds.lua` at runtime — never hand-edit the rows. Each one-line `hl.bind(...)` has a trailing `--` label (`$vars` inside are resolved). Preview with `./rofi/keybinds-cheatsheet.sh --print`.
-- `docs/keybindings.md` is **generated** by `scripts/docs/generate-keybindings.sh` from that same parser's `--markdown` mode — never hand-edit it, and regenerate after touching `keybinds.lua`. `test/test-docs.sh` fails on a stale copy, and since it lives in `test/` it runs on every commit. The two skins differ in exactly one way: markdown does **not** resolve the options-backed `$terminal`/`$browser`, printing `options/terminal` instead, because a committed file must not freeze one machine's preference as though it were fixed. `scripts/lib/hypr-vars.sh` owns which variables those are (`hypr_var_origin`); do not restate that list anywhere else. README keeps only the five essential binds and links here — it carried the full table by hand once and it drifted.
+- `scripts/keybinds/keybinds-sheet.sh` is the one parse of `keybinds.lua`: `--json` feeds the Super+H overlay, `--markdown` feeds `docs/keybindings.md`, and `--print` is a terminal preview. Never hand-write rows. Each one-line `hl.bind(...)` has a trailing `--` label (`$vars` inside are resolved); `tst_Overlay` (run on every commit by `test/test-docs.sh`) fails if any real label is elided at 1366×768, 1920×1080, 2560×1440 or portrait 1080×1920, so shorten a label rather than shrinking the type. Media, mouse and wheel keys print their legend (`Volume Up`, `Left button`, `Wheel`); that display table is `_key_display`.
+- `docs/keybindings.md` is **generated** by `scripts/docs/generate-keybindings.sh` from that same parser's `--markdown` mode — never hand-edit it, and regenerate after touching `keybinds.lua`. `test/test-docs.sh` fails on a stale copy, and since it lives in `test/` it runs on every commit. The skins differ in exactly one way: markdown does **not** resolve the options-backed `$terminal`/`$browser`, printing `options/terminal` instead, because a committed file must not freeze one machine's preference as though it were fixed. `scripts/lib/hypr-vars.sh` owns which variables those are (`hypr_var_origin`); do not restate that list anywhere else. README keeps only the five essential binds and links here — it carried the full table by hand once and it drifted.
 - `doctor.sh` and its check modules derive every target from tracked files. When adding a check, never introduce a hand-written list of paths, binaries, or packages — parse the config that already declares them. A list is a second source of truth and will drift.
 - Check modules must never run their loops in a pipeline (`cmd | while read`); the severity counters are shell variables and would be lost in the subshell, silently discarding every finding. Use `while read ...; do ... done < <(cmd)`. The test harness greps for this and fails the suite.
 - Use `git ls-files -z` with `while IFS= read -r -d ''`, never plain `git ls-files` — git C-quotes paths containing non-ASCII or quote characters, and the quoted form names no file on disk.

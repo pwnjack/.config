@@ -3,14 +3,14 @@
 # Renders docs/keybindings.md from hypr/config/software/keybinds.lua.
 #
 # README used to carry the full table by hand. It drifted, exactly the way the
-# rofi cheatsheet drifted before it was made self-rendering: bindings the config
+# cheatsheet drifted before it was made self-rendering: bindings the config
 # does not have, bindings the config has that the table omitted, and per-user
 # values printed as though they were fixed. Moving a hand-written table to a new
 # file relocates that problem, so this generates it instead.
 #
-# The rows come from `keybinds-cheatsheet.sh --markdown` rather than from a
+# The rows come from `scripts/keybinds/keybinds-sheet.sh --markdown` rather than from a
 # second parser here. One parse feeds both surfaces, so the document and the
-# Super+H sheet cannot disagree; this script only supplies the prose around it.
+# Super+H overlay cannot disagree; this script only supplies the prose around it.
 #
 # Usage: generate-keybindings.sh [--check]
 #   (no args)  write docs/keybindings.md
@@ -22,7 +22,7 @@ set -uo pipefail
 self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$self_dir/../.." && pwd)"
 
-cheatsheet="$root/rofi/keybinds-cheatsheet.sh"
+cheatsheet="$root/scripts/keybinds/keybinds-sheet.sh"
 out="$root/docs/keybindings.md"
 
 if [ ! -x "$cheatsheet" ]; then
@@ -49,8 +49,8 @@ be committed.
 
 Two rows name a file rather than an application. `Super + Enter` and
 `Super + B` run whatever `options/terminal` and `options/browser` contain, read
-at Hyprland's parse time, so the answer is per-machine and the runtime
-cheatsheet fills in your own. Everything else here is the same on every
+at Hyprland's parse time, so the answer is per-machine and the Super + H
+overlay fills in your own. Everything else here is the same on every
 checkout.
 
 PREAMBLE

@@ -27,9 +27,9 @@ customization and maintenance. Keybindings have their own generated page,
 ├── hypr/          # Hyprland: modular Lua config from hyprland.lua,
 │                  # plus Hyprlang configs for hyprlock/idle/sunset
 ├── waybar/        # Bar: config.jsonc, style.css, pywal colors
-├── rofi/          # Launcher, power/screenshot menus, keybinds cheatsheet
+├── rofi/          # Launcher, power/screenshot/clipboard menus
 ├── swaync/        # Notification daemon and sidebar
-├── quickshell/    # On-demand settings panel and wallpaper carousel
+├── quickshell/    # On-demand settings panel, wallpaper carousel, keybinds overlay
 ├── options/       # User preferences, one value per text file
 ├── scripts/       # doctor/, theming/, waybar/, hyprland/, hooks/, docs/
 ├── fish/ ghostty/ nvim/ btop/ cava/ starship/   # Per-app config
@@ -54,7 +54,7 @@ counterparts are generated symlinks — edit the template.
 | `Super + Space` | App launcher |
 | `Super + Q/W` | Close window |
 | `Super + L` | Lock screen |
-| `Super + H` | Keybinds cheatsheet |
+| `Super + H` | Keybindings overlay |
 
 Those five are the ones worth memorising.
 **[docs/keybindings.md](keybindings.md) has every binding**, grouped by

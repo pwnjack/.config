@@ -17,7 +17,7 @@ TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$TEST_DIR")"
 
 GENERATOR="$ROOT/scripts/docs/generate-keybindings.sh"
-CHEATSHEET="$ROOT/rofi/keybinds-cheatsheet.sh"
+CHEATSHEET="$ROOT/scripts/keybinds/keybinds-sheet.sh"
 DOC="$ROOT/docs/keybindings.md"
 CONF="$ROOT/hypr/config/software/keybinds.lua"
 
@@ -90,18 +90,34 @@ else
     fail "sections missing from docs/keybindings.md" "${missing[@]}"
 fi
 
-# --- row count matches the runtime cheatsheet --------------------------------
+# --- row count matches the runtime overlay -----------------------------------
 #
-# Both skins walk the same ORDER, so a row present in one and absent from the
-# other means the markdown renderer lost something.
+# All skins walk the same ORDER, so a row present in one and absent from another
+# means a renderer lost something.
 
 print_rows=$("$CHEATSHEET" --print | grep -c '^  ')
 md_rows=$("$CHEATSHEET" --markdown | grep -c '^| `')
-if [ "$print_rows" -eq "$md_rows" ]; then
-    pass "markdown and rofi renderings agree on $md_rows rows"
+json_rows=$("$CHEATSHEET" --json | jq '[.sections[].rows[]] | length')
+if [ "$print_rows" -eq "$md_rows" ] && [ "$print_rows" -eq "$json_rows" ]; then
+    pass "plain, markdown and JSON renderings agree on $md_rows rows"
 else
     fail "renderings disagree on row count" \
-        "--print: $print_rows rows, --markdown: $md_rows rows"
+        "--print: $print_rows, --markdown: $md_rows, --json: $json_rows"
+fi
+
+# --- every label fits the Super+H overlay ------------------------------------
+#
+# The overlay's own suite only runs when quickshell/keybinds-overlay/ changes,
+# but a label is edited in keybinds.lua. Its elision check renders the real
+# sheet, so it belongs to every commit, the same as this file does.
+
+if out=$(bash "$ROOT/quickshell/keybinds-overlay/test/run-tests.sh" Overlay::test_no_real_label_is_elided 2>&1); then
+    pass "no keybinds.lua label is elided in the overlay"
+else
+    # The same suite also fails for a missing tool or a broken model test, so
+    # show what failed rather than assuming it was a label.
+    fail "the overlay's label check failed (\"labels elided\" below means: shorten that comment)" \
+        "$(printf '%s\n' "$out" | grep -E 'FAIL|Actual|required|not found|rror' | head -5)"
 fi
 
 # --- per-user values are not frozen into the document ------------------------

@@ -15,8 +15,8 @@ be committed.
 
 Two rows name a file rather than an application. `Super + Enter` and
 `Super + B` run whatever `options/terminal` and `options/browser` contain, read
-at Hyprland's parse time, so the answer is per-machine and the runtime
-cheatsheet fills in your own. Everything else here is the same on every
+at Hyprland's parse time, so the answer is per-machine and the Super + H
+overlay fills in your own. Everything else here is the same on every
 checkout.
 
 ## Applications
@@ -59,7 +59,6 @@ checkout.
 | `Super + C` | Clipboard history |
 | `Super + Shift + C` | Colour picker (copies hex) |
 | `Super + .` | Emoji picker |
-| `Super + H` | This cheatsheet |
 
 ## Notifications
 
@@ -79,6 +78,7 @@ checkout.
 | Key | Action |
 |-----|--------|
 | `Super + I` | Settings panel |
+| `Super + H` | Keybindings |
 | `Super + Shift + W` | Random wallpaper |
 | `Super + Ctrl + W` | Wallpaper carousel |
 | `Ctrl + Shift + Esc` | System monitor |
@@ -91,10 +91,10 @@ checkout.
 |-----|--------|
 | `Super + 1-9/0` | Switch to workspace |
 | `Super + Shift + 1-9/0` | Move window to workspace |
-| `Super + Ctrl + Shift + 1-9/0` | Move window to workspace silently |
+| `Super + Ctrl + Shift + 1-9/0` | Move window, stay here |
 | `Super + Ctrl + Left/Right` | Previous/next workspace |
-| `Super + Ctrl + Shift + Left/Right` | Move window to prev/next workspace and follow |
-| `Super + Scroll down/Scroll up` | Scroll through workspaces |
+| `Super + Ctrl + Shift + Left/Right` | Move window to prev/next |
+| `Super + Wheel` | Scroll through workspaces |
 
 ## Window Focus & Movement
 
@@ -110,18 +110,18 @@ checkout.
 
 | Key | Action |
 |-----|--------|
-| `Super + Mouse1` | Move window (drag) |
-| `Super + Mouse2` | Resize window (drag) |
+| `Super + Left button` | Move window (drag) |
+| `Super + Right button` | Resize window (drag) |
 
 ## Media Keys
 
 | Key | Action |
 |-----|--------|
-| `AudioRaiseVolume` | Volume up |
-| `AudioLowerVolume` | Volume down |
-| `AudioMute` | Mute output |
-| `AudioMicMute` | Mute microphone |
+| `Volume Up` | Volume up |
+| `Volume Down` | Volume down |
+| `Mute` | Mute output |
+| `Mic Mute` | Mute microphone |
 | `Calculator` | Calculator |
-| `AudioNext` | Next track |
-| `AudioPause/AudioPlay` | Play/pause |
-| `AudioPrev` | Previous track |
+| `Next` | Next track |
+| `Play/Pause` | Play/pause |
+| `Previous` | Previous track |
