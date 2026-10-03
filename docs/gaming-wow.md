@@ -43,6 +43,9 @@ no configuration errors. Keep testing through this one launch path: camera
 dragging, Super+workspace switching and repeated fullscreen/resize cycles still
 need user confirmation before treating gameplay as fully verified.
 
+Audio: to hear WoW's 7.1 mix positionally on headphones, route it to the
+virtual surround device once in `pavucontrol` (see `docs/virtual-surround.md`).
+
 The monitor exposes VRR support, but Hyprland currently has `misc.vrr = 0`
 and `general.allow_tearing = false`. Neither `--adaptive-sync` nor the
 `immediate` window rule proves VRR/tearing is active. Leave display tuning

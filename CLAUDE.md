@@ -188,6 +188,14 @@ Gotchas, all found by probing the binary rather than reading docs:
   - *In the panel* (GTK4 `icon-name` lookup), symbolic icons work, but **Papirus-Dark ships its symbolic `status/` set with the light theme's `#444444`**, so `night-light-symbolic` renders invisible on a dark plate even though `Gtk.IconTheme.has_icon` returns true. Only entries symlinked into `panel/` are correctly themed. Check the resolved SVG's `ColorScheme-Text` before trusting a symbolic icon.
   - *In notifications*, **swaync 0.12.6 renders nothing at all for Papirus-Dark's symbolic icons** — it reserves the icon slot and leaves it blank. `notify-send -i` must use the **non-symbolic** name (`weather-clear-night`, not `weather-clear-night-symbolic`). A name that renders in the panel is no evidence it renders in a toast; screenshot the toast.
 
+### Virtual surround (PipeWire)
+
+`pipewire/pipewire.conf.d/60-virtual-surround.conf` is the only tracked PipeWire
+config: a filter-chain sink, *Virtual Surround 7.1 (headphones)*, that renders 8
+channels binaurally through libmysofa's KEMAR HRTF into stereo. It is chosen per
+application and is not meant to be the default output; its output follows the
+default sink and names no device. See `docs/virtual-surround.md`.
+
 ### SDDM Greeter Wallpaper Sync
 
 `sddm/watch_wallpaper.sh` follows awww changes and asks `sddm/update_sddm.sh`
