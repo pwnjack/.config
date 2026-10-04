@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Network readout for Waybar: download and upload speed while the machine is
-# actually moving data (options/bar-network can instead show them always, or
-# never), "Offline" when no physical interface holds a default
+# Network readout for Waybar: the combined download + upload rate while the
+# machine is actually moving data (options/bar-network can instead show it
+# always, or never), "Offline" when no physical interface holds a default
 # route, and nothing at all otherwise. The module appearing is the notice --
 # the same stateless grammar custom/updates and custom/battery use.
 #
@@ -34,7 +34,7 @@
 NET_SYSFS=${NET_SYSFS:-/sys/class/net}
 NET_PROC=${NET_PROC:-/proc/net}
 NET_INTERVAL=${NET_INTERVAL:-2}
-# Bytes per second, in either direction, before the speeds appear. Background
+# Bytes per second, up and down combined, before the readout appears. Background
 # chatter -- sync clients, the VPN keepalive -- stays well below it.
 NET_SHOW=${NET_SHOW:-102400}
 # Quiet ticks before the speeds hide again, so a download that stalls for a
@@ -56,6 +56,7 @@ NET_BEAT=${NET_BEAT:-30}
 
 NET_GLYPH_DOWN=$'\U000f01da'
 NET_GLYPH_UP=$'\U000f0552'
+NET_GLYPH_RATE=$'\U000f04e1'
 NET_GLYPH_WIRED=$'\U000f0200'
 NET_GLYPH_WIFI=$'\U000f0928'
 NET_GLYPH_OFFLINE=$'\U000f0c9b'
@@ -128,32 +129,32 @@ net_address() {
     done < <(ip -o addr show dev "$1" scope global 2>/dev/null)
 }
 
-# net_human <bytes/s> -- REPLY = the rate at most five characters wide:
-# "820K", "1.0M", "12.4M", "150M", "1.1G". One decimal below 100 of a unit,
-# whole units from there. Unpadded, like the percentages beside it: padding
-# would sit between the glyph and the number and pull the pair apart.
+# net_human <bytes/s> -- REPLY = the rate with its unit: "820 KB/s",
+# "1.2 MB/s", "12.4 MB/s", "150 MB/s", "1.1 GB/s". One decimal below 100 of
+# a unit, whole units from there. Unpadded, like the percentages beside it:
+# padding would sit between the glyph and the number and pull the pair apart.
 net_human() {
     local b=$1 div unit tenths
     if (( b < 1000 * 1024 )); then
-        REPLY="$(( b / 1024 ))K"
+        REPLY="$(( b / 1024 )) KB/s"
         return
     elif (( b < 1000 * 1048576 )); then
-        div=1048576 unit=M
+        div=1048576 unit='MB/s'
     else
-        div=1073741824 unit=G
+        div=1073741824 unit='GB/s'
     fi
     tenths=$(( b * 10 / div ))
     if (( tenths < 1000 )); then
-        REPLY="$(( tenths / 10 )).$(( tenths % 10 ))$unit"
+        REPLY="$(( tenths / 10 )).$(( tenths % 10 )) $unit"
     else
-        REPLY="$(( b / div ))$unit"
+        REPLY="$(( b / div )) $unit"
     fi
 }
 
-# net_visible <rx> <tx> -- true while the speeds should show. Traffic at or
-# above NET_SHOW shows them at once; NET_LINGER quiet ticks hide them again.
+# net_visible <rx> <tx> -- true while the readout should show. A combined rate
+# at or above NET_SHOW shows it at once; NET_LINGER quiet ticks hide it again.
 net_visible() {
-    if (( $1 >= NET_SHOW || $2 >= NET_SHOW )); then
+    if (( $1 + $2 >= NET_SHOW )); then
         NET_QUIET=0
     elif (( NET_QUIET < NET_LINGER )); then
         NET_QUIET=$(( NET_QUIET + 1 ))
@@ -178,7 +179,7 @@ net_escape() {
 
 # net_render <iface> <rx/s> <tx/s> <address> <vpn> -- OUT = the JSON line
 net_render() {
-    local iface=$1 rx=$2 tx=$3 addr=$4 vpn=$5 glyph text='' tooltip down
+    local iface=$1 rx=$2 tx=$3 addr=$4 vpn=$5 glyph text='' tooltip breakdown=''
     if [ -z "$iface" ]; then
         NET_QUIET=$NET_LINGER
         OUT="{\"text\":\"<span size='large'>$NET_GLYPH_OFFLINE</span>  Offline\",\"tooltip\":\"No wired or Wi-Fi connection\",\"class\":\"offline\"}"
@@ -191,20 +192,17 @@ net_render() {
         *)       net_visible "$rx" "$tx" && show=1 ;;
     esac
     if [ -n "$show" ]; then
-        net_human "$rx"; down=$REPLY
-        net_human "$tx"
-        # No space after the glyph, only 6pt letter spacing. cpu/memory/disk
-        # use a space plus 4pt, but their glyphs fill their advance; the
-        # arrows are narrow and centred, and a space left them visibly
-        # detached. 6pt lands the arrow-to-digit gap at the ~5px the others
-        # show, measured in a rendered bar. Two
-        # spaces between the readouts come close to the 20px that separates
-        # the resource modules beside it.
-        text="<span size='large' letter_spacing='6144'>$NET_GLYPH_DOWN</span>$down  <span size='large' letter_spacing='6144'>$NET_GLYPH_UP</span>$REPLY"
+        net_human $(( rx + tx ))
+        # The cpu/memory idiom: glyph in a large span with 4pt letter
+        # spacing, then a space. swap_vertical fills its advance as their
+        # glyphs do (the old narrow arrows needed 6pt and no space).
+        text="<span size='large' letter_spacing='4096'>$NET_GLYPH_RATE</span> $REPLY"
+        net_human "$rx"; breakdown="$NET_GLYPH_DOWN $REPLY   "
+        net_human "$tx"; breakdown+="$NET_GLYPH_UP $REPLY\\n"
     fi
     glyph=$NET_GLYPH_WIRED
     [ -d "$NET_SYSFS/$iface/wireless" ] && glyph=$NET_GLYPH_WIFI
-    net_escape "$iface"; tooltip="$glyph  $REPLY"
+    net_escape "$iface"; tooltip="$breakdown$glyph  $REPLY"
     [ -n "$addr" ] && { net_escape "$addr"; tooltip+="  $REPLY"; }
     [ -n "$vpn" ] && { net_escape "$vpn"; tooltip+="\\nVPN  $REPLY"; }
     OUT="{\"text\":\"$text\",\"tooltip\":\"$tooltip\",\"class\":\"active\"}"
