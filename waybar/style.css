@@ -150,8 +150,8 @@ window#waybar {
 /* Optional workspace dots 6-10 sit at zero width while absent, so the gap
    after the dots belongs to what follows them. The taskbar's buttons carry
    5px of their own padding and the last dot 3px of margin, which is why
-   these read as the 30px group gap (29px in numbers mode, whose boxes
-   carry 2px). #taskbar.empty drops to zero below, and
+   these read as the 30px group gap (28px in numbers mode, whose boxes
+   carry 1px). #taskbar.empty drops to zero below, and
    the window title then opens the group on its own. */
 #taskbar {
     padding-left: 22px;
@@ -202,27 +202,29 @@ window#waybar {
    Each dot is drawn here, not by a glyph: workspace.sh prints one space
    and a state class, so the box can morph.
 
-     empty     8x8 ring    alpha(@foreground, 0.6)
-     occupied  8x8 disc    @foreground
-     active    22x8 pill   @color4
+     empty     10x10 ring  alpha(@foreground, 0.6)
+     occupied  10x10 disc  @foreground
+     active    28x10 pill  @color4
      absent    0 wide      workspaces 6-10 that do not exist yet
 
    Fill means "has windows" and nothing else; the pill alone marks the
    current workspace. min-width/min-height are content-box, so the 1px
    border -- present in every visible state, only its colour changes, so
-   the box never jumps -- turns 6px into 8. The bar's border takes no
-   height: a 16px vertical margin centres the 8px box in the 40px bar.
+   the box never jumps -- turns 8px into 10. The bar's border takes no
+   height: a 15px vertical margin centres the 10px box in the 40px bar.
    Margins sit inside the module's event box, so the click target is
-   14x40 even though the ink is 8x8. GTK renders a 1.5px border as 1px.
+   16x40 even though the ink is 10x10. GTK renders a 1.5px border as 1px.
 
    Motion: width and margin 300ms on a decelerating curve, colour 200ms.
    On a switch the old pill contracts while the new dot stretches; their
    sum stays constant, so nothing to the right moves (measured within
    1px). Workspaces 6-10 grow in from zero width and collapse back out.
 
-   Numbers mode (options/bar-workspaces) keeps the text tier, bold, with
-   the empty ones dimmed because a number has no hollow form; the active
-   number sits in the same accent pill and shares the motion. */
+   Numbers mode (options/bar-workspaces) is sized to read like the dots
+   rather than like text: 12px bold, below the 14px text tier, in tight
+   boxes so both rows are about the same length. Empty ones are dimmed
+   because a number has no hollow form; the active number sits in the same
+   accent pill and shares the motion. */
 
 #custom-workspace {
     color: @foreground;
@@ -239,9 +241,9 @@ window#waybar {
 #custom-workspace:not(.numbers) {
     /* the space must never set the size */
     font-size: 1px;
-    min-width: 6px;
-    min-height: 6px;
-    margin: 16px 3px;
+    min-width: 8px;
+    min-height: 8px;
+    margin: 15px 3px;
     border: 1px solid alpha(@foreground, 0.6);
     background-color: alpha(@foreground, 0);
 }
@@ -252,7 +254,7 @@ window#waybar {
 }
 
 #custom-workspace.active:not(.numbers) {
-    min-width: 20px;
+    min-width: 26px;
     border-color: @color4;
     background-color: @color4;
 }
@@ -260,7 +262,7 @@ window#waybar {
 #custom-workspace.absent {
     min-width: 0;
     /* the space keeps a 1px natural width; the negative margin cancels it */
-    margin: 16px -1px 16px 0;
+    margin: 15px -1px 15px 0;
     border-width: 0;
     opacity: 0;
 }
@@ -272,18 +274,19 @@ window#waybar {
 }
 
 #custom-workspace.numbers {
+    font-size: 12px;
     font-weight: bold;
-    /* Measured on a variant render: these minima give a 26x24 box (the
-       22px line box rounds the height up) and the active pill below 38x24,
-       so the pill grows 12px from the number's resting width. */
-    min-width: 26px;
-    min-height: 22px;
-    margin: 8px 2px;
+    /* Measured on a variant render: an 18x18 box (11px vertical margin in
+       the 40px bar) and the active pill below 30x18, so the pill grows 12px
+       from the number's resting width. */
+    min-width: 18px;
+    min-height: 16px;
+    margin: 11px 1px;
     background-color: alpha(@color4, 0);
 }
 
 #custom-workspace.numbers.one {
-    margin-left: 12px;
+    margin-left: 9px;
 }
 
 #custom-workspace.numbers.empty {
@@ -291,7 +294,7 @@ window#waybar {
 }
 
 #custom-workspace.numbers.active {
-    min-width: 38px;
+    min-width: 30px;
     background-color: @color4;
 }
 
