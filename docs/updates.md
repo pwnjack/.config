@@ -23,7 +23,12 @@ starts and watches.
   accidental Return can never start an update or a reboot.
 - **The bar** follows the same state: a running class while the update runs,
   and a restart or attention class that stays until the card has shown the
-  result (`ack`, below).
+  result (`ack`, below). Its count is the planner's (`repo + AUR + Flatpak`),
+  so it equals the card's. Hovering shows a summary built by
+  `model.tooltip()` (printed by `scripts/updates/tooltip.mjs`): a row per
+  non-zero source, the download size, a kernel line, and when it last
+  checked. While running it shows pacman's step, and after a run the card's
+  result copy. If node fails, a one-line tooltip stands in.
 - **AUR packages never update here.** The card says how many there are and
   offers the terminal (`scripts/updates/terminal.sh aur|pacman|flatpak`, which
   opens `options/terminal`).
@@ -140,8 +145,11 @@ card showed; the bar keeps an unseen restart or attention class until
   explanations are kept as the reason; `warning:` lines are skipped.
 - **checkupdates and paru exit codes.** `checkupdates` exits 2 for "no
   updates" and `paru -Qua` is unreliable. The plan accepts checkupdates only as
-  0 or 2 and ignores the AUR helper's status. The bar and the plan share the
-  private `CHECKUPDATES_DB` through a `flock` beside it, and
+  0 or 2 and ignores the AUR helper's and Flatpak's status. The plan itself
+  exits 1 when the check failed (the bar hides) and 3 when `pacman -Sup`
+  cannot resolve the upgrade (the bar shows its glyph with "Updates need a
+  terminal"); the card shows either as an error. Both run the planner, so they
+  share the private `CHECKUPDATES_DB` through the planner's `flock`, and
   `pacman -Sup --dbpath <that dir> --print-format '%n %s %l'` works without
   root.
 - **QML.** Qt's V4 engine rejects object spread in `.mjs` imported by QML

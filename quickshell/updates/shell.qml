@@ -229,7 +229,7 @@ ShellRoot {
         function status(): string {
             return JSON.stringify({
                 opened: root.opened, mode: root.mode, expanded: root.expanded,
-                pending: root.plan ? root.plan.repo.length + root.plan.aur.length : -1,
+                pending: root.plan ? root.plan.repo.length + root.plan.aur.length + (root.plan.flatpak || 0) : -1,
                 planError: root.planError,
                 run: root.run ? { status: root.run.status, progress: root.run.progress, line: root.run.line } : null,
                 shown: card.shown

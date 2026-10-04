@@ -28,6 +28,12 @@ stub pacman 'case "$1" in
   -Qqo) [ "$2" = "'"$TMP"'/modules/7.2.8-2-cachyos" ] && echo linux-cachyos ;;
 esac'
 stub paru 'echo "spotblock-git 1.0-1 -> 1.1-1"; exit 0'
+# flatpak: `list` names installed refs; `remote-ls --updates` names pending
+# ones. FP_LIST / FP_UPDATES / FP_RC steer it; remote-ls leaves a probe file.
+stub flatpak 'case "$1" in
+  list) [ -n "${FP_LIST-}" ] && printf "%s\n" $FP_LIST ;;
+  remote-ls) touch "'"$TMP"'/fp-ran"; [ -n "${FP_UPDATES-}" ] && printf "%s\n" $FP_UPDATES; exit "${FP_RC:-0}" ;;
+esac'
 echo 'paru -Syu' > "$TMP/aurhelper"
 
 run() {
@@ -52,16 +58,31 @@ assert_json_field "$out" '.aur[0].name' spotblock-git "AUR updates from the deri
 assert_json_field "$out" '.aur[0].old' 1.0-1 "AUR old version"
 assert_json_field "$out" '.aur[0].new' 1.1-1 "AUR new version"
 
+assert_json_field "$out" '.flatpak' 0 "no Flatpak installs count as 0"
+[ -e "$TMP/fp-ran" ] && fp=ran || fp=skipped
+assert_eq "$fp" skipped "remote-ls is not run without installs"
+
+out=$(FP_LIST="org.a.App" FP_UPDATES="org.a.App org.gnome.Platform" run)
+assert_json_field "$out" '.flatpak' 2 "pending Flatpak refs are counted"
+
+out=$(FP_LIST="org.a.App" FP_RC=1 run)
+assert_json_field "$out" '.flatpak' 0 "a failing remote-ls counts as 0, not a failed plan"
+
+out=$(UPDATES_FLATPAK=nosuchflatpak run)
+assert_json_field "$out" '.flatpak' 0 "no flatpak binary counts as 0"
+rm -f "$TMP/fp-ran"
+
 touch "$TMP/cache/mesa-1:26.2.2-1-x86_64.pkg.tar.zst"
 out=$(run)
 assert_json_field "$out" '.repo[0].bytes' 0 "a package already in the cache downloads nothing"
 rm "$TMP/cache/mesa-1:26.2.2-1-x86_64.pkg.tar.zst"
 
-# fails <label> <stderr pattern>: run must exit 1, print the reason, no stdout.
+# fails <label> <stderr pattern> [status]: run must exit with status (default
+# 1), print the reason, no stdout.
 fails() {
     local err rc
     err=$(run 2>&1 >"$TMP/stdout"); rc=$?
-    assert_eq "$rc" 1 "$1: exit 1"
+    assert_eq "$rc" "${3:-1}" "$1: exit ${3:-1}"
     assert_eq "$([[ "$err" == *"$2"* ]] && echo yes || echo "no: $err")" yes "$1: reason on stderr"
     assert_eq "$(cat "$TMP/stdout")" "" "$1: no JSON on stdout"
 }
@@ -76,7 +97,7 @@ mv "$TMP/checkupdates.off" "$TMP/bin/checkupdates"
 
 stub checkupdates 'echo "mesa 1-1 -> 2-1"; exit 0'
 stub pacman 'exit 1'
-fails "pacman -Sup failure" "pacman cannot resolve"
+fails "pacman -Sup failure" "pacman cannot resolve" 3
 
 stub pacman 'case "$1" in
   -Sup) printf "%s\n" "mesa 100 https://m/mesa.pkg" "junk notanumber https://m/junk.pkg" ;;

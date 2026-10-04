@@ -202,7 +202,7 @@ export function duration(seconds) {
 export function summary(plan, error = '') {
     if (error) return { title: 'Could not check for updates', subtitle: error, count: 0, repo: 0, canUpdate: false, aur: '' }
     if (!plan) return { title: 'Checking for updates…', subtitle: 'Syncing package databases', count: 0, repo: 0, canUpdate: false, aur: '' }
-    const repo = plan.repo.length, aur = plan.aur.length, count = repo + aur
+    const repo = plan.repo.length, aur = plan.aur.length, count = repo + aur + (plan.flatpak || 0)
     if (!count) return { title: 'Up to date', subtitle: 'Nothing to install', count, repo, canUpdate: false, aur: '' }
     const size = plan.bytes ? `${mib(plan.bytes)} to download` : 'Already downloaded'
     return {
@@ -222,14 +222,19 @@ export function runningKey(run) { return run ? run.key : 'start' }
 
 function reasonText(s) { return [s.error, s.detail].filter(Boolean).join('\n') }
 
+// "15 packages updated in 1m 3s": the card's result and the bar's tooltip.
+function updatedText(snap) {
+    const took = duration(Math.max(0, snap.finishedAt - snap.startedAt))
+    const count = snap.total || snap.done
+    return count
+        ? `${count} package${count === 1 ? '' : 's'} updated in ${took}`
+        : 'Nothing needed updating'
+}
+
 // ③ Result copy for a finished snapshot; null while the run is still going.
 export function result(snap) {
     if (snap.status === 'running') return null
-    const took = duration(Math.max(0, snap.finishedAt - snap.startedAt))
-    const count = snap.total || snap.done
-    const updated = count
-        ? `${count} package${count === 1 ? '' : 's'} updated in ${took}`
-        : 'Nothing needed updating'
+    const updated = updatedText(snap)
     switch (snap.status) {
     case 'done':
         return { kind: 'done', tone: 'ok', title: 'Up to date', subtitle: updated, reason: '', terminal: '' }
@@ -288,4 +293,71 @@ export function glide(shown, targetValue, dtSeconds) {
     if (targetValue <= shown) return shown
     if (targetValue - shown < 0.0005) return targetValue
     return shown + (targetValue - shown) * (1 - Math.exp(-dtSeconds / 0.28))
+}
+
+// ④ Waybar tooltip for custom/updates (scripts/waybar/updates.sh runs it
+// through scripts/updates/tooltip.mjs). Pango markup, one string. `input`:
+//   state    pending | running | restart | attention | blocked
+//   icon     the glyph the bar shows, so the header matches it
+//   plan     updates-plan.sh's JSON (pending, attention when it has one)
+//   snap     state.json (running may be null; restart and attention)
+//   pct      the bar's percentage (running)
+//   checked  "HH:MM" of the check, formatted by the caller (pending)
+//   reason   the planner's stderr line (blocked)
+// No destructuring defaults and no spread: QML's V4 engine imports this file.
+const RESTART_GLYPH = String.fromCodePoint(0xf0709)
+
+function dim(text) { return `<span alpha='55%'>${text}</span>` }
+function heading(glyph, title) { return `${glyph}  <b>${escapeHtml(title)}</b>` }
+function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}` }
+function planCount(plan) { return plan.repo.length + plan.aur.length + (plan.flatpak || 0) }
+
+// One row per non-zero source: labels padded to the longest, counts
+// right-aligned, the download size on the repo row only. The bar font is
+// monospaced, so spaces align.
+function planRows(plan) {
+    const rows = [['Repo', plan.repo.length], ['AUR', plan.aur.length], ['Flatpak', plan.flatpak || 0]]
+        .filter(row => row[1] > 0)
+    const label = Math.max.apply(null, rows.map(row => row[0].length))
+    const digits = Math.max.apply(null, rows.map(row => String(row[1]).length))
+    return rows.map(row => {
+        const line = `  ${row[0].padEnd(label)}  ${String(row[1]).padStart(digits)}`
+        return row[0] === 'Repo' ? `${line}   ${plan.bytes ? mib(plan.bytes) : 'cached'}` : line
+    })
+}
+
+export function tooltip(input) {
+    const icon = input.icon || ''
+    const plan = input.plan || null
+    const snap = input.snap || null
+    let lines
+    switch (input.state) {
+    case 'running':
+        lines = [heading(icon, `Updating · ${input.pct || 0}%`), '',
+                 `  ${escapeHtml(runningLine(snap))}`, '', dim('Click: show progress')]
+        break
+    case 'restart':
+        lines = [heading(RESTART_GLYPH, result(snap).title), '', `  ${updatedText(snap)}`,
+                 `  Kernel ${escapeHtml(snap.restart || '')} loads on next boot`]
+        if (snap.errorKind === 'flatpak') lines.push('  Flatpak apps did not update')
+        lines.push('', dim('Click: open result'))
+        break
+    case 'attention': {
+        const r = result(snap)
+        lines = [heading(icon, r.title), '', `  ${escapeHtml(r.subtitle)}`]
+        const why = r.reason.split('\n')[0]
+        if (why) lines.push(`  ${escapeHtml(why)}`)
+        if (plan && planCount(plan)) lines = lines.concat(['', `  ${plural(planCount(plan), 'update')} waiting`], planRows(plan))
+        lines.push('', dim('Click: open details'))
+        break
+    }
+    case 'blocked':
+        lines = [heading(icon, 'Updates need a terminal'), '', `  ${escapeHtml(input.reason || '')}`, '', dim('Click: details')]
+        break
+    default:
+        lines = [heading(icon, plural(planCount(plan), 'update')), ''].concat(planRows(plan))
+        if (plan.kernel) lines.push('', `${RESTART_GLYPH}  Kernel · restart after`)
+        lines.push('', dim(`Checked ${escapeHtml(input.checked || '')}`), dim('Click: review updates'), dim('Right-click: check now'))
+    }
+    return lines.join('\n')
 }
