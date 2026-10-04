@@ -1,0 +1,156 @@
+#include "model.h"
+
+#include <errno.h>
+#include <json-glib/json-glib.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* The range check happens on the 64-bit value, before any narrowing. */
+static int slot_of(gint64 id)
+{
+    return id >= 1 && id <= WS_COUNT ? (int)id : 0;
+}
+
+int ws_slot(long id)
+{
+    return slot_of(id);
+}
+
+void ws_state_init(WsState *s)
+{
+    memset(s, 0, sizeof *s);
+}
+
+bool ws_visible(const WsState *s, int slot)
+{
+    if (slot < 1 || slot > WS_COUNT)
+        return false;
+    return slot <= WS_ALWAYS || s->exists[slot];
+}
+
+/* The root of a JSON document, owned by the caller; NULL when invalid. */
+static JsonNode *parse_json(const char *json)
+{
+    if (!json)
+        return NULL;
+    JsonParser *parser = json_parser_new();
+    JsonNode *root = NULL;
+    if (json_parser_load_from_data(parser, json, -1, NULL))
+        root = json_parser_steal_root(parser);
+    g_object_unref(parser);
+    return root;
+}
+
+/* An integer member, or false when absent or not an integer. */
+static bool int_member(JsonObject *o, const char *name, gint64 *out)
+{
+    JsonNode *n = json_object_get_member(o, name);
+    if (!n || !JSON_NODE_HOLDS_VALUE(n) || json_node_get_value_type(n) != G_TYPE_INT64)
+        return false;
+    *out = json_node_get_int(n);
+    return true;
+}
+
+bool ws_parse_workspaces(const char *json, WsState *s)
+{
+    JsonNode *root = parse_json(json);
+    if (!root || !JSON_NODE_HOLDS_ARRAY(root)) {
+        if (root)
+            json_node_unref(root);
+        return false;
+    }
+
+    WsState next = *s;
+    memset(next.exists, 0, sizeof next.exists);
+    memset(next.windows, 0, sizeof next.windows);
+
+    JsonArray *items = json_node_get_array(root);
+    bool ok = true;
+    for (guint i = 0; i < json_array_get_length(items); i++) {
+        JsonNode *item = json_array_get_element(items, i);
+        gint64 id, windows = 0;
+        if (!JSON_NODE_HOLDS_OBJECT(item) || !int_member(json_node_get_object(item), "id", &id)) {
+            ok = false;
+            break;
+        }
+        int slot = slot_of(id);
+        if (!slot)
+            continue;
+        int_member(json_node_get_object(item), "windows", &windows);
+        next.exists[slot] = true;
+        next.windows[slot] = windows < 0 ? 0 : windows > INT_MAX ? INT_MAX : (int)windows;
+    }
+    json_node_unref(root);
+    if (ok)
+        *s = next;
+    return ok;
+}
+
+bool ws_parse_active(const char *json, int *active)
+{
+    JsonNode *root = parse_json(json);
+    gint64 id;
+    bool ok = root && JSON_NODE_HOLDS_OBJECT(root) && int_member(json_node_get_object(root), "id", &id);
+    if (ok)
+        *active = slot_of(id);
+    if (root)
+        json_node_unref(root);
+    return ok;
+}
+
+/* A whole decimal integer in [start, end): an optional '-' then digits only,
+ * so a leading space or '+' (which strtol would accept) is rejected. */
+static bool parse_long(const char *start, const char *end, long *out)
+{
+    if (start >= end)
+        return false;
+    char buf[32];
+    size_t n = (size_t)(end - start);
+    if (n >= sizeof buf)
+        return false;
+    memcpy(buf, start, n);
+    buf[n] = '\0';
+    const char *digits = buf[0] == '-' ? buf + 1 : buf;
+    if (*digits < '0' || *digits > '9')
+        return false;
+    char *stop;
+    errno = 0;
+    long v = strtol(buf, &stop, 10);
+    if (errno || *stop || stop == buf)
+        return false;
+    *out = v;
+    return true;
+}
+
+WsEvent ws_parse_event(const char *line, int *active)
+{
+    const char *sep = strstr(line, ">>");
+    if (!sep)
+        return WS_EVENT_NONE;
+    size_t len = (size_t)(sep - line);
+    const char *data = sep + 2;
+#define IS(name) (len == sizeof(name) - 1 && strncmp(line, name, len) == 0)
+
+    if (IS("workspacev2")) { /* ID,NAME */
+        const char *comma = strchr(data, ',');
+        long id;
+        if (!comma || !parse_long(data, comma, &id))
+            return WS_EVENT_NONE;
+        *active = ws_slot(id);
+        return WS_EVENT_ACTIVE;
+    }
+    if (IS("focusedmonv2")) { /* MONNAME,ID */
+        const char *comma = strrchr(data, ',');
+        long id;
+        if (!comma || !parse_long(comma + 1, comma + 1 + strlen(comma + 1), &id))
+            return WS_EVENT_NONE;
+        *active = ws_slot(id);
+        return WS_EVENT_ACTIVE;
+    }
+    if (IS("createworkspacev2") || IS("destroyworkspacev2") || IS("openwindow") ||
+        IS("closewindow") || IS("movewindowv2"))
+        return WS_EVENT_REFRESH;
+    return WS_EVENT_NONE;
+#undef IS
+}
