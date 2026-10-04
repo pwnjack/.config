@@ -105,8 +105,12 @@ RESTART_ICON=$'\U000f0709'   # restart
 if [ "$run_status" = running ]; then
     pct=$(awk -v p="$run_progress" 'BEGIN { v = int(p * 100); if (v < 0) v = 0; if (v > 99) v = 99; print v }')
     slice=${SLICES[$(( pct * 8 / 100 ))]}
+    # Right after the runner takes the lock, state.json can still hold the
+    # previous run's result; only a running snapshot describes this run (the
+    # card applies the same guard).
     tooltip=$(tip "Updating · $pct%" "$(jq -nc --arg icon "$slice" --argjson pct "$pct" --argjson snap "$snap" \
-        '{state: "running", icon: $icon, pct: $pct, snap: $snap}')")
+        '{state: "running", icon: $icon, pct: $pct,
+          snap: (if $snap != null and $snap.status == "running" then $snap else null end)}')")
     jq -nc --arg text "<span size=\"large\">$slice</span> $pct%" --arg tooltip "$tooltip" \
         '{text: $text, tooltip: $tooltip, class: "running"}'
     exit 0

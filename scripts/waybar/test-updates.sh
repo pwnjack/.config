@@ -196,6 +196,14 @@ assert_json_field "$out" .class running "a held lock with no state.json is still
 assert_json_contains "$out" .text "0%" "at 0%"
 assert_json_contains "$out" .tooltip "Starting…" "and the tooltip says it is starting"
 probe_ran; assert_eq "$?" 1 "without running the planner"
+
+# A held lock with the PREVIOUS run's result still in state.json (the runner
+# has not cleared it yet) is the new run starting, not the old run's last step.
+printf '{"status":"done","progress":1,"line":"Old run last step","finishedAt":1750}\n' > "$TMP/state/state.json"
+out=$(run)
+assert_json_contains "$out" .tooltip "Starting…" "a stale finished snapshot reads as starting"
+assert_json_lacks "$out" .tooltip "Old run last step" "not as the previous run's step"
+rm -f "$TMP/state/state.json"
 exec 9>&-
 
 # An unseen failure shows even when nothing is pending, or the check failed.
