@@ -36,7 +36,7 @@ $(BUILD):
 	mkdir -p $@
 
 $(BUILD)/workspaces.so: $(LIB_SRC) $(HEADERS) | $(BUILD)
-	$(CC) $(WS_CFLAGS) $(CFLAGS) -shared -o $@ $(LIB_SRC) $(WS_LDLIBS) $(LDLIBS)
+	$(CC) $(WS_CFLAGS) $(CFLAGS) -fvisibility=hidden -shared -o $@ $(LIB_SRC) $(WS_LDLIBS) $(LDLIBS)
 
 # Each test links the library sources it needs; hypr's retry is shortened so
 # the reconnect test runs in milliseconds.
