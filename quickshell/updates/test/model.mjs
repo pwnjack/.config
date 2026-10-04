@@ -258,4 +258,86 @@ assert.equal(model.glide(0.5, 0.4, 0.016), 0.5)
 assert.ok(model.glide(0, 1, 0.016) > 0 && model.glide(0, 1, 0.016) < 0.1)
 assert.equal(model.glide(0.9996, 1, 0.016), 1)
 
+// Summary counts Flatpak; only repo packages make the card's Update possible.
+{
+    const plan = { repo: [{ name: 'a' }], aur: [], bytes: 0, kernel: false, flatpak: 2 }
+    assert.equal(model.summary(plan).count, 3)
+    assert.equal(model.summary(plan).title, '3 updates')
+    assert.equal(model.summary(plan).canUpdate, true)
+    assert.equal(model.summary(Object.assign({}, plan, { repo: [] })).canUpdate, false)
+}
+
+// Waybar tooltip (scripts/waybar/updates.sh through scripts/updates/tooltip.mjs).
+{
+    const dim = text => `<span alpha='55%'>${text}</span>`
+    const restart = String.fromCodePoint(0xf0709)
+
+    // Pending: rows for non-zero sources, size on the repo row, kernel line.
+    const plan = { repo: [{ name: 'a' }, { name: 'b' }], aur: [{ name: 'c' }], bytes: 434110464, kernel: true, flatpak: 0 }
+    assert.equal(model.tooltip({ state: 'pending', icon: 'U', plan, checked: '14:32' }), [
+        'U  <b>3 updates</b>',
+        '',
+        '  Repo  2   414 MiB',
+        '  AUR   1',
+        '',
+        `${restart}  Kernel · restart after`,
+        '',
+        dim('Checked 14:32'),
+        dim('Click: review updates'),
+        dim('Right-click: check now'),
+    ].join('\n'))
+
+    // Alignment across label and digit widths; nothing to download reads "cached".
+    const lines = model.tooltip({ state: 'pending', icon: 'U',
+        plan: { repo: [{ name: 'a' }], aur: [], bytes: 0, kernel: false, flatpak: 12 }, checked: '09:05' }).split('\n')
+    assert.equal(lines[0], 'U  <b>13 updates</b>')
+    assert.equal(lines[2], '  Repo      1   cached')
+    assert.equal(lines[3], '  Flatpak  12')
+    assert.ok(!lines.some(l => l.includes('Kernel')), 'no kernel line without a kernel update')
+    assert.ok(!lines.some(l => l.includes('AUR')), 'a zero source has no row')
+    assert.match(model.tooltip({ state: 'pending', icon: 'U',
+        plan: { repo: [{ name: 'a' }], aur: [], bytes: 1, kernel: false }, checked: '' }), /<b>1 update<\/b>/)
+
+    // Running: the bar's own glyph and percentage, and pacman's current step.
+    assert.equal(model.tooltip({ state: 'running', icon: 'S', pct: 42, snap: { line: 'Installing (12/40)' } }),
+        ['S  <b>Updating · 42%</b>', '', '  Installing (12/40)', '', dim('Click: show progress')].join('\n'))
+    assert.match(model.tooltip({ state: 'running', icon: 'S', pct: 0, snap: null }), /  Starting…/)
+    assert.match(model.tooltip({ state: 'running', icon: 'S', pct: 1, snap: { line: 'a < b & c' } }), /  a &lt; b &amp; c/)
+
+    // Restart: the card's title, what was updated, which kernel boots next.
+    const snap = { status: 'restart', restart: '7.2.9-1-cachyos', errorKind: '', error: '', detail: '',
+                   total: 15, done: 15, startedAt: 1000, finishedAt: 1063 }
+    assert.equal(model.tooltip({ state: 'restart', snap }), [
+        `${restart}  <b>Restart to finish</b>`,
+        '',
+        '  15 packages updated in 1m 3s',
+        '  Kernel 7.2.9-1-cachyos loads on next boot',
+        '',
+        dim('Click: open result'),
+    ].join('\n'))
+    assert.match(model.tooltip({ state: 'restart', snap: Object.assign({}, snap, { errorKind: 'flatpak' }) }),
+        /\n  Flatpak apps did not update\n/)
+
+    // Attention: the card's result copy, the first reason line escaped, and
+    // what is still waiting when the plan has anything.
+    const failed = { status: 'failed', errorKind: '', error: 'failed to commit transaction (a & <b>)',
+                     detail: 'second line', startedAt: 0, finishedAt: 5, total: 0, done: 0 }
+    const t = model.tooltip({ state: 'attention', icon: 'U', snap: failed, plan })
+    assert.equal(t.split('\n').slice(0, 4).join('\n'), [
+        'U  <b>The update did not finish</b>',
+        '',
+        '  pacman stopped partway through. Finish it in a terminal.',
+        '  failed to commit transaction (a &amp; &lt;b&gt;)',
+    ].join('\n'))
+    assert.doesNotMatch(t, /second line/)
+    assert.match(t, /\n\n  3 updates waiting\n  Repo  2   414 MiB\n  AUR   1\n/)
+    assert.ok(t.endsWith(`\n\n${dim('Click: open details')}`))
+    assert.doesNotMatch(model.tooltip({ state: 'attention', icon: 'U', snap: failed, plan: null }), /waiting/)
+
+    // Blocked (planner exit 3): the planner's reason, escaped.
+    assert.equal(model.tooltip({ state: 'blocked', icon: 'U', reason: 'pacman cannot resolve this upgrade; a & b' }),
+        ['U  <b>Updates need a terminal</b>', '', '  pacman cannot resolve this upgrade; a &amp; b', '',
+         dim('Click: details')].join('\n'))
+}
+
 console.log('model: ok')
