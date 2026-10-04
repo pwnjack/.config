@@ -37,12 +37,12 @@ NET_INTERVAL=${NET_INTERVAL:-2}
 # Bytes per second, up and down combined, before the readout appears. Background
 # chatter -- sync clients, the VPN keepalive -- stays well below it.
 NET_SHOW=${NET_SHOW:-102400}
-# Quiet ticks before the speeds hide again, so a download that stalls for a
+# Quiet ticks before the readout hides again, so a download that stalls for a
 # moment does not make the module blink.
 NET_LINGER=${NET_LINGER:-3}
 NET_QUIET=$NET_LINGER
-# The Bar page's mode (options/bar-network): traffic (speeds only while data
-# moves), always, or offline (never speeds). Offline itself shows in every
+# The Bar page's mode (options/bar-network): traffic (the rate only while data
+# moves), always, or offline (never the rate). Offline itself shows in every
 # mode. NET_MODE overrides the file for the tests.
 BAR_OPTIONS="${BAR_OPTIONS-}"
 [ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
@@ -144,6 +144,9 @@ net_human() {
         div=1073741824 unit='GB/s'
     fi
     tenths=$(( b * 10 / div ))
+    # 1000 KiB/s is 0.98 MiB/s: show it as 1.0 of the larger unit, not 0.9,
+    # so a rising rate never reads as a drop where the unit switches.
+    (( tenths < 10 )) && tenths=10
     if (( tenths < 1000 )); then
         REPLY="$(( tenths / 10 )).$(( tenths % 10 )) $unit"
     else

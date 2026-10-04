@@ -104,9 +104,9 @@ assert_eq "$?" 1 "an unknown interface reports failure"
 echo
 echo "rate format"
 
-for case in '0|0 KB/s' '102400|100 KB/s' '1023999|999 KB/s' '1048576|1.0 MB/s' \
+for case in '0|0 KB/s' '102400|100 KB/s' '1023999|999 KB/s' '1024000|1.0 MB/s' '1048576|1.0 MB/s' \
             '13002343|12.4 MB/s' '104857599|99.9 MB/s' '104857600|100 MB/s' \
-            '157286400|150 MB/s' '1181116007|1.1 GB/s'; do
+            '157286400|150 MB/s' '1048576000|1.0 GB/s' '1181116007|1.1 GB/s'; do
     net_human "${case%%|*}"
     assert_eq "$REPLY" "${case#*|}" "${case%%|*} B/s renders as '${case#*|}'"
 done
@@ -161,6 +161,7 @@ assert_json_contains "$OUT" .text Offline "offline says so"
 net_render eno1 0 0 192.168.178.23 ""
 assert_json_field "$OUT" .text "" "idle renders empty text, which hides the module"
 assert_json_lacks "$OUT" .tooltip "B/s" "no breakdown in the tooltip while the readout is hidden"
+assert_json_contains "$OUT" .tooltip "eno1  192.168.178.23" "the idle tooltip still names the interface and address"
 net_render eno1 13002343 839680 192.168.178.23 proton0
 assert_json_contains "$OUT" .text "</span>13.2 MB/s" "the combined rate sits flush against its glyph span"
 assert_json_contains "$OUT" .text "$NET_GLYPH_RATE" "the bar uses the single up/down glyph"
@@ -186,7 +187,7 @@ assert_json_contains "$OUT" .text "0 KB/s" "always shows the rate with no traffi
 # shellcheck disable=SC2034 # read by the sourced functions
 NET_QUIET=3
 NET_MODE=offline net_render eno1 13002343 0 "" ""
-assert_json_field "$OUT" .text "" "offline-only never shows speeds"
+assert_json_field "$OUT" .text "" "offline-only never shows the rate"
 NET_MODE=offline net_render "" 0 0 "" ""
 assert_json_field "$OUT" .class offline "offline-only still reports Offline"
 
