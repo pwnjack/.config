@@ -317,7 +317,7 @@ static void on_disconnected(void *user)
     jump(m);
 }
 
-/* options/bar-workspaces, read like workspace.sh used to: first line,
+/* options/bar-workspaces, read as the old script did: first line,
  * surrounding whitespace trimmed; "numbers" or anything else (dots). */
 static gboolean numbers_mode(void)
 {

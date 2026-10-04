@@ -111,6 +111,8 @@ PACKAGES=(
     "headsetcontrol"
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
+    # Native Waybar workspace module (scripts/waybar/build-workspaces.sh)
+    "gcc" "make" "pkgconf" "gtk3" "json-glib"
     # Isolated deployment/hook fixtures and panel persistence tests
     "python" "nodejs" "gjs"
     # Fonts (configs default to FiraCode Nerd Font)
@@ -247,6 +249,10 @@ fi
 
 if ! execute bash "$CONFIG_DIR/scripts/waybar/bar-modes.sh" --no-reload; then
     warning "Could not render the Waybar module modes"
+fi
+
+if ! execute bash "$CONFIG_DIR/scripts/waybar/build-workspaces.sh"; then
+    warning "The Waybar workspace module did not build; run scripts/waybar/build-workspaces.sh to retry"
 fi
 
 # Seed waypaper config
