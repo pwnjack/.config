@@ -8,21 +8,24 @@
 # including new dependencies (measured: works unprivileged). A package whose
 # file is already in the cache downloads nothing and counts as 0.
 #
-# Exit status: checkupdates is accepted only as 0 (updates) or 2 (none); any
-# other status, a missing checkupdates, a lock timeout, or a failing
-# `pacman -Sup` prints one reason line on stderr and exits 1 with no JSON, so
-# the card shows an error instead of a false "Up to date". (scripts/waybar/
-# updates.sh keeps its own rule of ignoring the status.) The AUR helper's
-# status stays ignored: `paru -Qua` exits unreliably, and the AUR list is
-# derived from options/aurhelper the same way updates.sh derives it.
+# Exit status: 0 with the plan on stdout. Otherwise one reason line on stderr,
+# no JSON, and:
+#   1  checkupdates missing, failed (any status but 0 or 2), or its lock timed
+#      out
+#   3  `pacman -Sup` cannot resolve the upgrade, so it needs a terminal
+# The card shows any failure as an error instead of a false "Up to date"; the
+# bar (scripts/waybar/updates.sh) hides on 1 and shows an attention glyph on 3.
+# The AUR helper's status stays ignored: `paru -Qua` exits unreliably, and the
+# AUR list is derived from options/aurhelper. Flatpak's status is ignored too:
+# its count is the lines `remote-ls --updates` prints, 0 on any failure.
 #
 # checkupdates runs under `flock -w` on "$DB.lock" (LOCK below), because the
-# private sync DB is shared. scripts/waybar/updates.sh must take the same lock
-# around its own checkupdates call (Task 5).
+# private sync DB is shared between the card and the bar, which both run
+# this script.
 #
 # Test seams: UPDATES_REPO_CMD, UPDATES_AURHELPER, UPDATES_AUR_CMD,
 # UPDATES_CACHE_DIR, UPDATES_KERNEL, UPDATES_MODULES_DIR, UPDATES_DB,
-# UPDATES_LOCK_TIMEOUT.
+# UPDATES_LOCK_TIMEOUT, UPDATES_FLATPAK.
 #
 set -uo pipefail
 
@@ -37,8 +40,9 @@ CACHE="${UPDATES_CACHE_DIR-}"
 CACHE="${CACHE%/}"
 LOCK="$DB.lock"
 LOCK_TIMEOUT="${UPDATES_LOCK_TIMEOUT:-120}"
+FLATPAK="${UPDATES_FLATPAK:-flatpak}"
 
-fail() { echo "$1" >&2; exit 1; }
+fail() { echo "$1" >&2; exit "${2:-1}"; }
 
 command -v "$REPO_CMD" >/dev/null 2>&1 || fail "Could not check for updates (checkupdates is not installed)"
 repo=$(CHECKUPDATES_DB="$DB" flock -w "$LOCK_TIMEOUT" -E 200 "$LOCK" "$REPO_CMD" 2>/dev/null)
@@ -51,7 +55,7 @@ esac
 sizes=""
 if [ -n "$repo" ]; then
     plist=$(LC_ALL=C pacman -Sup --dbpath "$DB" --print-format '%n %s %l' 2>/dev/null) ||
-        fail "pacman cannot resolve this upgrade; update in a terminal"
+        fail "pacman cannot resolve this upgrade; update in a terminal" 3
     while read -r name size location; do
         [ -n "$name" ] || continue
         [[ "$size" =~ ^[0-9]+$ ]] || continue
@@ -72,10 +76,18 @@ if [ -n "$aur_cmd" ] && command -v "$aur_cmd" >/dev/null 2>&1; then
     aur=$("$aur_cmd" -Qua 2>/dev/null)
 fi
 
-jq -nc --arg repo "$repo" --arg sizes "$sizes" --arg owners "$owners" --arg aur "$aur" '
+# Flatpak: only when something is installed -- the same guard updates-run.sh
+# uses before its Flatpak phase. Runtimes count too; the run updates them.
+flatpak=0
+if command -v "$FLATPAK" >/dev/null 2>&1 \
+    && [ -n "$("$FLATPAK" list --columns=application 2>/dev/null | head -n1)" ]; then
+    flatpak=$("$FLATPAK" remote-ls --updates --columns=application 2>/dev/null | grep -c .)
+fi
+
+jq -nc --arg repo "$repo" --arg sizes "$sizes" --arg owners "$owners" --arg aur "$aur" --argjson flatpak "$flatpak" '
     def rows($text): $text | split("\n") | map(select(length > 0));
     def updates($text): [rows($text)[] | capture("^(?<name>\\S+) (?<old>\\S+) -> (?<new>\\S+)")?];
     (rows($sizes) | map(split(" ") | {key: .[0], value: (.[1] | tonumber)}) | from_entries) as $size
     | rows($owners) as $kernel
     | (updates($repo) | map(. + {bytes: ($size[.name] // 0), kernel: (.name as $n | $kernel | index([$n]) != null)})) as $rows
-    | {repo: $rows, aur: updates($aur), bytes: ([$size[]] | add // 0), kernel: ($rows | any(.kernel))}'
+    | {repo: $rows, aur: updates($aur), bytes: ([$size[]] | add // 0), kernel: ($rows | any(.kernel)), flatpak: $flatpak}'
