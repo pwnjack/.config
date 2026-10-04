@@ -38,26 +38,30 @@ run_workspace() {
 
 echo "workspace.sh"
 
+# Dots are drawn by style.css: the text is one space (an empty text would
+# hide the module, and it must stay mounted to animate) and the state is the
+# single class.
 out=$(run_workspace status 2)
-assert_json_field "$out" '.text' '●' "the active workspace is filled"
-assert_json_field "$out" '.class' 'active' "the active workspace gets the highlight class"
+assert_json_field "$out" '.text' ' ' "the active workspace prints one space for CSS to draw"
+assert_json_field "$out" '.class' 'active' "the active workspace gets the pill class"
 
 out=$(run_workspace status 1)
-assert_json_field "$out" '.text' '●' "an occupied inactive workspace is filled"
-assert_json_field "$out" '.class' 'occupied' "an occupied inactive workspace is not highlighted"
+assert_json_field "$out" '.text' ' ' "an occupied workspace prints one space"
+assert_json_field "$out" '.class' 'occupied' "an occupied inactive workspace is filled, not the pill"
 
 out=$(run_workspace status 3)
-assert_json_field "$out" '.text' '○' "an empty workspace is outlined"
-assert_json_field "$out" '.class' 'empty' "an empty workspace gets the empty class"
+assert_json_field "$out" '.text' ' ' "an empty workspace prints one space"
+assert_json_field "$out" '.class' 'empty' "an empty workspace gets the ring class"
 
 out=$(run_workspace status 5)
-assert_json_field "$out" '.text' '○' "a missing workspace safely renders empty"
+assert_json_field "$out" '.class' 'empty' "a missing workspace safely renders empty"
 
 out=$(run_workspace status-existing 3)
-assert_json_field "$out" '.text' '○' "an existing optional workspace is rendered"
+assert_json_field "$out" '.class' 'empty' "an existing optional workspace is rendered"
 
 out=$(run_workspace status-existing 5)
-assert_json_field "$out" '.text' '' "a missing optional workspace is hidden"
+assert_json_field "$out" '.text' ' ' "a missing optional workspace stays mounted"
+assert_json_field "$out" '.class' 'absent' "a missing optional workspace collapses through the absent class"
 
 # options/bar-workspaces: numbers swaps the glyph and adds the numbers class;
 # anything else keeps the dots with a single state class.
@@ -73,7 +77,7 @@ assert_json_field "$out" '.text' '' "numbers mode still hides a missing optional
 
 printf 'banana\n' > "$TMP/opt/bar-workspaces"
 out=$(run_workspace status 1)
-assert_json_field "$out" '.text' '●' "an unknown mode falls back to dots"
+assert_json_field "$out" '.text' ' ' "an unknown mode falls back to dots"
 assert_json_field "$out" '.class' 'occupied' "the dots keep a single state class"
 rm -f "$TMP/opt/bar-workspaces"
 

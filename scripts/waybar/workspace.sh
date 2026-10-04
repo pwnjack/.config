@@ -5,20 +5,30 @@
 # The built-in hyprland/workspaces module knows occupancy, but its click path
 # hard-codes the legacy positional workspace dispatcher that Hyprland's Lua
 # config provider removed. ext/workspaces activates safely through Wayland but
-# does not expose window counts. This small module keeps both properties:
+# does not expose window counts. This small module keeps both properties.
 #
-#   active or occupied  ●
-#   genuinely empty     ○
+# The dot itself is drawn by waybar/style.css, not by a glyph, so it can morph:
+# the text is a single space and the state is the class.
+#
+#   active     the pill (current workspace)
+#   occupied   filled (has windows)
+#   empty      ring
+#   absent     zero width (status-existing only: workspace does not exist)
+#
+# The text is never empty in dots mode because Waybar hides a custom module
+# whose text is empty, and a hidden module cannot animate in or out.
 #
 # The Bar page's mode (options/bar-workspaces) swaps the dots for the workspace
 # number; anything but `numbers` keeps the dots. A number cannot be hollow, so
-# that mode adds a `numbers` class and style.css dims the empty ones instead.
+# that mode adds a `numbers` class and style.css dims the empty ones instead;
+# a missing optional workspace prints empty text there and hides at once,
+# since a digit cannot shrink below its own width.
 # A save reloads Waybar, which re-runs every instance, so the option is read on
 # each status call rather than cached.
 #
 # Hyprland events signal Waybar for immediate updates; the module's interval is
-# only a fallback. Workspaces 1-5 are always rendered, while `status-existing`
-# lets the optional 6-10 modules disappear until their workspace exists.
+# only a fallback. Workspaces 1-5 are always rendered with `status`; the
+# optional 6-10 use `status-existing`.
 
 set -uo pipefail
 
@@ -50,8 +60,15 @@ case "$action" in
         workspaces=$(hyprctl workspaces -j 2>/dev/null) || workspaces='[]'
         exists=$(jq -r --argjson id "$workspace" \
             'any(.[]; .id == $id)' <<< "$workspaces" 2>/dev/null) || exists=false
+        mode=''
+        read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-workspaces"
+
         if [ "$action" = "status-existing" ] && [ "$exists" != true ]; then
-            printf '{"text":""}\n'
+            if [ "$mode" = numbers ]; then
+                printf '{"text":""}\n'
+            else
+                printf '{"text":" ","class":"absent"}\n'
+            fi
             exit 0
         fi
         active=$(hyprctl activeworkspace -j 2>/dev/null \
@@ -68,14 +85,10 @@ case "$action" in
             state=empty
         fi
 
-        mode=''
-        read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-workspaces"
         if [ "$mode" = numbers ]; then
             printf '{"text":"%s","class":["%s","numbers"]}\n' "$workspace" "$state"
-        elif [ "$state" = empty ]; then
-            printf '{"text":"○","class":"empty"}\n'
         else
-            printf '{"text":"●","class":"%s"}\n' "$state"
+            printf '{"text":" ","class":"%s"}\n' "$state"
         fi
         ;;
     *)

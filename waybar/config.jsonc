@@ -62,10 +62,13 @@
   // click handler hard-codes the removed positional `workspace` dispatcher.
   // ext/workspaces fixes clicks but exposes no window count, so these custom
   // instances preserve both behaviours: Lua-safe clicks and filled occupied
-  // dots. Workspaces 1-5 stay visible; the remaining bound workspaces 6-10
-  // appear only while they exist. Signal 7 is raised by Hyprland
-  // workspace/window events; the five-minute interval is only a low-cost
-  // fallback if one is missed.
+  // dots. The dots are drawn by style.css from a state class, so they can
+  // morph. Workspaces 1-5 always render; 6-10 use status-existing and sit at
+  // zero width (class `absent`) until their workspace exists, then grow in.
+  // Dots never print empty text, so hide-empty-text only acts in numbers
+  // mode, where a missing workspace hides at once.
+  // Signal 7 is raised by Hyprland workspace/window events; the five-minute
+  // interval is only a low-cost fallback if one is missed.
   "custom/workspace#one": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status 1",

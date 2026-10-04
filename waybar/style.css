@@ -147,13 +147,14 @@ window#waybar {
     padding-left: 15px;
 }
 
-/* Optional workspace dots 6-10 hide completely when absent, so the gap after
-   the dots belongs to what follows them. The taskbar's buttons carry 5px of
-   their own padding and the last dot's pill 2px of margin, which is why these
-   read as the 30px group gap. #taskbar.empty drops to zero below, and the
-   window title then opens the group on its own. */
+/* Optional workspace dots 6-10 sit at zero width while absent, so the gap
+   after the dots belongs to what follows them. The taskbar's buttons carry
+   5px of their own padding and the last dot 3px of margin, which is why
+   these read as the 30px group gap (29px in numbers mode, whose boxes
+   carry 2px). #taskbar.empty drops to zero below, and
+   the window title then opens the group on its own. */
 #taskbar {
-    padding-left: 25px;
+    padding-left: 22px;
     padding-right: 0px;
 }
 
@@ -198,47 +199,122 @@ window#waybar {
 }
 
 /* ── WORKSPACES ──────────────────────────────────────────────────────
-   ● / ○ (or the numbers) are geometric Unicode, not Nerd Font glyphs —
-   they render at full size, so they stay at the text size rather than the
-   icon size. */
+   Each dot is drawn here, not by a glyph: workspace.sh prints one space
+   and a state class, so the box can morph.
+
+     empty     8x8 ring    alpha(@foreground, 0.6)
+     occupied  8x8 disc    @foreground
+     active    22x8 pill   @color4
+     absent    0 wide      workspaces 6-10 that do not exist yet
+
+   Fill means "has windows" and nothing else; the pill alone marks the
+   current workspace. min-width/min-height are content-box, so the 1px
+   border -- present in every visible state, only its colour changes, so
+   the box never jumps -- turns 6px into 8. The bar's border takes no
+   height: a 16px vertical margin centres the 8px box in the 40px bar.
+   Margins sit inside the module's event box, so the click target is
+   14x40 even though the ink is 8x8. GTK renders a 1.5px border as 1px.
+
+   Motion: width and margin 300ms on a decelerating curve, colour 200ms.
+   On a switch the old pill contracts while the new dot stretches; their
+   sum stays constant, so nothing to the right moves (measured within
+   1px). Workspaces 6-10 grow in from zero width and collapse back out.
+
+   Numbers mode (options/bar-workspaces) keeps the text tier, bold, with
+   the empty ones dimmed because a number has no hollow form; the active
+   number sits in the same accent pill and shares the motion. */
 
 #custom-workspace {
-    background: transparent;
     color: @foreground;
-    border-radius: 100px;
-    /* GTK's 22px line box renders these asymmetric CSS minima as an exact
-       24x24 background; measured from a live bar capture. */
-    min-width: 26px;
-    min-height: 22px;
+    background-image: none;
     padding: 0;
-    margin: 8px 2px;
-    transition: all 0.25s ease-in-out;
+    border-radius: 100px;
+    transition: min-width 300ms cubic-bezier(0.2, 0, 0, 1),
+                margin 300ms cubic-bezier(0.2, 0, 0, 1),
+                background-color 200ms ease-out,
+                border-color 200ms ease-out,
+                opacity 200ms ease-out;
 }
 
-/* Against the bar border. The dot's ink sits inside its 26px pill, so a
-   smaller margin than the 16px edge lands the dot where #custom-power sits. */
-#custom-workspace.one {
-    margin-left: 12px;
+#custom-workspace:not(.numbers) {
+    /* the space must never set the size */
+    font-size: 1px;
+    min-width: 6px;
+    min-height: 6px;
+    margin: 16px 3px;
+    border: 1px solid alpha(@foreground, 0.6);
+    background-color: alpha(@foreground, 0);
 }
 
-#custom-workspace.active {
-    color: @foreground;
+#custom-workspace.occupied:not(.numbers) {
+    border-color: @foreground;
+    background-color: @foreground;
+}
+
+#custom-workspace.active:not(.numbers) {
+    min-width: 20px;
+    border-color: @color4;
     background-color: @color4;
 }
 
-/* Numbers mode (options/bar-workspaces): bold to carry the dots' weight, and
-   empty ones dimmed because a number has no hollow form. */
+#custom-workspace.absent {
+    min-width: 0;
+    /* the space keeps a 1px natural width; the negative margin cancels it */
+    margin: 16px -1px 16px 0;
+    border-width: 0;
+    opacity: 0;
+}
+
+/* Against the bar border: the first dot's ink lands at the same inset as
+   #custom-power's glyph on the other edge (measured on a variant render). */
+#custom-workspace.one:not(.numbers) {
+    margin-left: 15px;
+}
+
 #custom-workspace.numbers {
     font-weight: bold;
+    /* Measured on a variant render: these minima give a 26x24 box (the
+       22px line box rounds the height up) and the active pill below 38x24,
+       so the pill grows 12px from the number's resting width. */
+    min-width: 26px;
+    min-height: 22px;
+    margin: 8px 2px;
+    background-color: alpha(@color4, 0);
+}
+
+#custom-workspace.numbers.one {
+    margin-left: 12px;
 }
 
 #custom-workspace.numbers.empty {
     opacity: 0.4;
 }
 
-#custom-workspace:hover {
+#custom-workspace.numbers.active {
+    min-width: 38px;
     background-color: @color4;
-    opacity: 0.4;
+}
+
+/* Hover tints toward the accent; it never changes size. */
+#custom-workspace.empty:hover:not(.numbers) {
+    border-color: @color4;
+    background-color: alpha(@color4, 0.35);
+}
+
+#custom-workspace.occupied:hover:not(.numbers) {
+    border-color: @color4;
+    background-color: @color4;
+}
+
+#custom-workspace.numbers:hover {
+    background-color: alpha(@color4, 0.35);
+}
+
+/* Last on purpose: it ties .numbers.active and .numbers:hover on
+   specificity and wins only by coming after them. */
+#custom-workspace.active:hover {
+    border-color: shade(@color4, 1.15);
+    background-color: shade(@color4, 1.15);
 }
 
 /* ── TASKBAR ─────────────────────────────────────────────────────────
