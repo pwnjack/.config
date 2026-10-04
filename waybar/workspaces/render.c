@@ -107,7 +107,7 @@ static void draw_number(cairo_t *cr, const Theme *t, int slot, double cx, double
     pango_font_description_set_absolute_size(font, 12 * PANGO_SCALE);
     pango_font_description_set_weight(font, PANGO_WEIGHT_BOLD);
     pango_layout_set_font_description(layout, font);
-    char digits[4];
+    char digits[12]; /* any int fits: -Wformat-truncation at -O1 */
     snprintf(digits, sizeof digits, "%d", slot);
     pango_layout_set_text(layout, digits, -1);
     PangoRectangle ink, logical;

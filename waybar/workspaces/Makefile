@@ -41,7 +41,7 @@ $(BUILD)/workspaces.so: $(LIB_SRC) $(HEADERS) | $(BUILD)
 # Each test links the library sources it needs; hypr's retry is shortened so
 # the reconnect test runs in milliseconds.
 $(BUILD)/test_%: test/test_%.c test/check.h $(LIB_SRC) $(HEADERS) | $(BUILD)
-	$(CC) $(WS_CFLAGS) $(CFLAGS) -DHYPR_RETRY_MS=50 -I. -o $@ $< $(filter-out module.c,$(LIB_SRC)) $(WS_LDLIBS) $(LDLIBS) -ldl
+	$(CC) $(WS_CFLAGS) $(CFLAGS) -DHYPR_RETRY_MS=50 -DHYPR_TEST -I. -o $@ $< $(filter-out module.c,$(LIB_SRC)) $(WS_LDLIBS) $(LDLIBS) -ldl
 
 test: $(TESTS) $(if $(wildcard module.c),$(BUILD)/workspaces.so)
 	@set -e; for t in $(TESTS); do "$$t" "$(BUILD)"; done
