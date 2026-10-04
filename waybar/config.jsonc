@@ -62,10 +62,11 @@
   // click handler hard-codes the removed positional `workspace` dispatcher.
   // ext/workspaces fixes clicks but exposes no window count, so these custom
   // instances preserve both behaviours: Lua-safe clicks and filled occupied
-  // dots. Workspaces 1-5 stay visible; the remaining bound workspaces 6-10
-  // appear only while they exist. Signal 7 is raised by Hyprland
-  // workspace/window events; the five-minute interval is only a low-cost
-  // fallback if one is missed.
+  // dots. The dots are drawn by style.css from a state class, so they can
+  // morph. Workspaces 1-5 always render; 6-10 use status-existing and sit at
+  // zero width (class `absent`) until their workspace exists, then grow in.
+  // Signal 7 is raised by Hyprland workspace/window events; the five-minute
+  // interval is only a low-cost fallback if one is missed.
   "custom/workspace#one": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status 1",
@@ -114,7 +115,6 @@
   "custom/workspace#six": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status-existing 6",
-    "hide-empty-text": true,
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 6",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
@@ -124,7 +124,6 @@
   "custom/workspace#seven": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status-existing 7",
-    "hide-empty-text": true,
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 7",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
@@ -134,7 +133,6 @@
   "custom/workspace#eight": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status-existing 8",
-    "hide-empty-text": true,
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 8",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
@@ -144,7 +142,6 @@
   "custom/workspace#nine": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status-existing 9",
-    "hide-empty-text": true,
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 9",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
@@ -154,7 +151,6 @@
   "custom/workspace#ten": {
     "return-type": "json",
     "exec": "~/.config/scripts/waybar/workspace.sh status-existing 10",
-    "hide-empty-text": true,
     "on-click": "~/.config/scripts/waybar/workspace.sh switch 10",
     "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
     "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
