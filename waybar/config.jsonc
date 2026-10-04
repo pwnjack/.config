@@ -347,11 +347,11 @@
   },
 
   // Network
-  // Speeds appear only while data is moving, "Offline" only when no wired or
-  // Wi-Fi interface holds a default route; nothing shows otherwise. A
-  // continuous script, so there is no interval: it samples every two seconds
-  // without spawning anything. Why Waybar's own network module is not used
-  // is in the script's header.
+  // The combined download + upload speed appears only while data is moving,
+  // "Offline" only when no wired or Wi-Fi interface holds a default route;
+  // nothing shows otherwise. A continuous script, so there is no interval: it
+  // samples every two seconds without spawning anything. Why Waybar's own
+  // network module is not used is in the script's header.
   "custom/network": {
     "format": "{}",
     "return-type": "json",
