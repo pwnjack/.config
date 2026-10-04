@@ -6,8 +6,9 @@
 # Waybar hands module_path to dlopen verbatim -- no ~ expansion -- so the
 # tracked config.jsonc cannot name the library on every machine. The rendered
 # include carries the absolute path, and Waybar merges it into config.jsonc's
-# cffi/workspaces block key by key. "source" is for doctor.sh's staleness
-# check; the module ignores both keys.
+# cffi/workspaces block key by key. "source" is informational only (where the
+# library was built from); doctor.sh hashes its own checkout's sources through
+# --check, and the module ignores both keys.
 #
 # Rebuilds only when the installed library's content stamp (a sha256 over the
 # Makefile, the C sources and headers, and this script, beside the library as

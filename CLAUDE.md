@@ -121,6 +121,28 @@ wheel scrolls by pixels only on overflow, and Esc or a click closes it.
 balancing), tested by node; the view is tested offscreen by qmltestrunner. See
 `docs/keybinds-overlay.md`.
 
+### Workspace module (cffi/workspaces)
+
+The workspace dots are one native Waybar module, `waybar/workspaces/` (C,
+GTK3/cairo, Waybar CFFI ABI 2), drawn on one canvas from one animation clock:
+the leaving pill contracts while the arriving dot stretches, both amounts
+from the same clock, so the row's width is exactly constant and nothing
+beyond them moves by a pixel. The ten CSS-animated custom modules it replaced
+could not do that: GTK rounds each animating `min-width` up (a 1 px wobble)
+and separate processes landed their updates up to tens of ms apart.
+`model.c` (state, parsers), `anim.c` (groups, curves, layout) and `render.c`
+are pure and tested headless; `hypr.c` speaks Hyprland's sockets directly and
+is tested against fake sockets; `module.c` is the GTK glue and must export all
+five `wbcffi_*` functions — Waybar calls `update` and `refresh`
+unconditionally. `scripts/waybar/build-workspaces.sh` builds out of tree
+(never inside the repo) into `~/.local/lib/waybar/workspaces.so` and renders
+`~/.local/state/waybar/workspaces.jsonc` with the absolute `module_path`,
+because Waybar `dlopen`s that string verbatim. A content stamp beside the
+library (`<lib>.sha256`, a hash of the sources, Makefile and script) decides
+whether a rebuild is needed; `--check` compares only and exits 0 current / 1
+stale or missing, which is what `doctor.sh` uses. Colours and insets stay in
+`style.css` (`#workspaces`, `.active`, `.numbers`); sizes live in `anim.c`.
+
 ### Update popover (Waybar custom/updates)
 
 `quickshell/updates/shell.qml` is the on-demand update card started by
@@ -339,6 +361,7 @@ scripts/doctor/
 │   ├── sddm.sh              # check_sddm       — from sddm/setup-sudo.sh and the live SDDM configuration
 │   ├── updates.sh           # check_updates    — from updates/setup-sudo.sh and sudo -l
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
+│   ├── workspaces.sh        # check_workspaces — placed cffi/* modules: library present and current
 │   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
 │   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
 └── test/
@@ -346,6 +369,6 @@ scripts/doctor/
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_wsm_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`, `$HOME` via `_wsm_home`, the build script's `--check` via `_wsm_current`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

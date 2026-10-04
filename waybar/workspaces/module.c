@@ -340,7 +340,7 @@ static gboolean numbers_mode(void)
 
 ABI void *wbcffi_init(const wbcffi_init_info *info, const wbcffi_config_entry *entries, size_t n)
 {
-    (void)entries, (void)n; /* module_path and source are for Waybar and doctor */
+    (void)entries, (void)n; /* module_path is for Waybar; source is informational */
     Module *m = g_new0(Module, 1);
     m->theme.numbers = numbers_mode();
     m->geo = m->theme.numbers ? &GEOMETRY_NUMBERS : &GEOMETRY_DOTS;
