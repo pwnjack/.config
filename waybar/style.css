@@ -150,7 +150,8 @@ window#waybar {
 /* Optional workspace dots 6-10 sit at zero width while absent, so the gap
    after the dots belongs to what follows them. The taskbar's buttons carry
    5px of their own padding and the last dot 3px of margin, which is why
-   these read as the 30px group gap. #taskbar.empty drops to zero below, and
+   these read as the 30px group gap (29px in numbers mode, whose boxes
+   carry 2px). #taskbar.empty drops to zero below, and
    the window title then opens the group on its own. */
 #taskbar {
     padding-left: 22px;
@@ -225,6 +226,7 @@ window#waybar {
 
 #custom-workspace {
     color: @foreground;
+    background-image: none;
     padding: 0;
     border-radius: 100px;
     transition: min-width 300ms cubic-bezier(0.2, 0, 0, 1),
@@ -308,6 +310,8 @@ window#waybar {
     background-color: alpha(@color4, 0.35);
 }
 
+/* Last on purpose: it ties .numbers.active and .numbers:hover on
+   specificity and wins only by coming after them. */
 #custom-workspace.active:hover {
     border-color: shade(@color4, 1.15);
     background-color: shade(@color4, 1.15);
