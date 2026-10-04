@@ -1000,7 +1000,7 @@
       "section": "modules",
       "id": "bar.network",
       "title": "Network",
-      "description": "Download and upload speed; Offline always shows",
+      "description": "Combined network speed; Offline always shows",
       "source": "option",
       "key": "bar-network",
       "kind": "select",

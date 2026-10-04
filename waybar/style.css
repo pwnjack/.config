@@ -296,7 +296,7 @@ tooltip label {
 }
 
 /* ── NETWORK ─────────────────────────────────────────────────────────
-   class: active deliberately has no rule -- speeds read like the resource
+   class: active deliberately has no rule -- the rate reads like the resource
    readouts beside them. */
 
 /* ALERT EXCEPTION — see #pulseaudio.muted below. Offline used to be dimmed,

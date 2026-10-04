@@ -104,7 +104,9 @@ assert_eq "$?" 1 "an unknown interface reports failure"
 echo
 echo "rate format"
 
-for case in '0|0K' '102400|100K' '1023999|999K' '1048576|1.0M' '13002343|12.4M' '157286400|150M' '1181116007|1.1G'; do
+for case in '0|0 KB/s' '102400|100 KB/s' '1023999|999 KB/s' '1024000|1.0 MB/s' '1048576|1.0 MB/s' \
+            '13002343|12.4 MB/s' '104857599|99.9 MB/s' '104857600|100 MB/s' \
+            '157286400|150 MB/s' '1048576000|1.0 GB/s' '1181116007|1.1 GB/s'; do
     net_human "${case%%|*}"
     assert_eq "$REPLY" "${case#*|}" "${case%%|*} B/s renders as '${case#*|}'"
 done
@@ -121,6 +123,12 @@ assert_eq "$seen" 011100 "hidden while idle, shown on traffic, hidden after thre
 NET_QUIET=3
 net_visible 0 100
 assert_eq "$?" 0 "upload alone reaching the threshold shows the module"
+NET_QUIET=3
+net_visible 60 60
+assert_eq "$?" 0 "neither direction alone, but their sum reaching the threshold shows the module"
+NET_QUIET=3
+net_visible 40 40
+assert_eq "$?" 1 "a combined rate below the threshold stays hidden"
 
 echo
 echo "vpn"
@@ -152,9 +160,14 @@ assert_json_field "$OUT" .class offline "no interface renders the offline class"
 assert_json_contains "$OUT" .text Offline "offline says so"
 net_render eno1 0 0 192.168.178.23 ""
 assert_json_field "$OUT" .text "" "idle renders empty text, which hides the module"
+assert_json_lacks "$OUT" .tooltip "B/s" "no breakdown in the tooltip while the readout is hidden"
+assert_json_contains "$OUT" .tooltip "eno1  192.168.178.23" "the idle tooltip still names the interface and address"
 net_render eno1 13002343 839680 192.168.178.23 proton0
-assert_json_contains "$OUT" .text "12.4M" "the download rate is shown"
-assert_json_contains "$OUT" .text "</span>820K" "the upload rate is shown, flush against its glyph span"
+assert_json_contains "$OUT" .text "</span>13.2 MB/s" "the combined rate sits flush against its glyph span"
+assert_json_contains "$OUT" .text "$NET_GLYPH_RATE" "the bar uses the single up/down glyph"
+assert_json_lacks "$OUT" .text "12.4" "the bar shows no per-direction rate"
+assert_json_field "$OUT" '.tooltip | split("\n")[0]' \
+    "$NET_GLYPH_DOWN 12.4 MB/s   $NET_GLYPH_UP 820 KB/s" "the tooltip's first line is the breakdown"
 assert_json_contains "$OUT" .tooltip "eno1  192.168.178.23" "the tooltip names the interface and address"
 assert_json_contains "$OUT" .tooltip "VPN  proton0" "the tooltip names the VPN"
 net_render 'we"ird<&' 0 0 "" ""
@@ -170,11 +183,11 @@ iface eno1 physical
 # shellcheck disable=SC2034 # read by the sourced functions
 NET_QUIET=3
 NET_MODE=always net_render eno1 0 0 "" ""
-assert_json_contains "$OUT" .text "0K" "always shows speeds with no traffic"
+assert_json_contains "$OUT" .text "0 KB/s" "always shows the rate with no traffic"
 # shellcheck disable=SC2034 # read by the sourced functions
 NET_QUIET=3
 NET_MODE=offline net_render eno1 13002343 0 "" ""
-assert_json_field "$OUT" .text "" "offline-only never shows speeds"
+assert_json_field "$OUT" .text "" "offline-only never shows the rate"
 NET_MODE=offline net_render "" 0 0 "" ""
 assert_json_field "$OUT" .class offline "offline-only still reports Offline"
 
