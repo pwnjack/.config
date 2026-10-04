@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Pending updates for waybar -- repo and AUR, one count.
+# Pending updates for waybar -- repo, AUR and Flatpak, one count.
 #
 # There is no update notifier on this machine. The arch-update tray entry in
 # ~/.config/autostart names a binary that is not installed, and Discover's
@@ -9,39 +9,40 @@
 # opens the update card (scripts/hyprland/updates-popover.sh), and the terminal
 # path for AUR updates is scripts/updates/terminal.sh.
 #
-# THE EXIT-STATUS TRAP. Both count commands use exit status to mean "nothing
-# found", with different codes:
+# The count comes from the card's own planner, scripts/updates/updates-plan.sh,
+# so the bar's number is the card's number. The planner owns the exit-status
+# trap (checkupdates exits 2 for "none", paru -Qua exits 1) and the lock on
+# the private sync DB; see its header. Its status means, here:
 #
-#   checkupdates   exit 2   no updates          (exit 0 with updates)
-#   paru -Qua      exit 1   no AUR updates
+#   0   a plan on stdout: count it, hide at zero
+#   3   pacman cannot resolve the upgrade: show the glyph alone, because that
+#       is exactly when a terminal is needed
+#   *   offline, lock timeout, no planner: hide, as a failed check always has
 #
-# So this script must ignore exit status entirely and count lines. Any `&&`
-# chain, any `set -e`, any `if cmd; then count; fi` reports zero forever and
-# looks perfectly healthy doing it -- the failure mode is silence, which is
-# why test-updates.sh pins all four combinations of status and output.
+# The tooltip is quickshell/updates/model.mjs's tooltip(), run through
+# scripts/updates/tooltip.mjs -- the card's copy, so the wording agrees too.
+# If node fails, a one-line tooltip stands in: a tooltip error must never
+# hide the module.
 #
-# The AUR helper is DERIVED from options/aurhelper (first word of e.g.
-# "paru -Syu"), never hardcoded. A hardcoded name would be a second source of
-# truth beside the file the settings panel and update.sh already read.
+# UPDATES_PLAN_CMD, UPDATES_TOOLTIP, UPDATES_STATE_DIR and BAR_OPTIONS are the
+# test seam; test-updates.sh drives them the way test-battery.sh drives
+# BATTERY_SYSFS.
 #
-# UPDATES_REPO_CMD, UPDATES_AUR_CMD, UPDATES_AURHELPER, UPDATES_STATE_DIR,
-# UPDATES_DB and UPDATES_LOCK_TIMEOUT are the test seam; test-updates.sh drives them the way test-battery.sh drives BATTERY_SYSFS.
-#
-
-REPO_CMD="${UPDATES_REPO_CMD:-checkupdates}"
 
 # Written as two statements rather than as one :- default holding the path, on
 # purpose. doctor.sh's literal-reference pattern allows braces inside a path, so
 # the brace closing such a default is captured as part of the filename and the
 # check then reports a path that does not exist. The brace-free form says the
 # same thing and keeps ./doctor.sh at zero warnings.
-AURHELPER_FILE="${UPDATES_AURHELPER-}"
-[ -n "$AURHELPER_FILE" ] || AURHELPER_FILE="$HOME/.config/options/aurhelper"
+PLAN_CMD="${UPDATES_PLAN_CMD-}"
+[ -n "$PLAN_CMD" ] || PLAN_CMD="$HOME/.config/scripts/updates/updates-plan.sh"
+TOOLTIP="${UPDATES_TOOLTIP-}"
+[ -n "$TOOLTIP" ] || TOOLTIP="$HOME/.config/scripts/updates/tooltip.mjs"
 
 ICON=$'\U000f06b0'   # Nerd Font, Material Design: update (󰚰)
 
 # The Bar page's mode (options/bar-updates): pending, or hidden. Hidden
-# returns before checkupdates, which syncs a pacman DB over the network.
+# returns before the planner, whose checkupdates syncs a DB over the network.
 BAR_OPTIONS="${BAR_OPTIONS-}"
 [ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
 mode=''
@@ -49,17 +50,19 @@ read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-updates"
 [ "$mode" = hidden ] && exit 0
 
 # The update card's run state (scripts/updates/updates-run.sh writes it).
-# While a run is active, show its progress and return BEFORE checkupdates.
+# While a run is active, show its progress and return BEFORE the planner.
 # A finished run the card has not shown yet (ack != finishedAt) keeps a
 # class so the result is not missed: restart replaces the module, attention
 # marks the normal count.
 STATE_DIR="${UPDATES_STATE_DIR-}"
 [ -n "$STATE_DIR" ] || STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$UID}/updates"
-run_status='' run_progress=0 run_finished=0
+run_status='' run_progress=0 run_finished=0 snap=''
 if [ -r "$STATE_DIR/state.json" ]; then
     IFS=$'\t' read -r run_status run_progress run_finished < <(
         jq -r '[.status // "", (.progress // 0), (.finishedAt // 0)] | @tsv' "$STATE_DIR/state.json" 2>/dev/null)
+    snap=$(jq -c . "$STATE_DIR/state.json" 2>/dev/null)
 fi
+[ -n "$snap" ] || snap=null
 # Liveness comes from run.lock, not from state.json: the runner deletes the
 # state right after taking the lock and the first snapshot follows a moment
 # later, and after a SIGKILL the file still says running with the lock free.
@@ -82,6 +85,18 @@ fi
 run_seen=false
 [ "$(cat "$STATE_DIR/ack" 2>/dev/null)" = "$run_finished" ] && run_seen=true
 
+# tip <fallback> <input json> -- the tooltip from the shared model, or the
+# fallback line when node or the model fails. The fallback is plain text with
+# no markup characters, so it is valid Pango as it stands.
+tip() {
+    local out
+    if out=$(printf '%s' "$2" | node "$TOOLTIP" 2>/dev/null) && [ -n "$out" ]; then
+        printf '%s' "$out"
+    else
+        printf '%s' "$1"
+    fi
+}
+
 # Nerd Font Material circle-slice-1..8, one per eighth of the run.
 SLICES=($'\U000f0a9e' $'\U000f0a9f' $'\U000f0aa0' $'\U000f0aa1'
         $'\U000f0aa2' $'\U000f0aa3' $'\U000f0aa4' $'\U000f0aa5')
@@ -90,77 +105,70 @@ RESTART_ICON=$'\U000f0709'   # restart
 if [ "$run_status" = running ]; then
     pct=$(awk -v p="$run_progress" 'BEGIN { v = int(p * 100); if (v < 0) v = 0; if (v > 99) v = 99; print v }')
     slice=${SLICES[$(( pct * 8 / 100 ))]}
-    jq -nc --arg text "<span size=\"large\">$slice</span> $pct%" --arg tooltip "Updating · $pct%" \
+    tooltip=$(tip "Updating · $pct%" "$(jq -nc --arg icon "$slice" --argjson pct "$pct" --argjson snap "$snap" \
+        '{state: "running", icon: $icon, pct: $pct, snap: $snap}')")
+    jq -nc --arg text "<span size=\"large\">$slice</span> $pct%" --arg tooltip "$tooltip" \
         '{text: $text, tooltip: $tooltip, class: "running"}'
     exit 0
 fi
 if [ "$run_status" = restart ] && ! $run_seen; then
-    jq -nc --arg text "<span size=\"large\">$RESTART_ICON</span>" \
-        '{text: $text, tooltip: "Restart to finish the update", class: "restart"}'
+    tooltip=$(tip "Restart to finish the update" "$(jq -nc --argjson snap "$snap" '{state: "restart", snap: $snap}')")
+    jq -nc --arg text "<span size=\"large\">$RESTART_ICON</span>" --arg tooltip "$tooltip" \
+        '{text: $text, tooltip: $tooltip, class: "restart"}'
     exit 0
 fi
 class=""
 case "$run_status" in attention | failed) $run_seen || class=attention ;; esac
 
-# checkupdates shares one private sync DB with scripts/updates/updates-plan.sh;
-# concurrent runs race on db.lck and one silently returns nothing, so both take
-# the same flock.
-DB="${UPDATES_DB:-${TMPDIR:-/tmp}/checkup-db-${UID}}"
-LOCK="$DB.lock"
-LOCK_TIMEOUT="${UPDATES_LOCK_TIMEOUT:-120}"
+# The plan. stdout goes to a file and stderr is captured, because exit 3's
+# reason is the planner's last stderr line -- the line the card shows too.
+planfile=$(mktemp) || exit 0
+trap 'rm -f "$planfile"' EXIT
+reason=$("$PLAN_CMD" 2>&1 >"$planfile")
+rc=$?
+reason=${reason##*$'\n'}
 
-# count <command> [args...] — lines of output, exit status ignored on purpose.
-count() {
-    local out
-    out=$("$@" 2>/dev/null)
-    [ -n "$out" ] || { printf '0'; return; }
-    printf '%s' "$out" | grep -c ''
-}
-
-# repo count
-if command -v "$REPO_CMD" >/dev/null 2>&1; then
-    repo=$(CHECKUPDATES_DB="$DB" count flock -w "$LOCK_TIMEOUT" "$LOCK" "$REPO_CMD")
-else
-    repo=0
+if [ "$rc" -eq 3 ]; then
+    tooltip=$(tip "Updates need a terminal" "$(jq -nc --arg icon "$ICON" --arg reason "$reason" \
+        '{state: "blocked", icon: $icon, reason: $reason}')")
+    jq -nc --arg text "<span size=\"large\">$ICON</span>" --arg tooltip "$tooltip" \
+        '{text: $text, tooltip: $tooltip, class: "attention"}'
+    exit 0
 fi
 
-# AUR count. UPDATES_AUR_CMD overrides the derivation for the tests; otherwise
-# take the first word of options/aurhelper, which holds a full command line.
-aur_cmd="${UPDATES_AUR_CMD-}"
-if [ -z "${UPDATES_AUR_CMD+set}" ]; then
-    aur_cmd=$(awk 'NR==1 {print $1}' "$AURHELPER_FILE" 2>/dev/null)
+plan=null total=0
+if [ "$rc" -eq 0 ]; then
+    plan=$(jq -c . "$planfile" 2>/dev/null)
+    total=$(jq '(.repo | length) + (.aur | length) + (.flatpak // 0)' <<< "$plan" 2>/dev/null)
+    [[ "$total" =~ ^[0-9]+$ ]] || { plan=null total=0; }
 fi
-
-aur=""
-if [ -n "$aur_cmd" ] && command -v "$aur_cmd" >/dev/null 2>&1; then
-    aur=$(count "$aur_cmd" -Qua)
-fi
-
-total=$((repo + ${aur:-0}))
 
 # Nothing pending: print nothing and let waybar hide the module -- the idiom
 # battery.sh and custom/media already use. The module APPEARING is the signal,
 # which is what keeps this stateless with nothing to remember or expire.
 if [ "$total" -eq 0 ]; then
     # An unseen failed run stays visible even with nothing pending (pacman
-    # fine, Flatpak failed): the alert class is the only trace of it.
+    # fine, Flatpak failed) or a failed check: the alert class is the only
+    # trace of it.
     if [ -n "$class" ]; then
-        jq -nc --arg text "<span size=\"large\">$ICON</span>" \
-            '{text: $text, tooltip: "The last update needs attention", class: "attention"}'
+        tooltip=$(tip "The last update needs attention" "$(jq -nc --arg icon "$ICON" --argjson snap "$snap" \
+            '{state: "attention", icon: $icon, snap: $snap}')")
+        jq -nc --arg text "<span size=\"large\">$ICON</span>" --arg tooltip "$tooltip" \
+            '{text: $text, tooltip: $tooltip, class: "attention"}'
     fi
     exit 0
 fi
 
-# Only non-zero sides are named. "0 repo · 1 AUR" reads as a fault report
-# rather than a count, and the zero carries nothing the total does not.
-# `total > 0` above guarantees at least one side survives, so this is never
-# empty.
-tooltip=""
-[ "$repo" -gt 0 ] && tooltip="$repo repo"
-if [ -n "$aur" ] && [ "$aur" -gt 0 ]; then
-    [ -n "$tooltip" ] && tooltip+=" · "
-    tooltip+="$aur AUR"
+if [ -n "$class" ]; then
+    input=$(jq -nc --arg icon "$ICON" --argjson snap "$snap" --argjson plan "$plan" \
+        '{state: "attention", icon: $icon, snap: $snap, plan: $plan}')
+else
+    input=$(jq -nc --arg icon "$ICON" --argjson plan "$plan" --arg checked "$(date +%H:%M)" \
+        '{state: "pending", icon: $icon, plan: $plan, checked: $checked}')
 fi
+fallback="$total update"
+[ "$total" -eq 1 ] || fallback+=s
+tooltip=$(tip "$fallback" "$input")
 
 # The gap between glyph and count is set HERE, not in style.css: a waybar
 # module is a single Pango label, so the stylesheet owns the gaps BETWEEN
@@ -175,8 +183,5 @@ fi
 # two spaces to look equal.
 text="<span size=\"large\">$ICON</span> $total"
 
-# Both fields are ours -- a glyph and digits, no package names, no vendor
-# strings -- so unlike battery.sh's tooltip there is no arbitrary text to
-# escape for Pango here.
 jq -nc --arg text "$text" --arg tooltip "$tooltip" --arg class "$class" \
     '{text: $text, tooltip: $tooltip} + (if $class == "" then {} else {class: $class} end)'
