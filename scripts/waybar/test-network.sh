@@ -162,7 +162,7 @@ net_render eno1 0 0 192.168.178.23 ""
 assert_json_field "$OUT" .text "" "idle renders empty text, which hides the module"
 assert_json_lacks "$OUT" .tooltip "B/s" "no breakdown in the tooltip while the readout is hidden"
 net_render eno1 13002343 839680 192.168.178.23 proton0
-assert_json_contains "$OUT" .text "</span> 13.2 MB/s" "the combined rate follows its glyph span"
+assert_json_contains "$OUT" .text "</span>13.2 MB/s" "the combined rate sits flush against its glyph span"
 assert_json_contains "$OUT" .text "$NET_GLYPH_RATE" "the bar uses the single up/down glyph"
 assert_json_lacks "$OUT" .text "12.4" "the bar shows no per-direction rate"
 assert_json_field "$OUT" '.tooltip | split("\n")[0]' \

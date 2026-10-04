@@ -56,7 +56,7 @@ NET_BEAT=${NET_BEAT:-30}
 
 NET_GLYPH_DOWN=$'\U000f01da'
 NET_GLYPH_UP=$'\U000f0552'
-NET_GLYPH_RATE=$'\U000f04e1'
+NET_GLYPH_RATE=$'\U000f04e2'
 NET_GLYPH_WIRED=$'\U000f0200'
 NET_GLYPH_WIFI=$'\U000f0928'
 NET_GLYPH_OFFLINE=$'\U000f0c9b'
@@ -193,10 +193,12 @@ net_render() {
     esac
     if [ -n "$show" ]; then
         net_human $(( rx + tx ))
-        # The cpu/memory idiom: glyph in a large span with 4pt letter
-        # spacing, then a space. swap_vertical fills its advance as their
-        # glyphs do (the old narrow arrows needed 6pt and no space).
-        text="<span size='large' letter_spacing='4096'>$NET_GLYPH_RATE</span> $REPLY"
+        # No space after the glyph, only 6pt letter spacing. cpu/memory/disk
+        # use a space plus 4pt, but their glyphs fill their advance;
+        # swap_vertical is narrow and centred, and the space left it 13px
+        # from the digit. 6pt lands the gap at the 4-5px the others show,
+        # measured in a rendered bar.
+        text="<span size='large' letter_spacing='6144'>$NET_GLYPH_RATE</span>$REPLY"
         net_human "$rx"; breakdown="$NET_GLYPH_DOWN $REPLY   "
         net_human "$tx"; breakdown+="$NET_GLYPH_UP $REPLY\\n"
     fi
