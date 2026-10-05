@@ -130,36 +130,19 @@ static void query_read(Query *q)
                                     query_read_done, q);
 }
 
-static void query_write_done(GObject *src, GAsyncResult *res, gpointer user)
-{
-    Query *q = user;
-    if (!g_output_stream_write_all_finish(G_OUTPUT_STREAM(src), res, NULL, NULL)) {
-        query_finish(q, NULL);
-        return;
-    }
-    q->acc = g_byte_array_new();
-    query_read(q);
-}
-
-static void query_connect_done(GObject *src, GAsyncResult *res, gpointer user)
-{
-    Query *q = user;
-    q->conn = g_socket_client_connect_finish(G_SOCKET_CLIENT(src), res, NULL);
-    if (!q->conn) {
-        query_finish(q, NULL);
-        return;
-    }
-    g_output_stream_write_all_async(g_io_stream_get_output_stream(G_IO_STREAM(q->conn)), q->request,
-                                    strlen(q->request), G_PRIORITY_DEFAULT, q->c->cancel,
-                                    query_write_done, q);
-}
-
 static gboolean query_fail_idle(gpointer user)
 {
     query_finish(user, NULL);
     return G_SOURCE_REMOVE;
 }
 
+/* Connect and write the request in one synchronous step, as hyprctl does; only
+ * the reply is read asynchronously. Hyprland reads a command on its main
+ * thread, blocking (up to 5 s) from accept() until the request arrives. An
+ * async connect wrote it on a later main-loop iteration, and when Waybar's own
+ * Hyprland modules made a synchronous call in between, Waybar and Hyprland
+ * waited on each other: a 5 s compositor freeze on every window close. A local
+ * connect and a request this small do not block. */
 static void query(HyprClient *c, const char *request, QueryDone done, gpointer data)
 {
     Query *q = g_new0(Query, 1);
@@ -174,9 +157,16 @@ static void query(HyprClient *c, const char *request, QueryDone done, gpointer d
     }
     GSocketAddress *addr = g_unix_socket_address_new(path);
     g_free(path);
-    g_socket_client_connect_async(c->queries, G_SOCKET_CONNECTABLE(addr), c->cancel,
-                                  query_connect_done, q);
+    q->conn = g_socket_client_connect(c->queries, G_SOCKET_CONNECTABLE(addr), c->cancel, NULL);
     g_object_unref(addr);
+    if (!q->conn ||
+        !g_output_stream_write_all(g_io_stream_get_output_stream(G_IO_STREAM(q->conn)), q->request,
+                                   strlen(q->request), NULL, c->cancel, NULL)) {
+        g_idle_add(query_fail_idle, q);
+        return;
+    }
+    q->acc = g_byte_array_new();
+    query_read(q);
 }
 
 /* ---- coalesced snapshots ---------------------------------------------- */

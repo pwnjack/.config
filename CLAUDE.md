@@ -132,7 +132,10 @@ could not do that: GTK rounds each animating `min-width` up (a 1 px wobble)
 and separate processes landed their updates up to tens of ms apart.
 `model.c` (state, parsers), `anim.c` (groups, curves, layout) and `render.c`
 are pure and tested headless; `hypr.c` speaks Hyprland's sockets directly and
-is tested against fake sockets; `module.c` is the GTK glue and must export all
+is tested against fake sockets; it connects and writes each command
+synchronously and reads only the reply async, because Hyprland blocks its
+main loop from accept() until the request arrives (an async write deadlocked
+with Waybar's own synchronous Hyprland calls: a 5 s freeze per window close); `module.c` is the GTK glue and must export all
 five `wbcffi_*` functions — Waybar calls `update` and `refresh`
 unconditionally. `scripts/waybar/build-workspaces.sh` builds out of tree
 (never inside the repo) into `~/.local/lib/waybar/workspaces.so` and renders
