@@ -29,6 +29,18 @@ bool ws_visible(const WsState *s, int slot)
     return slot <= WS_ALWAYS || s->exists[slot];
 }
 
+int ws_step(const WsState *s, int dir)
+{
+    if (dir == 0)
+        return 0;
+    dir = dir < 0 ? -1 : 1;
+    int from = s->active >= 1 && s->active <= WS_COUNT ? s->active : (dir > 0 ? 0 : WS_COUNT + 1);
+    for (int i = from + dir; i >= 1 && i <= WS_COUNT; i += dir)
+        if (ws_visible(s, i))
+            return i;
+    return 0;
+}
+
 /* The root of a JSON document, owned by the caller; NULL when invalid. */
 static JsonNode *parse_json(const char *json)
 {

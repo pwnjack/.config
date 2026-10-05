@@ -260,9 +260,14 @@ static gboolean on_scroll(GtkWidget *w, GdkEventScroll *ev, gpointer user)
     default:
         return FALSE;
     }
-    if (dir)
-        hypr_dispatch(m->hypr, dir < 0 ? "hl.dsp.focus({ workspace = \"r-1\" })"
-                                       : "hl.dsp.focus({ workspace = \"r+1\" })");
+    /* Step through the slots the row draws, never past them: Hyprland's
+     * relative "r+1" counts on through 11, 12, ... where no slot exists. */
+    int slot = ws_step(&m->state, dir);
+    if (slot) {
+        char lua[64];
+        g_snprintf(lua, sizeof lua, "hl.dsp.focus({ workspace = %d })", slot);
+        hypr_dispatch(m->hypr, lua);
+    }
     return TRUE;
 }
 

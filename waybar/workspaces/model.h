@@ -18,6 +18,11 @@ typedef enum { WS_EVENT_NONE, WS_EVENT_ACTIVE, WS_EVENT_REFRESH } WsEvent;
 int ws_slot(long id);
 void ws_state_init(WsState *s);
 bool ws_visible(const WsState *s, int slot);
+/* The visible slot one step from the active one in direction dir (-1 or +1),
+ * or 0 at either end of the row (and for dir 0): scrolling stops rather than
+ * wraps. From outside the row (active 0), +1 enters at the first slot and -1
+ * at the last. */
+int ws_step(const WsState *s, int dir);
 /* j/workspaces. Replaces exists/windows; keeps active. False: s untouched. */
 bool ws_parse_workspaces(const char *json, WsState *s);
 /* j/activeworkspace. False: *active untouched. */

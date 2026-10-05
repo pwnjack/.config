@@ -89,11 +89,39 @@ static void test_visible(void)
           "ws_slot bounds");
 }
 
+static void test_step(void)
+{
+    WsState s;
+    ws_state_init(&s);
+    s.active = 1;
+    CHECK(ws_step(&s, 1) == 2, "down from 1 goes to 2");
+    CHECK(ws_step(&s, -1) == 0, "up from 1 stops at the first slot");
+    s.active = 5;
+    CHECK(ws_step(&s, 1) == 0, "down from 5 stops when 6-10 do not exist");
+    CHECK(ws_step(&s, -1) == 4, "up from 5 goes to 4");
+    s.exists[8] = true;
+    CHECK(ws_step(&s, 1) == 8, "down from 5 skips the hidden 6 and 7");
+    s.active = 8;
+    CHECK(ws_step(&s, -1) == 5, "up from 8 skips back over 6 and 7");
+    CHECK(ws_step(&s, 1) == 0, "down from the last visible slot stops");
+    s.exists[10] = true;
+    s.active = 10;
+    CHECK(ws_step(&s, 1) == 0, "down from 10 never leaves the row");
+    s.active = 0;
+    CHECK(ws_step(&s, 1) == 1, "outside the row, down enters at the first slot");
+    CHECK(ws_step(&s, -1) == 10, "outside the row, up enters at the last visible slot");
+    s.exists[10] = false;
+    CHECK(ws_step(&s, -1) == 8, "outside the row, up skips hidden slots");
+    s.active = 3;
+    CHECK(ws_step(&s, 0) == 0, "no direction, no step");
+}
+
 int main(void)
 {
     test_workspaces();
     test_active();
     test_events();
     test_visible();
+    test_step();
     return check_done("test_model");
 }
