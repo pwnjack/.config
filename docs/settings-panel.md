@@ -344,13 +344,12 @@ Whoever renders a module applies its mode:
   main config wins over an include, and a later `style.css` rule over an import.
 - **Clock seconds** belong to `clock-format.sh`, which adds `:%S` and `"interval": 1` to
   `clock.jsonc`; `config.jsonc` must set neither `clock.format` nor `clock.interval`.
-- **Workspaces** are read by `scripts/waybar/workspace.sh` on every status call, so the
-  `bar-modes.sh` reload is what applies a save. Anything but `numbers` keeps the dots, which
-  `style.css` draws from a state class (the script prints one space): ring, disc, and the
-  accent pill the current dot stretches into. Numbers mode prints the workspace number with
-  a `numbers` class beside the state class; `style.css` makes those bold, dims
-  `.numbers.empty` since a number has no hollow form, and puts the active one in the same
-  pill with the same motion.
+- **Workspaces** are drawn by the native module `cffi/workspaces` (`waybar/workspaces/`),
+  which reads `bar-workspaces` once when it starts, so the `bar-modes.sh` reload is what
+  applies a save. Anything but `numbers` keeps the dots: ring, disc, and the accent pill the
+  current dot stretches into. Numbers mode draws the workspace number instead, dims empty
+  ones since a number has no hollow form, and puts the active one in the same pill with the
+  same motion; the module adds a `numbers` class so `style.css` can set its insets.
 - **Position and Style reload Hyprland** after saving: `hypr/config/apptype.lua` reads both,
   and `rules.lua` places the picture-in-picture window clear of the bar with them.
 - **Monitors** are enumerated from `hyprctl monitors -j` on every read; a saved output that

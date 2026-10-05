@@ -7,8 +7,9 @@
   // Rendered, untracked includes. clock.jsonc: the clock's format
   // (options/clock, scripts/waybar/clock-format.sh; Waybar's own default is
   // {:%H:%M}). bar.jsonc: the Bar page's modes for cpu/memory/disk
-  // (options/bar-*, scripts/waybar/bar-modes.sh).
-  "include": ["~/.local/state/waybar/clock.jsonc", "~/.local/state/waybar/bar.jsonc"],
+  // (options/bar-*, scripts/waybar/bar-modes.sh). workspaces.jsonc: the native
+  // workspace module's absolute module_path (scripts/waybar/build-workspaces.sh).
+  "include": ["~/.local/state/waybar/clock.jsonc", "~/.local/state/waybar/bar.jsonc", "~/.local/state/waybar/workspaces.jsonc"],
 
   // General Settings
   "layer": "bottom",
@@ -24,16 +25,7 @@
 
   // Modules Left
   "modules-left": [
-    "custom/workspace#one",
-    "custom/workspace#two",
-    "custom/workspace#three",
-    "custom/workspace#four",
-    "custom/workspace#five",
-    "custom/workspace#six",
-    "custom/workspace#seven",
-    "custom/workspace#eight",
-    "custom/workspace#nine",
-    "custom/workspace#ten",
+    "cffi/workspaces",
     "wlr/taskbar",
     "hyprland/window",
   ],
@@ -57,113 +49,15 @@
     "custom/power",
   ],
 
-  // Workspaces
-  // hyprland/workspaces cannot be used with the Lua provider because its
-  // click handler hard-codes the removed positional `workspace` dispatcher.
-  // ext/workspaces fixes clicks but exposes no window count, so these custom
-  // instances preserve both behaviours: Lua-safe clicks and filled occupied
-  // dots. The dots are drawn by style.css from a state class, so they can
-  // morph. Workspaces 1-5 always render; 6-10 use status-existing and sit at
-  // zero width (class `absent`) until their workspace exists, then grow in.
-  // Dots never print empty text, so hide-empty-text only acts in numbers
-  // mode, where a missing workspace hides at once.
-  // Signal 7 is raised by Hyprland workspace/window events; the five-minute
-  // interval is only a low-cost fallback if one is missed.
-  "custom/workspace#one": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status 1",
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 1",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#two": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status 2",
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 2",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#three": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status 3",
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 3",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#four": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status 4",
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 4",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#five": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status 5",
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 5",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#six": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 6",
-    "hide-empty-text": true,
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 6",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#seven": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 7",
-    "hide-empty-text": true,
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 7",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#eight": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 8",
-    "hide-empty-text": true,
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 8",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#nine": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 9",
-    "hide-empty-text": true,
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 9",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
-  "custom/workspace#ten": {
-    "return-type": "json",
-    "exec": "~/.config/scripts/waybar/workspace.sh status-existing 10",
-    "hide-empty-text": true,
-    "on-click": "~/.config/scripts/waybar/workspace.sh switch 10",
-    "on-scroll-up": "~/.config/scripts/waybar/workspace.sh previous",
-    "on-scroll-down": "~/.config/scripts/waybar/workspace.sh next",
-    "interval": 300,
-    "signal": 7,
-  },
+  // Workspaces: one native module (waybar/workspaces, built and installed by
+  // scripts/waybar/build-workspaces.sh). It draws the whole row on one cairo
+  // canvas with one animation clock, so a switch is exact to the pixel, and
+  // talks to Hyprland's sockets directly. hyprland/workspaces stays unusable:
+  // its click path sends the positional `workspace` dispatcher the Lua
+  // provider removed. module_path comes from the rendered workspaces.jsonc
+  // include: Waybar passes it to dlopen verbatim, with no ~ expansion, so it
+  // cannot be written here. Colours and insets are #workspaces in style.css.
+  "cffi/workspaces": {},
   // Taskbar
   "wlr/taskbar": {
     "format": "{icon}",
