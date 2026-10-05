@@ -145,6 +145,11 @@ library (`<lib>.sha256`, a hash of the sources, Makefile and script) decides
 whether a rebuild is needed; `--check` compares only and exits 0 current / 1
 stale or missing, which is what `doctor.sh` uses. Colours and insets stay in
 `style.css` (`#workspaces`, `.active`, `.numbers`); sizes live in `anim.c`.
+`scripts/hooks/post-merge` (`post-checkout` is a symlink to it) runs the build
+after a pull or branch switch, in the main worktree only, so a pull never
+leaves a stale library. `docs/workspaces-native.md` has the build flow and the
+way back to the CSS dots: tags `workspaces-css` (before) and
+`workspaces-native` (the merge), undone with `git revert -m 1`.
 
 ### Update popover (Waybar custom/updates)
 

@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# post-merge / post-checkout (post-checkout is a symlink to this file): keep
+# the compiled Waybar workspace module current after a pull or a branch switch.
+# It is the repo's only compiled component; a pull that changes its sources
+# would otherwise leave Waybar loading the old library until someone ran the
+# build by hand. The build script skips when its content stamp matches, so
+# most runs are a hash check and nothing more.
+#
+# Only the main worktree builds: the library installs to one shared path in
+# ~/.local, and a linked worktree's sources must not replace the live bar's.
+# A tree without the module (e.g. after reverting to the CSS dots, see
+# docs/workspaces-native.md) has no build script, and this does nothing.
+# Post-* hooks cannot fail the git operation; problems are only reported.
+
+if [ "$(basename -- "$0")" = post-checkout ] && [ "${3:-1}" != 1 ]; then
+    exit 0 # a file checkout, not a branch switch
+fi
+[ "$(git rev-parse --path-format=absolute --git-dir)" = \
+  "$(git rev-parse --path-format=absolute --git-common-dir)" ] || exit 0
+
+build="$(git rev-parse --show-toplevel)/scripts/waybar/build-workspaces.sh"
+[ -f "$build" ] || exit 0
+bash "$build" --check >/dev/null 2>&1 && exit 0
+
+echo "git hook: rebuilding the native Waybar workspace module" >&2
+bash "$build" ||
+    echo "git hook: the build failed; run scripts/waybar/build-workspaces.sh to retry" >&2
+exit 0
