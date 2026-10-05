@@ -2,6 +2,8 @@
 -- docs/keybindings.md. Keep one hl.bind() per line and use a trailing `--`
 -- comment as its human label.
 
+local workspace_step = require("config.software.workspace_step")
+
 return function(apps)
     -- ## Applications
     hl.bind("SUPER + RETURN", hl.dsp.exec_cmd(apps.terminal)) -- Terminal ($terminal)
@@ -86,10 +88,10 @@ return function(apps)
     hl.bind("SUPER + CTRL + SHIFT + 9", hl.dsp.window.move({ workspace = 9, follow = false })) -- Move window, stay here
     hl.bind("SUPER + CTRL + SHIFT + 0", hl.dsp.window.move({ workspace = 10, follow = false })) -- Move window, stay here
 
-    hl.bind("SUPER + CTRL + left", hl.dsp.focus({ workspace = "r-1" })) -- Previous/next workspace
-    hl.bind("SUPER + CTRL + right", hl.dsp.focus({ workspace = "r+1" })) -- Previous/next workspace
-    hl.bind("SUPER + CTRL + SHIFT + left", hl.dsp.window.move({ workspace = "r-1", follow = true })) -- Move window to prev/next
-    hl.bind("SUPER + CTRL + SHIFT + right", hl.dsp.window.move({ workspace = "r+1", follow = true })) -- Move window to prev/next
+    hl.bind("SUPER + CTRL + left", workspace_step.focus(-1)) -- Previous/next workspace
+    hl.bind("SUPER + CTRL + right", workspace_step.focus(1)) -- Previous/next workspace
+    hl.bind("SUPER + CTRL + SHIFT + left", workspace_step.move(-1)) -- Move window to prev/next
+    hl.bind("SUPER + CTRL + SHIFT + right", workspace_step.move(1)) -- Move window to prev/next
     hl.bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" })) -- Scroll through workspaces
     hl.bind("SUPER + mouse_up", hl.dsp.focus({ workspace = "e-1" })) -- Scroll through workspaces
 
