@@ -211,12 +211,14 @@ window#waybar {
                     3px to the taskbar (see #taskbar above)
    .numbers is set by the module in numbers mode (options/bar-workspaces).
    Only these take effect: the widget is a bare GtkDrawingArea that the
-   module draws itself, so margin-top/bottom, padding, border, min-width and
-   background on #workspaces do nothing (slots centre in the bar's height). */
+   module draws itself, so padding, border, min-width and background on
+   #workspaces do nothing. The vertical margins set the row's height (slot +
+   top + bottom = 40px), which holds the bar's height when no window is open;
+   the slots centre in whatever height the bar ends up with. */
 
 #workspaces {
     color: @foreground;
-    margin: 0 3px 0 15px;
+    margin: 15px 3px 15px 15px;
 }
 
 #workspaces.active {
@@ -224,6 +226,8 @@ window#waybar {
 }
 
 #workspaces.numbers {
+    margin-top: 11px;
+    margin-bottom: 11px;
     margin-left: 9px;
     margin-right: 1px;
 }

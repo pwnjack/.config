@@ -33,7 +33,7 @@ typedef struct {
     double pointer_x; /* last pointer x, valid while pointer_inside */
     gboolean pointer_inside;
     double scroll_acc;
-    int width_request;
+    int width_request, height_request;
     gboolean connected;
     gboolean in_style_update;
 } Module;
@@ -76,9 +76,13 @@ static void update_size(Module *m)
     /* The epsilon matters: during a switch the total is exact only up to
      * floating-point noise, and ceil(110.0000000001) would add a pixel. */
     int want = (int)ceil(b.left + l.total + b.right - 1e-6);
-    if (want != m->width_request) {
+    /* The height is requested too: the row holds the bar at its full height
+     * even when every other module on it is empty (no windows open). */
+    int tall = b.top + m->geo->height + b.bottom;
+    if (want != m->width_request || tall != m->height_request) {
         m->width_request = want;
-        gtk_widget_set_size_request(m->area, want, -1);
+        m->height_request = tall;
+        gtk_widget_set_size_request(m->area, want, tall);
     }
 }
 
@@ -344,7 +348,7 @@ ABI void *wbcffi_init(const wbcffi_init_info *info, const wbcffi_config_entry *e
     Module *m = g_new0(Module, 1);
     m->theme.numbers = numbers_mode();
     m->geo = m->theme.numbers ? &GEOMETRY_NUMBERS : &GEOMETRY_DOTS;
-    m->width_request = -1;
+    m->width_request = m->height_request = -1;
     ws_state_init(&m->state);
 
     m->area = gtk_drawing_area_new();
