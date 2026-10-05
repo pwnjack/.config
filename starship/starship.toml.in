@@ -43,6 +43,7 @@ $os\
 
 right_format = """
 [ ](@color6@)\
+$cmd_duration\
 $time
 [ ](@color6@)\
 """
@@ -145,11 +146,21 @@ time_format = "%R"
 style = 'fg:@oncolor6@ bg:@color6@'
 format = '[ $time ]($style)'
 
+# Shares the time pill on the right; appears only once a command runs past
+# min_time, so quick commands leave the prompt unchanged.
+[cmd_duration]
+min_time = 2000
+style = 'fg:@oncolor6@ bg:@color6@'
+format = "[ \U000F051B $duration ]($style)"
+
 [os]
-format = "[ $symbol ($type )]($style)"
+format = "[ $symbol ]($style)"
 style = 'fg:@oncolor6@ bg:@color6@'
 disabled = false
 
 [os.symbols]
+# Without an entry starship falls back to its own CachyOS emoji (a ribbon);
+# use the Arch glyph, since CachyOS is Arch-based.
+CachyOS = "\U000F08C7"
 Arch = "󰣇"
 Fedora = ""
