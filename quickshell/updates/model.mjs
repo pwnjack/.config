@@ -199,17 +199,24 @@ export function duration(seconds) {
 }
 
 // ① Summary copy. `plan` is updates-plan.sh's JSON, null while it loads.
+// `terminal` names the terminal.sh path the card links to when Update cannot
+// cover everything: AUR (update.sh also runs Flatpak), or Flatpak on its own.
 export function summary(plan, error = '') {
-    if (error) return { title: 'Could not check for updates', subtitle: error, count: 0, repo: 0, canUpdate: false, aur: '' }
-    if (!plan) return { title: 'Checking for updates…', subtitle: 'Syncing package databases', count: 0, repo: 0, canUpdate: false, aur: '' }
-    const repo = plan.repo.length, aur = plan.aur.length, count = repo + aur + (plan.flatpak || 0)
-    if (!count) return { title: 'Up to date', subtitle: 'Nothing to install', count, repo, canUpdate: false, aur: '' }
-    const size = plan.bytes ? `${mib(plan.bytes)} to download` : 'Already downloaded'
+    const idle = (title, subtitle) => ({ title, subtitle, count: 0, repo: 0, canUpdate: false, note: '', terminal: '' })
+    if (error) return idle('Could not check for updates', error)
+    if (!plan) return idle('Checking for updates…', 'Syncing package databases')
+    const repo = plan.repo.length, aur = plan.aur.length, flatpak = plan.flatpak || 0
+    const count = repo + aur + flatpak
+    if (!count) return idle('Up to date', 'Nothing to install')
+    // plan.bytes is the repo download only; AUR and Flatpak sizes are unknown here.
+    const size = !repo ? 'Runs in a terminal' : plan.bytes ? `${mib(plan.bytes)} to download` : 'Already downloaded'
+    let note = '', terminal = ''
+    if (aur) { note = `${aur} of them from the AUR`; terminal = 'aur' }
+    else if (!repo) { note = `${flatpak} Flatpak app${flatpak === 1 ? '' : 's'}`; terminal = 'flatpak' }
     return {
         title: `${count} update${count === 1 ? '' : 's'}`,
         subtitle: size + (plan.kernel ? ' · restart needed after' : ''),
-        count, repo, canUpdate: repo > 0,
-        aur: aur ? `${aur} of them from the AUR` : '',
+        count, repo, canUpdate: repo > 0, note, terminal,
     }
 }
 

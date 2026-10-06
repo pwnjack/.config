@@ -155,23 +155,24 @@ Column {
     }
 
     Item {
-        visible: view.info.aur !== ""
+        visible: view.info.terminal !== ""
         width: parent.width
-        height: aurLink.implicitHeight
+        height: terminalLink.implicitHeight
         Text {
             anchors.left: parent.left
             anchors.leftMargin: view.card.px(10)
-            anchors.right: aurLink.left
+            anchors.right: terminalLink.left
             anchors.rightMargin: view.card.px(10)
             anchors.verticalCenter: parent.verticalCenter
             elide: Text.ElideRight
-            text: view.info.aur
+            text: view.info.note
             color: view.card.dim
             font.family: view.card.monoFont
             font.pixelSize: view.card.px(12.5)
         }
         Text {
-            id: aurLink
+            id: terminalLink
+            objectName: "terminalLink"
             anchors.right: parent.right
             anchors.rightMargin: view.card.px(10)
             anchors.verticalCenter: parent.verticalCenter
@@ -183,7 +184,7 @@ Column {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: view.controller.terminal("aur")
+                onClicked: view.controller.terminal(view.info.terminal)
             }
         }
     }

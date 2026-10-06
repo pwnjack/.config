@@ -29,9 +29,13 @@ starts and watches.
   non-zero source, the download size, a kernel line, and when it last
   checked. While running it shows pacman's step, and after a run the card's
   result copy. If node fails, a one-line tooltip stands in.
-- **AUR packages never update here.** The card says how many there are and
+- **AUR and Flatpak-only updates run in a terminal.** The card says how many there are and
   offers the terminal (`scripts/updates/terminal.sh aur|pacman|flatpak`, which
-  opens `options/terminal`).
+  opens `options/terminal`). Every pending mix has a path: Update runs repo
+  packages and then Flatpak, the AUR link's `update.sh` runs the AUR helper and
+  then Flatpak, and Flatpak updates on their own get the same link to
+  `terminal.sh flatpak`. Without repo packages the subtitle says "Runs in a
+  terminal", because the plan's download size covers repo packages only.
 
 ## Setting it up
 

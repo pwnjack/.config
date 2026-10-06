@@ -215,12 +215,12 @@ assert.equal(model.result(fold('nothing').snap).subtitle, 'Nothing needed updati
 }
 
 // Summary copy.
-assert.deepEqual(model.summary(null), { title: 'Checking for updates…', subtitle: 'Syncing package databases', count: 0, repo: 0, canUpdate: false, aur: '' })
+assert.deepEqual(model.summary(null), { title: 'Checking for updates…', subtitle: 'Syncing package databases', count: 0, repo: 0, canUpdate: false, note: '', terminal: '' })
 {
     const plan = { repo: [{ name: 'a' }, { name: 'b' }], aur: [{ name: 'c' }], bytes: 434110464, kernel: true }
     assert.deepEqual(model.summary(plan), {
         title: '3 updates', subtitle: '414 MiB to download · restart needed after',
-        count: 3, repo: 2, canUpdate: true, aur: '1 of them from the AUR',
+        count: 3, repo: 2, canUpdate: true, note: '1 of them from the AUR', terminal: 'aur',
     })
     assert.equal(model.summary({ ...plan, bytes: 0 }).subtitle, 'Already downloaded · restart needed after')
     assert.equal(model.summary({ repo: [], aur: [{ name: 'c' }], bytes: 0, kernel: false }).canUpdate, false)
@@ -265,6 +265,27 @@ assert.equal(model.glide(0.9996, 1, 0.016), 1)
     assert.equal(model.summary(plan).title, '3 updates')
     assert.equal(model.summary(plan).canUpdate, true)
     assert.equal(model.summary(Object.assign({}, plan, { repo: [] })).canUpdate, false)
+}
+
+// Every pending mix has a way to apply it: Update runs repo then Flatpak, the AUR
+// link's update.sh runs the helper then Flatpak, and Flatpak alone gets its own link.
+{
+    const pkg = [{ name: 'a' }], none = []
+    const link = (repo, aur, flatpak) => {
+        const s = model.summary({ repo, aur, bytes: 0, kernel: false, flatpak })
+        return [s.canUpdate, s.terminal, s.note]
+    }
+    assert.deepEqual(link(pkg, none, 0), [true, '', ''])
+    assert.deepEqual(link(pkg, none, 2), [true, '', ''])
+    assert.deepEqual(link(none, pkg, 0), [false, 'aur', '1 of them from the AUR'])
+    assert.deepEqual(link(none, pkg, 2), [false, 'aur', '1 of them from the AUR'])
+    assert.deepEqual(link(pkg, pkg, 2), [true, 'aur', '1 of them from the AUR'])
+    assert.deepEqual(link(none, none, 1), [false, 'flatpak', '1 Flatpak app'])
+    assert.deepEqual(link(none, none, 3), [false, 'flatpak', '3 Flatpak apps'])
+    // The plan's byte count covers repo packages only, so it says nothing without them.
+    assert.equal(model.summary({ repo: none, aur: none, bytes: 0, kernel: false, flatpak: 2 }).subtitle, 'Runs in a terminal')
+    assert.equal(model.summary({ repo: none, aur: pkg, bytes: 0, kernel: false }).subtitle, 'Runs in a terminal')
+    assert.equal(model.summary({ repo: pkg, aur: none, bytes: 0, kernel: false, flatpak: 2 }).subtitle, 'Already downloaded')
 }
 
 // Waybar tooltip (scripts/waybar/updates.sh through scripts/updates/tooltip.mjs).

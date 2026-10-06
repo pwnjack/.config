@@ -16,11 +16,12 @@ Item {
         property string monoFont: "monospace"
         property real uiScale: 1
         property string mode: "summary"
-        property var plan: ({ repo: [
+        readonly property var fullPlan: ({ repo: [
                 { name: "mesa", old: "1:26.2.1-1", new: "1:26.2.2-1", bytes: 1, kernel: false },
                 { name: "firefox", old: "152.0-1", new: "152.0.1-1", bytes: 1, kernel: false },
                 { name: "waybar", old: "0.14.0-3", new: "0.14.1-1", bytes: 1, kernel: false }],
             aur: [{ name: "spotblock-git", old: "1-1", new: "2-1" }], bytes: 115867648, kernel: false })
+        property var plan: fullPlan
         property string planError: ""
         property var run: null
         property bool expanded: false
@@ -50,6 +51,8 @@ Item {
             controller.starts = 0;
             controller.closes = 0;
             controller.reboots = 0;
+            controller.plan = controller.fullPlan;
+            controller.lastTerminal = "";
             card.forceActiveFocus();
             card.focusPrimary();
             wait(50);
@@ -65,6 +68,20 @@ Item {
             wait(card.activationDelay);
             keyClick(Qt.Key_Return);
             compare(controller.starts, 1);
+        }
+        function test_aurLinkOpensAurPath() {
+            const link = findChild(card, "terminalLink");
+            tryVerify(() => link.visible, 1000);
+            mouseClick(link);
+            compare(controller.lastTerminal, "aur");
+        }
+        function test_flatpakOnlyHasTerminalPath() {
+            controller.plan = { repo: [], aur: [], bytes: 0, kernel: false, flatpak: 2 };
+            const link = findChild(card, "terminalLink");
+            tryVerify(() => link.visible, 1000);
+            mouseClick(link);
+            compare(controller.lastTerminal, "flatpak");
+            compare(controller.starts, 0);
         }
         function test_escapeCloses() {
             keyClick(Qt.Key_Escape);
