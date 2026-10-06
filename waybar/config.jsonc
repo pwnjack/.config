@@ -272,12 +272,14 @@
   // Pulseaudio
   "pulseaudio": {
     "scroll-step": 2,
-    "format": "<span size='large'>{icon}</span>  {volume}%",
-    "format-bluetooth": "<span size='large'>{icon}</span>  {volume}% <span size='large'></span>",
-    "format-bluetooth-muted": "<span size='large'></span>  Muted <span size='large'></span>",
-    "format-muted": "<span size='large'></span>  Muted",
-    "format-source": "{volume}% ",
-    "format-source-muted": "",
+    "format": "<span size='large'>{icon}</span>  {volume}%{format_source}",
+    "format-bluetooth": "<span size='large'>{icon}</span>  {volume}% <span size='large'></span>{format_source}",
+    "format-bluetooth-muted": "<span size='large'></span>  Muted <span size='large'></span>{format_source}",
+    "format-muted": "<span size='large'></span>  Muted{format_source}",
+    // The mic appears only while muted: its appearing is the warning. Fixed red
+    // for the reason in style.css at #pulseaudio.muted.
+    "format-source": "",
+    "format-source-muted": "  <span size='large' color='#ff5555'></span>",
     "format-icons": {
       "headphone": "",
       "hands-free": "",
@@ -287,7 +289,7 @@
       "car": "",
       "default": ["", "", "", ""],
     },
-    "tooltip-format": "{desc}\n\nVolume: {volume}%\nMic: {format_source}",
+    "tooltip-format": "{desc}\n\nVolume: {volume}%\nMic: {source_volume}%{format_source}",
     "on-click": "pavucontrol",
     "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
     "on-scroll-up": "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 2%+",
