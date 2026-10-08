@@ -181,3 +181,17 @@ assert_eq "$DOCTOR_WARNINGS" 1 "ssh: an unreadable config is one warning"
 assert_contains "$ssh_out" "is not readable" "ssh: says it is unreadable"
 assert_contains "$ssh_out" "chmod u+r" "ssh: the hint restores read access"
 assert_not_contains "$ssh_out" "Permission denied" "ssh: no raw bash error"
+
+# No runtime dir means no user bus either: the unit cannot be judged.
+ssh_healthy; ssh_rundir=""; ssh_enabled=no
+ssh_run
+assert_eq "$DOCTOR_WARNINGS$DOCTOR_NOTICES" "01" "ssh: no runtime dir skips the unit check"
+assert_contains "$ssh_out" "cannot check the agent unit or socket" "ssh: the note names the unit too"
+
+# A dangling symlink whose directory is missing still names where it points.
+ssh_healthy
+rm -f "$ssh_home/.ssh/config"
+ln -s "$DOCTOR_TEST_TMP/nonexistent-dir/cfg" "$ssh_home/.ssh/config"
+ssh_run
+assert_eq "$DOCTOR_WARNINGS" 1 "ssh: a dangling symlink is one warning"
+assert_contains "$ssh_out" "$DOCTOR_TEST_TMP/nonexistent-dir/cfg" "ssh: the hint names the dangling target"

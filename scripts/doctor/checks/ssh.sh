@@ -62,7 +62,7 @@ check_ssh() {
     local conf="$DOCTOR_ROOT/environment.d/ssh-agent.conf"
     local setup="$DOCTOR_ROOT/scripts/ssh/setup.sh"
     local fragment="$DOCTOR_ROOT/ssh/config"
-    local sock unit include config first="" fix mode found=0 nosock=0
+    local sock unit include config first="" fix mode target found=0 nosock=0
 
     [ -f "$conf" ] || return 0
     sock=$(sed -n '/^SSH_AUTH_SOCK=/{s///p;q;}' "$conf" 2>/dev/null)
@@ -83,10 +83,12 @@ check_ssh() {
     if [ -z "$(_ssh_runtime_dir)" ] || [[ $sock == *'$'* ]]; then nosock=1; fi
     fix="bash $(doctor_q "$setup")"
 
-    if ! _ssh_unit_enabled "$unit"; then
+    if [ "$nosock" -eq 1 ]; then
+        :  # no runtime dir means no user bus: neither unit nor socket can be judged
+    elif ! _ssh_unit_enabled "$unit"; then
         warn "$unit is not enabled — ssh asks for the passphrase on every use" "$fix"
         found=1
-    elif [ "$nosock" -eq 0 ] && ! _ssh_socket_live "$sock"; then
+    elif ! _ssh_socket_live "$sock"; then
         warn "nothing is listening at $sock" "systemctl --user restart $(doctor_q "$unit")"
         found=1
     fi
@@ -102,8 +104,10 @@ check_ssh() {
             :
         elif [ -L "$config" ]; then
             # setup.sh leaves a symlinked config alone, so its hint cannot clear this.
+            target=$(readlink -f -- "$config")
+            [ -n "$target" ] || target=$(readlink -- "$config")
             warn "$config is a symlink whose target does not start with: $include" \
-                "add that line at the top of $(doctor_q "$(readlink -f -- "$config")")"
+                "add that line at the top of $(doctor_q "$target")"
             found=1
         else
             warn "$config does not start with: $include" "$fix"
@@ -121,7 +125,7 @@ check_ssh() {
     fi
 
     if [ "$nosock" -eq 1 ]; then
-        note "no XDG_RUNTIME_DIR in this shell — cannot check the agent socket"
+        note "no XDG_RUNTIME_DIR in this shell — cannot check the agent unit or socket"
         found=1
     elif [ "$found" -eq 0 ] && [ "$(_ssh_session_sock)" != "$sock" ]; then
         note "this shell has no SSH_AUTH_SOCK=$sock yet — log out and back in"
