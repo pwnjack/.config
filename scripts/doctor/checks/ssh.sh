@@ -2,13 +2,14 @@
 #
 # SSH agent wiring (scripts/ssh/setup.sh): passphrase once per login.
 #
-# Nothing is restated here. The socket path comes from
-# environment.d/ssh-agent.conf, and the unit name and Include line from
+# Nothing is restated here. The socket name comes from the SSH_AUTH_SOCK line
+# of hypr/config/setup/envvars.lua, and the unit name and Include line from
 # scripts/ssh/setup.sh, which owns them.
 #
 # Every finding is a WARN: without the agent ssh still works and just asks for
 # the passphrase on every use. A shell started before the setup, which lacks
-# SSH_AUTH_SOCK until the next login, is only a note.
+# SSH_AUTH_SOCK until the next login, is only a note; so is a shell that uses
+# another agent (forwarded, gpg-agent, gcr).
 #
 # Two details mirror setup.sh: the first line of ~/.ssh/config is compared
 # without trailing whitespace (ssh ignores it, a CR included), and the tracked
@@ -16,8 +17,7 @@
 # refuses such an Include target ("Bad owner or permissions") and then every
 # ssh call fails.
 #
-# Trees without environment.d/ssh-agent.conf, or whose file sets no
-# SSH_AUTH_SOCK, get no output: the feature does not apply there.
+# Trees without envvars.lua, or whose file sets no SSH_AUTH_SOCK, get no output: the feature does not apply there.
 
 _ssh_unit_enabled() {
     systemctl --user is-enabled --quiet "$1" 2>/dev/null
@@ -29,6 +29,11 @@ _ssh_socket_live() {
 
 _ssh_home() {
     printf '%s' "$HOME"
+}
+
+# Whether the user manager can see the unit file at all.
+_ssh_unit_present() {
+    systemctl --user cat "$1" >/dev/null 2>&1
 }
 
 _ssh_runtime_dir() {
@@ -58,15 +63,21 @@ _ssh_assignment() {
     ' "$1" 2>/dev/null
 }
 
+# _ssh_socket_name <envvars.lua> — the "/name" after `runtime ..` in the
+# hl.env("SSH_AUTH_SOCK", ...) line. scripts/ssh/setup.sh uses the same sed.
+_ssh_socket_name() {
+    sed -n '/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)").*/\1/p;q;}' "$1" 2>/dev/null
+}
+
 check_ssh() {
-    local conf="$DOCTOR_ROOT/environment.d/ssh-agent.conf"
+    local envlua="$DOCTOR_ROOT/hypr/config/setup/envvars.lua"
     local setup="$DOCTOR_ROOT/scripts/ssh/setup.sh"
     local fragment="$DOCTOR_ROOT/ssh/config"
-    local sock unit include config first="" fix mode target found=0 nosock=0
+    local sock name unit include config first="" fix mode target found=0 nosock=0 session
 
-    [ -f "$conf" ] || return 0
-    sock=$(sed -n '/^SSH_AUTH_SOCK=/{s///p;q;}' "$conf" 2>/dev/null)
-    [ -n "$sock" ] || return 0
+    [ -f "$envlua" ] || return 0
+    name=$(_ssh_socket_name "$envlua")
+    [ -n "$name" ] || return 0
     group "SSH agent"
 
     unit=$(_ssh_assignment "$setup" SSH_AGENT_UNIT)
@@ -76,15 +87,16 @@ check_ssh() {
             "git -C $(doctor_q "$DOCTOR_ROOT") diff -- scripts/ssh/setup.sh"
         return 0
     fi
-    # The one expansion environment.d performs that this file relies on.
-    # shellcheck disable=SC2016
-    sock=${sock//'${XDG_RUNTIME_DIR}'/$(_ssh_runtime_dir)}
+    sock="$(_ssh_runtime_dir)$name"
     # su, sudo -u and cron carry no runtime dir: the socket path is unknowable.
-    if [ -z "$(_ssh_runtime_dir)" ] || [[ $sock == *'$'* ]]; then nosock=1; fi
+    if [ -z "$(_ssh_runtime_dir)" ]; then nosock=1; fi
     fix="bash $(doctor_q "$setup")"
 
     if [ "$nosock" -eq 1 ]; then
         :  # no runtime dir means no user bus: neither unit nor socket can be judged
+    elif ! _ssh_unit_present "$unit"; then
+        warn "$unit is not installed (it ships with openssh)"
+        found=1
     elif ! _ssh_unit_enabled "$unit"; then
         warn "$unit is not enabled — ssh asks for the passphrase on every use" "$fix"
         found=1
@@ -109,6 +121,9 @@ check_ssh() {
             warn "$config is a symlink whose target does not start with: $include" \
                 "add that line at the top of $(doctor_q "$target")"
             found=1
+        elif [ ! -e "$config" ]; then
+            warn "$config does not exist" "$fix"
+            found=1
         else
             warn "$config does not start with: $include" "$fix"
             found=1
@@ -127,9 +142,15 @@ check_ssh() {
     if [ "$nosock" -eq 1 ]; then
         note "no XDG_RUNTIME_DIR in this shell — cannot check the agent unit or socket"
         found=1
-    elif [ "$found" -eq 0 ] && [ "$(_ssh_session_sock)" != "$sock" ]; then
-        note "this shell has no SSH_AUTH_SOCK=$sock yet — log out and back in"
-        found=1
+    elif [ "$found" -eq 0 ]; then
+        session=$(_ssh_session_sock)
+        if [ -z "$session" ]; then
+            note "this shell has no SSH_AUTH_SOCK yet — log out and back in"
+            found=1
+        elif [ "$session" != "$sock" ]; then
+            note "this shell uses another agent at $session (forwarded, gpg-agent or gcr?)"
+            found=1
+        fi
     fi
 
     [ "$found" -eq 0 ] && ok "the SSH agent is wired: passphrase once per login"

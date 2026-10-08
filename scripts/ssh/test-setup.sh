@@ -37,8 +37,8 @@ export STUB_LOG="$TMP/systemctl.log"
 # A private copy of the two tracked files setup.sh reads, so nothing here can
 # chmod the real repo. mk_repo <dir> builds one; TEST_REPO is what setup sees.
 mk_repo() {
-    mkdir -p "$1/environment.d" "$1/ssh"
-    cp "$TEST_DIR/../../environment.d/ssh-agent.conf" "$1/environment.d/"
+    mkdir -p "$1/hypr/config/setup" "$1/ssh"
+    cp "$TEST_DIR/../../hypr/config/setup/envvars.lua" "$1/hypr/config/setup/"
     cp "$TEST_DIR/../../ssh/config" "$1/ssh/config"
     chmod 644 "$1/ssh/config"
 }
@@ -168,6 +168,9 @@ printf 'Host x\n' > "$h/elsewhere"
 ln -s "$h/elsewhere" "$h/.ssh/config"
 setup --backup-dir "$h/bak"
 assert_eq "$rc" 1 "symlink: exits 1"
+assert_contains "$(cat "$STUB_LOG")" "--user set-environment SSH_AUTH_SOCK=" \
+    "symlink: the later steps still run"
+assert_contains "$out" "Log out" "symlink: the closing message still prints"
 assert_eq "$(readlink "$h/.ssh/config")" "$h/elsewhere" "symlink: the link is untouched"
 assert_eq "$(cat "$h/elsewhere")" "Host x" "symlink: its target is untouched"
 assert_contains "$out" "$INC" "symlink: names the line to add"
@@ -264,22 +267,50 @@ mkdir -p "$h/bak/.ssh"
 printf 'keep\n' > "$h/bak/.ssh/config"
 setup --backup-dir "$h/bak"
 assert_eq "$rc" 1 "backup exists: exits 1"
+assert_contains "$(cat "$STUB_LOG")" "--user set-environment SSH_AUTH_SOCK=" \
+    "backup exists: the later steps still run"
 assert_eq "$(same "$TMP/original$n" "$h/.ssh/config")" same "backup exists: config untouched"
 assert_eq "$(cat "$h/bak/.ssh/config")" keep "backup exists: old backup untouched"
 assert_contains "$out" "$h/bak/.ssh/config" "backup exists: names the path"
 
-# --- an unexpanded variable is not pushed into the manager -------------------
-mkdir -p "$TMP/repoenv/environment.d" "$TMP/repoenv/ssh"
-printf 'SSH_AUTH_SOCK=$OTHER/x\n' > "$TMP/repoenv/environment.d/ssh-agent.conf"
+# --- envvars.lua without the SSH_AUTH_SOCK line ------------------------------
+mkdir -p "$TMP/repoenv/hypr/config/setup" "$TMP/repoenv/ssh"
+printf 'return function() end\n' > "$TMP/repoenv/hypr/config/setup/envvars.lua"
 cp "$TMP/repo/ssh/config" "$TMP/repoenv/ssh/config"
 TEST_REPO="$TMP/repoenv"
 fresh_home
 setup
-assert_eq "$rc" 0 "unexpanded variable: exits 0"
-assert_not_contains "$(cat "$STUB_LOG")" "set-environment" "unexpanded variable: not pushed"
-assert_contains "$out" "skipping" "unexpanded variable: says it skips"
+assert_eq "$rc" 0 "no env line: exits 0"
+assert_not_contains "$(cat "$STUB_LOG")" "set-environment" "no env line: not pushed"
+assert_contains "$out" "skipping set-environment" "no env line: says it skips"
 assert_contains "$out" "Log out" "re-login note prints even when set-environment is skipped"
 TEST_REPO="$TMP/repo"
+
+# --- AddKeysToAgent already in the user's config -----------------------------
+fresh_home
+mkdir -p "$h/.ssh"
+printf 'Host x\n   addkeystoagent no\n' > "$h/.ssh/config"
+setup --backup-dir "$h/bak"
+assert_eq "$rc" 0 "AddKeysToAgent: exits 0"
+assert_contains "$out" "takes" "AddKeysToAgent: the precedence notice prints"
+assert_contains "$out" "precedence" "AddKeysToAgent: says the tracked value wins"
+assert_eq "$(head -n 1 "$h/.ssh/config")" "$INC" "AddKeysToAgent: still proceeds"
+fresh_home
+existing_config 600
+setup --backup-dir "$h/bak"
+assert_not_contains "$out" "precedence" "no AddKeysToAgent: no notice"
+
+# --- restore command ---------------------------------------------------------
+fresh_home
+existing_config 600
+setup --backup-dir "$h/bak"
+assert_contains "$out" "cp -a $h/bak/.ssh/config $h/.ssh/config" "backup: prints the restore command"
+
+# --- dry run wording ---------------------------------------------------------
+fresh_home
+setup --dry-run
+assert_contains "$out" "ssh: would enable ssh-agent.socket" "dry run: says would enable"
+assert_not_contains "$out" "ssh: enabling" "dry run: does not claim to enable"
 
 # --- bad arguments -----------------------------------------------------------
 fresh_home

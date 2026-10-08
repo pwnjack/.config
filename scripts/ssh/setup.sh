@@ -2,8 +2,8 @@
 # Wire the tracked SSH agent setup into this machine, so a key's passphrase is
 # asked once per login: OpenSSH's socket-activated agent holds the key, and
 # ssh/config (AddKeysToAgent yes) hands it over on first use. SSH_AUTH_SOCK
-# comes from environment.d/ssh-agent.conf, which the systemd user manager reads
-# at login; uwsm starts Hyprland under it, so every app and shell inherits it.
+# is set by hypr/config/setup/envvars.lua, so every app and shell Hyprland
+# launches inherits it, in the plain and the uwsm session alike.
 #
 #   scripts/ssh/setup.sh [--dry-run] [--backup-dir DIR | --no-backup]
 #
@@ -13,13 +13,16 @@
 # to <backup dir>/.ssh/config, as scripts/lib/deploy.sh does for every config it
 # replaces; install.sh passes its own --backup-dir so one install makes one
 # backup. A symlinked ~/.ssh/config belongs to someone else's dotfiles and is
-# left alone. Idempotent and never interactive.
+# never edited. A problem there (symlink without the Include, backup already
+# present) skips the config change, still runs the rest and exits 1 at the end.
+# Idempotent and never interactive.
 #
-# Test seam: SSH_SETUP_REPO overrides the repo root (where environment.d/ and
-# ssh/ are read), so the tests can run against a private copy.
+# Test seam: SSH_SETUP_REPO overrides the repo root (where
+# hypr/config/setup/envvars.lua and ssh/ are read), so the tests can run against a private copy.
 #
 # checks/ssh.sh parses SSH_AGENT_UNIT and INCLUDE_LINE from this file, so keep
-# each a single plain NAME="value" line.
+# each a single plain NAME="value" line. The socket name is read from the
+# SSH_AUTH_SOCK line of envvars.lua; checks/ssh.sh parses it with the same sed.
 set -euo pipefail
 
 SSH_AGENT_UNIT="ssh-agent.socket"
@@ -55,7 +58,7 @@ have_unit() {
 
 # 1. The agent. Socket-activated: nothing runs until a client connects.
 if have_unit; then
-  echo "ssh: enabling $SSH_AGENT_UNIT"
+  if $dry; then echo "ssh: would enable $SSH_AGENT_UNIT"; else echo "ssh: enabling $SSH_AGENT_UNIT"; fi
   if ! run systemctl --user enable --now "$SSH_AGENT_UNIT"; then
     echo "ssh: could not enable $SSH_AGENT_UNIT; the Include is still set up" >&2
     failed=1
@@ -84,7 +87,7 @@ if [ "$first" = "$INCLUDE_LINE" ]; then
 elif [ -L "$config" ]; then
   echo "ssh: $config is a symlink; left alone. Add this as the first line of its target:" >&2
   echo "  $INCLUDE_LINE" >&2
-  exit 1
+  failed=1
 elif [ ! -e "$config" ]; then
   echo "ssh: creating $config"
   if $dry; then
@@ -93,15 +96,20 @@ elif [ ! -e "$config" ]; then
     [ -d "$ssh_dir" ] || mkdir -m 700 -- "$ssh_dir"
     (umask 077 && printf '%s\n' "$INCLUDE_LINE" > "$config")
   fi
+elif [ -n "$backup" ] && { [ -e "$backup/.ssh/config" ] || [ -L "$backup/.ssh/config" ]; }; then
+  echo "ssh: $backup/.ssh/config already exists; not overwriting it, so $config is unchanged" >&2
+  failed=1
 else
+  if grep -qiE '^[[:space:]]*AddKeysToAgent([[:space:]]|=|$)' -- "$config" 2>/dev/null; then
+    echo "ssh: $config sets AddKeysToAgent; the tracked 'AddKeysToAgent yes' now takes"
+    echo "  precedence because ssh uses the first value it reads. To keep yours,"
+    echo "  change $repo/ssh/config."
+  fi
   if [ -n "$backup" ]; then
-    if [ -e "$backup/.ssh/config" ] || [ -L "$backup/.ssh/config" ]; then
-      echo "ssh: $backup/.ssh/config already exists; not overwriting it" >&2
-      exit 1
-    fi
     echo "ssh: backing up $config to $backup/.ssh/config"
     run mkdir -p -- "$backup/.ssh"
     run cp -a -- "$config" "$backup/.ssh/config"
+    echo "ssh: to restore: cp -a $backup/.ssh/config $config"
   else
     echo "ssh: --no-backup given; not backing up $config"
   fi
@@ -119,16 +127,14 @@ else
 fi
 
 # 3. The running user manager, so units started from now on see the socket.
-conf="$repo/environment.d/ssh-agent.conf"
-sock=$(sed -n '/^SSH_AUTH_SOCK=/{s///p;q;}' "$conf" 2>/dev/null || true)
-if [ -n "$sock" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] && have_unit; then
-  # shellcheck disable=SC2016  # the literal environment.d placeholder
-  sock=${sock//'${XDG_RUNTIME_DIR}'/$XDG_RUNTIME_DIR}
-  if [[ $sock == *'$'* ]]; then
-    echo "ssh: SSH_AUTH_SOCK in $conf still holds a variable; skipping set-environment"
-  else
-    run systemctl --user set-environment "SSH_AUTH_SOCK=$sock"
-  fi
+# The name comes from the SSH_AUTH_SOCK line of envvars.lua (checks/ssh.sh
+# parses the same line with the same sed).
+envlua="$repo/hypr/config/setup/envvars.lua"
+name=$(sed -n '/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)").*/\1/p;q;}' "$envlua" 2>/dev/null || true)
+if [ -z "$name" ]; then
+  echo "ssh: no SSH_AUTH_SOCK line in $envlua; skipping set-environment"
+elif [ -n "${XDG_RUNTIME_DIR:-}" ] && have_unit; then
+  run systemctl --user set-environment "SSH_AUTH_SOCK=$XDG_RUNTIME_DIR$name"
 fi
 
 # Terminals already open carry the old environment until the next login.

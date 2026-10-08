@@ -10,12 +10,14 @@ source "$DOCTOR_DIR/checks/ssh.sh"
 
 ssh_root="$DOCTOR_TEST_TMP/ssh-root"
 ssh_home="$DOCTOR_TEST_TMP/ssh-home"
-mkdir -p "$ssh_root/environment.d" "$ssh_root/scripts/ssh" "$ssh_root/ssh" "$ssh_home/.ssh"
+mkdir -p "$ssh_root/hypr/config/setup" "$ssh_root/scripts/ssh" "$ssh_root/ssh" "$ssh_home/.ssh"
 echo 'AddKeysToAgent yes' > "$ssh_root/ssh/config"
-# Quoted heredocs: both lines must reach the fixture literally.
-cat > "$ssh_root/environment.d/ssh-agent.conf" <<'EOT'
-# comment
-SSH_AUTH_SOCK=${XDG_RUNTIME_DIR}/ssh-agent.socket
+# Quoted heredoc: the line must reach the fixture literally.
+cat > "$ssh_root/hypr/config/setup/envvars.lua" <<'EOT'
+return function()
+    local runtime = os.getenv("XDG_RUNTIME_DIR")
+    if runtime and runtime ~= "" then hl.env("SSH_AUTH_SOCK", runtime .. "/ssh-agent.socket") end
+end
 EOT
 cat > "$ssh_root/scripts/ssh/setup.sh" <<'EOT'
 SSH_AGENT_UNIT="ssh-agent.socket"
@@ -26,6 +28,7 @@ ssh_include='Include ~/.config/ssh/config'
 ssh_expected="/run/user/test/ssh-agent.socket"
 
 ssh_enabled=yes
+ssh_present=yes
 ssh_live=yes
 ssh_session="$ssh_expected"
 ssh_mode=644
@@ -33,6 +36,7 @@ ssh_rundir=/run/user/test
 
 # Host probes are the only pieces replaced.
 _ssh_unit_enabled() { [ "$ssh_enabled" = yes ]; }
+_ssh_unit_present() { [ "$ssh_present" = yes ]; }
 _ssh_socket_live() { [ "$ssh_live" = yes ] && [ "$1" = "$ssh_expected" ]; }
 _ssh_home() { printf '%s' "$ssh_home"; }
 _ssh_runtime_dir() { printf '%s' "$ssh_rundir"; }
@@ -45,19 +49,27 @@ ssh_run() {
     ssh_out=$(cat "$DOCTOR_TEST_TMP/ssh.out")
 }
 ssh_healthy() {
-    ssh_enabled=yes; ssh_live=yes; ssh_session="$ssh_expected"; ssh_mode=644; ssh_rundir=/run/user/test
+    ssh_enabled=yes; ssh_present=yes; ssh_live=yes; ssh_session="$ssh_expected"; ssh_mode=644; ssh_rundir=/run/user/test
     rm -f "$ssh_home/.ssh/real" "$ssh_home/.ssh/config"
     printf '%s\nHost x\n' "$ssh_include" > "$ssh_home/.ssh/config"
 }
 
-# Not applicable: no environment.d file, or one without SSH_AUTH_SOCK.
+# Not applicable: no envvars.lua, or one without the SSH_AUTH_SOCK line.
 mkdir -p "$DOCTOR_TEST_TMP/ssh-bare"
 ssh_run "$DOCTOR_TEST_TMP/ssh-bare"
-assert_eq "$ssh_out" "" "ssh: a tree without the env file prints nothing"
-mkdir -p "$DOCTOR_TEST_TMP/ssh-novar/environment.d"
-echo 'OTHER=1' > "$DOCTOR_TEST_TMP/ssh-novar/environment.d/ssh-agent.conf"
+assert_eq "$ssh_out" "" "ssh: a tree without envvars.lua prints nothing"
+mkdir -p "$DOCTOR_TEST_TMP/ssh-novar/hypr/config/setup"
+echo 'return function() end' > "$DOCTOR_TEST_TMP/ssh-novar/hypr/config/setup/envvars.lua"
 ssh_run "$DOCTOR_TEST_TMP/ssh-novar"
-assert_eq "$ssh_out" "" "ssh: an env file without SSH_AUTH_SOCK prints nothing"
+assert_eq "$ssh_out" "" "ssh: an envvars.lua without SSH_AUTH_SOCK prints nothing"
+
+# The real tree: the parse must keep working against what is tracked.
+assert_eq "$(_ssh_socket_name "$REPO_DIR/hypr/config/setup/envvars.lua")" "/ssh-agent.socket" \
+    "ssh: the real envvars.lua yields the socket name"
+assert_eq "$(_ssh_assignment "$REPO_DIR/scripts/ssh/setup.sh" SSH_AGENT_UNIT)" "ssh-agent.socket" \
+    "ssh: the real setup.sh yields SSH_AGENT_UNIT"
+assert_eq "$(_ssh_assignment "$REPO_DIR/scripts/ssh/setup.sh" INCLUDE_LINE)" "$ssh_include" \
+    "ssh: the real setup.sh yields INCLUDE_LINE"
 
 # Healthy.
 ssh_healthy
@@ -93,7 +105,8 @@ assert_contains "$ssh_out" "systemctl --user restart ssh-agent.socket" "ssh: the
 ssh_healthy; rm -f "$ssh_home/.ssh/config"
 ssh_run
 assert_eq "$DOCTOR_WARNINGS" 1 "ssh: a missing config is one warning"
-assert_contains "$ssh_out" "$ssh_include" "ssh: names the Include line"
+assert_contains "$ssh_out" "does not exist" "ssh: says the config is missing"
+assert_not_contains "$ssh_out" "does not start with" "ssh: a missing file is not a wrong first line"
 ssh_healthy; printf 'Host x\n%s\n' "$ssh_include" > "$ssh_home/.ssh/config"
 ssh_run
 assert_eq "$DOCTOR_WARNINGS" 1 "ssh: an Include that is not first is one warning"
@@ -115,6 +128,21 @@ ssh_run
 assert_eq "$DOCTOR_WARNINGS$DOCTOR_NOTICES" "01" "ssh: a stale session is a note, not a warning"
 assert_contains "$ssh_out" "log out and back in" "ssh: the note says what to do"
 assert_not_contains "$ssh_out" "passphrase once per login" "ssh: no ok beside the note"
+
+# Another agent in this shell: a note without logout advice.
+ssh_healthy; ssh_session="/tmp/ssh-XXXX/agent.1"
+ssh_run
+assert_eq "$DOCTOR_WARNINGS$DOCTOR_NOTICES" "01" "ssh: a foreign agent is a note"
+assert_contains "$ssh_out" "another agent at /tmp/ssh-XXXX/agent.1" "ssh: names the other agent"
+assert_not_contains "$ssh_out" "log out" "ssh: no logout advice for a foreign agent"
+
+# Unit file absent: setup.sh cannot clear it, so no hint.
+ssh_healthy; ssh_present=no; ssh_enabled=no
+ssh_run
+assert_eq "$DOCTOR_WARNINGS" 1 "ssh: a missing unit is one warning"
+assert_contains "$ssh_out" "ssh-agent.socket is not installed (it ships with openssh)" "ssh: says it is not installed"
+assert_not_contains "$ssh_out" "not enabled" "ssh: not reported as merely disabled"
+assert_not_contains "$ssh_out" "scripts/ssh/setup.sh" "ssh: no setup hint for a missing unit"
 
 # Setup script lost its assignments.
 ssh_healthy
