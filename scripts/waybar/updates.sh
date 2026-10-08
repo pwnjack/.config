@@ -29,22 +29,14 @@
 # BATTERY_SYSFS.
 #
 
-# Written as two statements rather than as one :- default holding the path, on
-# purpose. doctor.sh's literal-reference pattern allows braces inside a path, so
-# the brace closing such a default is captured as part of the filename and the
-# check then reports a path that does not exist. The brace-free form says the
-# same thing and keeps ./doctor.sh at zero warnings.
-PLAN_CMD="${UPDATES_PLAN_CMD-}"
-[ -n "$PLAN_CMD" ] || PLAN_CMD="$HOME/.config/scripts/updates/updates-plan.sh"
-TOOLTIP="${UPDATES_TOOLTIP-}"
-[ -n "$TOOLTIP" ] || TOOLTIP="$HOME/.config/scripts/updates/tooltip.mjs"
+PLAN_CMD="${UPDATES_PLAN_CMD:-$HOME/.config/scripts/updates/updates-plan.sh}"
+TOOLTIP="${UPDATES_TOOLTIP:-$HOME/.config/scripts/updates/tooltip.mjs}"
 
 ICON=$'\U000f06b0'   # Nerd Font, Material Design: update (󰚰)
 
 # The Bar page's mode (options/bar-updates): pending, or hidden. Hidden
 # returns before the planner, whose checkupdates syncs a DB over the network.
-BAR_OPTIONS="${BAR_OPTIONS-}"
-[ -n "$BAR_OPTIONS" ] || BAR_OPTIONS="$HOME/.config/options"
+BAR_OPTIONS="${BAR_OPTIONS:-$HOME/.config/options}"
 mode=''
 read -r mode 2>/dev/null < "$BAR_OPTIONS/bar-updates"
 [ "$mode" = hidden ] && exit 0

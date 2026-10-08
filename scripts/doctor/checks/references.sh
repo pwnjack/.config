@@ -96,7 +96,9 @@ DOCTOR_CACHE="${DOCTOR_CACHE:-$HOME/.cache}"
 
 # The shape of a literal reference into this repo, as written in a config or a
 # script. The bracket expression leads with ][ so both brackets are literal.
-DOCTOR_REF_PATTERN='(\$HOME|~)/\.config/[][A-Za-z0-9._/$*?{}-]+'
+# Braces are accepted only as a whole ${name}: a lone } is the end of an
+# enclosing ${VAR:-~/.config/x} default, not part of the path.
+DOCTOR_REF_PATTERN='(\$HOME|~)/\.config/([][A-Za-z0-9._/$*?-]|\$\{[A-Za-z0-9_]+\})+'
 
 # _ref_under_root <path>
 # Prints the DOCTOR_ROOT-relative form of a literal ~/.config reference.

@@ -115,6 +115,16 @@ one=~/.config/themes/?.rasi
 set=~/.config/themes/[ab].rasi
 EOF
 
+# A reference used as a parameter-expansion default is followed by the
+# expansion's own closing brace, which is not part of the path. A braced
+# variable inside the path is, and keeps the path unresolvable.
+cat > "$ref_fixture/scripts/defaults.sh" <<'EOF'
+p="${PRESENT_OVERRIDE:-$HOME/.config/present.sh}"
+# Overridable, e.g. ${PRESENT_OVERRIDE:-~/.config/present.sh}
+g="${GONE_OVERRIDE:-$HOME/.config/gone/defaulted.sh}"
+t="$HOME/.config/templated/${id}/x"
+EOF
+
 # The prefix strip must remove only the LEADING ~/.config/, never the last one.
 cat > "$ref_fixture/nested.sh" <<'EOF'
 p="$HOME/.config/scripts/x/.config/y"
@@ -228,6 +238,13 @@ assert_not_contains "$ref_out" "doctor-fixture-target.conf" \
 assert_not_contains "$ref_out" "themes" \
     "paths holding a variable or a glob are skipped, not reported"
 
+assert_not_contains "$ref_out" "present.sh}" \
+    "a parameter-expansion default's closing brace is not part of the path"
+assert_contains "$ref_out" "defaults.sh references ~/.config/gone/defaulted.sh," \
+    "a missing path used as a default is reported without the brace"
+assert_not_contains "$ref_out" "templated" \
+    "a braced variable inside a path keeps it unresolvable"
+
 # The strip must be anchored to the front. A longest-match strip would turn
 # scripts/x/.config/y into y and send the reader to the wrong file.
 assert_contains "$ref_out" "nested.sh references ~/.config/scripts/x/.config/y" \
@@ -267,8 +284,8 @@ assert_contains "$ref_pywal_line" "ERROR" "missing pywal cache is ERROR severity
 # --- tallies ----------------------------------------------------------------
 # Only what stops the session: 4 source targets, 1 Lua module, 2 palette files.
 assert_eq "$DOCTOR_ERRORS" "7" "session-breaking references counted as errors"
-# 4 literal references plus the 3 entries of wall.sh's guarded loop.
-assert_eq "$DOCTOR_WARNINGS" "7" "degraded-feature references counted as warnings"
+# 5 literal references plus the 3 entries of wall.sh's guarded loop.
+assert_eq "$DOCTOR_WARNINGS" "8" "degraded-feature references counted as warnings"
 assert_eq "$DOCTOR_NOTICES" "0" "nothing here is a notice"
 
 # --- every fix hint is copy-pasteable ---------------------------------------
