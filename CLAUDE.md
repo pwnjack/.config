@@ -270,6 +270,35 @@ after a successful decode. The resolved theme and `Backgrounds` directories
 must remain root-owned so an unprivileged user cannot substitute either side
 of that privileged rename.
 
+### SSH agent
+
+OpenSSH's packaged `ssh-agent.socket` (socket-activated, keys in memory only)
+holds the key, so its passphrase is asked once per login. `SSH_AUTH_SOCK` is set
+by `hypr/config/setup/envvars.lua` (`$XDG_RUNTIME_DIR/ssh-agent.socket`, guarded
+against an unset runtime dir): Hyprland launches every app and terminal, so the
+plain `Hyprland` session and the uwsm one both get it — `environment.d` would
+reach only the latter. The line's `true` flag (`hl.env`'s `dbus` argument) also
+exports it to the systemd user manager and the D-Bus activation environment each
+session, which uwsm's fixed export list would not, so systemd units and
+D-Bus-activated apps (Ghostty) see it. Already-open terminals get it at the next
+login; `setup.sh`'s `set-environment` only covers the current session until then. The
+tracked `ssh/config` holds only `AddKeysToAgent yes`.
+`~/.ssh` is outside the repo, so `scripts/ssh/setup.sh` (run by `install.sh`
+after the deploy step, no prompt) gives it a pointer: `Include ~/.config/ssh/config`
+as the **first** line of `~/.ssh/config`, because a line after a `Host` or
+`Match` block applies to that block alone. ssh uses the first value it reads, so
+the tracked `AddKeysToAgent yes` takes precedence over one already in the user's
+config (setup prints a notice; edit `ssh/config` to keep theirs). It backs the
+file up to `<backup dir>/.ssh/config` first, as the deploy step does, and prints
+the restore command. It never edits a symlinked `~/.ssh/config`: a symlink whose
+target already has the Include is simply accepted, otherwise it is reported. A
+symlink problem, an existing backup, or a failed enable skips only that step; the
+rest still runs and setup exits 1. ssh refuses an Include target that is group or
+world writable, so setup repairs the fragment with `chmod go-w` and doctor's
+`check_ssh` warns when it finds it that way. `checks/ssh.sh` reads the unit name
+and Include line from `setup.sh` and the socket name from the `envvars.lua` line
+(both use the same sed).
+
 ### Gaming (WoW / Battle.net)
 
 `docs/gaming-wow.md` is the single source for this — **read it before touching
@@ -371,12 +400,13 @@ scripts/doctor/
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
 │   ├── workspaces.sh        # check_workspaces — placed cffi/* modules: library present and current
 │   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
-│   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
+│   ├── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
+│   └── ssh.sh               # check_ssh        — from hypr/config/setup/envvars.lua and scripts/ssh/setup.sh
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_wsm_`, `_hctl_`, `_hw_`, `_as_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`, `$HOME` via `_wsm_home`, the build script's `--check` via `_wsm_current`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_wsm_`, `_hctl_`, `_hw_`, `_as_`, `_ssh_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`, `$HOME` via `_wsm_home`, the build script's `--check` via `_wsm_current`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

@@ -1,0 +1,6 @@
+# Included from the first line of ~/.ssh/config by scripts/ssh/setup.sh.
+# Global options only: no hosts, no key paths, nothing machine-specific.
+
+# Hand a key to the agent the first time it is unlocked, so its passphrase is
+# asked once per login. The agent keeps it in memory only.
+AddKeysToAgent yes

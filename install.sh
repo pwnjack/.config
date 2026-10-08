@@ -272,6 +272,32 @@ if [ -d "$CONFIG_DIR/.git" ]; then
 fi
 
 # ------------------------------------------------------------------
+# SSH agent
+# ------------------------------------------------------------------
+# Passphrase once per login: OpenSSH's socket-activated agent plus the tracked
+# ssh/config, included from ~/.ssh/config. Not a prompt: ~/.ssh/config is
+# backed up before it changes, like every config the deploy step replaces.
+# This MUST stay after deploy_dotfiles: that refuses a $BACKUP_DIR which
+# already exists, and this step creates $BACKUP_DIR/.ssh.
+info "Setting up the SSH agent..."
+ssh_setup_args=()
+if [ "$DRY_RUN" = true ]; then
+    ssh_setup_args+=(--dry-run)
+fi
+if [ "$NO_BACKUP" = true ]; then
+    ssh_setup_args+=(--no-backup)
+else
+    ssh_setup_args+=(--backup-dir "$BACKUP_DIR")
+fi
+# A dry run previews from the clone, since nothing has been deployed yet.
+ssh_setup_root="$CONFIG_DIR"
+if [ "$DRY_RUN" = true ]; then
+    ssh_setup_root="$DOTFILES_DIR"
+fi
+bash "$ssh_setup_root/scripts/ssh/setup.sh" "${ssh_setup_args[@]}" \
+    || warning "SSH agent setup reported a problem (see above)"
+
+# ------------------------------------------------------------------
 # Final wiring
 # ------------------------------------------------------------------
 # Script modes need no fixing here: git tracks the executable bit, and the
@@ -336,7 +362,7 @@ echo "  SUPER+L          - Lock screen"
 echo "  SUPER+SHIFT+L    - Power menu"
 echo "  SUPER+H          - Keybinds cheatsheet"
 echo ""
-if [ "$NO_BACKUP" = false ] && [ "$DOTFILES_DIR" != "$CONFIG_DIR" ]; then
+if [ "$NO_BACKUP" = false ] && { [ "$DOTFILES_DIR" != "$CONFIG_DIR" ] || [ -d "$BACKUP_DIR" ]; }; then
     info "Backup location: $BACKUP_DIR"
 fi
 echo ""
