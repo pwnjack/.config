@@ -62,7 +62,7 @@ check_ssh() {
     local conf="$DOCTOR_ROOT/environment.d/ssh-agent.conf"
     local setup="$DOCTOR_ROOT/scripts/ssh/setup.sh"
     local fragment="$DOCTOR_ROOT/ssh/config"
-    local sock unit include config first="" fix mode found=0
+    local sock unit include config first="" fix mode found=0 nosock=0
 
     [ -f "$conf" ] || return 0
     sock=$(sed -n '/^SSH_AUTH_SOCK=/{s///p;q;}' "$conf" 2>/dev/null)
@@ -79,22 +79,36 @@ check_ssh() {
     # The one expansion environment.d performs that this file relies on.
     # shellcheck disable=SC2016
     sock=${sock//'${XDG_RUNTIME_DIR}'/$(_ssh_runtime_dir)}
+    # su, sudo -u and cron carry no runtime dir: the socket path is unknowable.
+    if [ -z "$(_ssh_runtime_dir)" ] || [[ $sock == *'$'* ]]; then nosock=1; fi
     fix="bash $(doctor_q "$setup")"
 
     if ! _ssh_unit_enabled "$unit"; then
         warn "$unit is not enabled — ssh asks for the passphrase on every use" "$fix"
         found=1
-    elif ! _ssh_socket_live "$sock"; then
+    elif [ "$nosock" -eq 0 ] && ! _ssh_socket_live "$sock"; then
         warn "nothing is listening at $sock" "systemctl --user restart $(doctor_q "$unit")"
         found=1
     fi
 
     config="$(_ssh_home)/.ssh/config"
-    if [ -f "$config" ]; then IFS= read -r first < "$config" || true; fi
-    first=${first%"${first##*[![:space:]]}"}
-    if [ "$first" != "$include" ]; then
-        warn "$config does not start with: $include" "$fix"
+    if [ -f "$config" ] && [ ! -r "$config" ]; then
+        warn "$config is not readable" "chmod u+r $(doctor_q "$config")"
         found=1
+    else
+        if [ -f "$config" ]; then IFS= read -r first 2>/dev/null < "$config" || true; fi
+        first=${first%"${first##*[![:space:]]}"}
+        if [ "$first" = "$include" ]; then
+            :
+        elif [ -L "$config" ]; then
+            # setup.sh leaves a symlinked config alone, so its hint cannot clear this.
+            warn "$config is a symlink whose target does not start with: $include" \
+                "add that line at the top of $(doctor_q "$(readlink -f -- "$config")")"
+            found=1
+        else
+            warn "$config does not start with: $include" "$fix"
+            found=1
+        fi
     fi
 
     if [ -f "$fragment" ]; then
@@ -106,7 +120,10 @@ check_ssh() {
         fi
     fi
 
-    if [ "$found" -eq 0 ] && [ "$(_ssh_session_sock)" != "$sock" ]; then
+    if [ "$nosock" -eq 1 ]; then
+        note "no XDG_RUNTIME_DIR in this shell — cannot check the agent socket"
+        found=1
+    elif [ "$found" -eq 0 ] && [ "$(_ssh_session_sock)" != "$sock" ]; then
         note "this shell has no SSH_AUTH_SOCK=$sock yet — log out and back in"
         found=1
     fi

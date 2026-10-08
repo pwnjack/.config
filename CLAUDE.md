@@ -362,7 +362,6 @@ scripts/doctor/
 ├── lib.sh                   # group/ok/err/warn/note/summary, counters, doctor_q, doctor_require_repo
 ├── checks/
 │   ├── autostart.sh         # check_autostart  — per-user XDG autostart entries whose program is missing
-│   ├── ssh.sh               # check_ssh        — from environment.d/ssh-agent.conf and scripts/ssh/setup.sh
 │   ├── symlinks.sh          # check_symlinks   — from `git ls-files -s` mode 120000
 │   ├── references.sh        # check_references — from Lua require(), Hyprlang source, literal paths
 │   ├── binaries.sh          # check_binaries   — from Lua keybind/autostart hl.exec_cmd() calls
@@ -372,7 +371,8 @@ scripts/doctor/
 │   ├── waybar.sh            # check_waybar     — from config.jsonc's modules-* arrays and handler values
 │   ├── workspaces.sh        # check_workspaces — placed cffi/* modules: library present and current
 │   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
-│   └── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
+│   ├── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
+│   └── ssh.sh               # check_ssh        — from environment.d/ssh-agent.conf and scripts/ssh/setup.sh
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
     └── test-*.sh            # One per module; sourced into one shared shell
