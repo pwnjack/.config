@@ -270,6 +270,27 @@ after a successful decode. The resolved theme and `Backgrounds` directories
 must remain root-owned so an unprivileged user cannot substitute either side
 of that privileged rename.
 
+### SSH agent
+
+OpenSSH's packaged `ssh-agent.socket` (socket-activated, keys in memory only)
+holds the key, so its passphrase is asked once per login. Its socket path is set
+by the tracked `environment.d/ssh-agent.conf`: the systemd user manager reads it
+at login, and uwsm starts Hyprland under that manager, so every app, terminal
+and fish shell inherits `SSH_AUTH_SOCK` — fish has no line of its own, and a bare
+TTY login gets none. The tracked `ssh/config` holds only `AddKeysToAgent yes`.
+`~/.ssh` is outside the repo, so `scripts/ssh/setup.sh` (run by `install.sh`
+after the deploy step, no prompt) gives it a pointer: `Include ~/.config/ssh/config`
+as the **first** line of `~/.ssh/config`, because a line after a `Host` or
+`Match` block applies to that block alone. It backs the file up to
+`<backup dir>/.ssh/config` first, as the deploy step does (refusing if that
+backup already exists), and leaves a symlinked `~/.ssh/config` untouched unless
+its target already has the Include. A failed enable of the unit still sets up the
+Include and exits 1. ssh refuses an Include target that is group or world
+writable, so setup repairs the fragment with `chmod go-w` and doctor's
+`check_ssh` warns when it finds it that way. Already-open terminals get the
+variable at the next login. `checks/ssh.sh` reads the unit name and Include line
+from `setup.sh` and the socket path from the environment.d file.
+
 ### Gaming (WoW / Battle.net)
 
 `docs/gaming-wow.md` is the single source for this — **read it before touching
