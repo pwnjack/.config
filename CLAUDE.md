@@ -277,8 +277,11 @@ holds the key, so its passphrase is asked once per login. `SSH_AUTH_SOCK` is set
 by `hypr/config/setup/envvars.lua` (`$XDG_RUNTIME_DIR/ssh-agent.socket`, guarded
 against an unset runtime dir): Hyprland launches every app and terminal, so the
 plain `Hyprland` session and the uwsm one both get it — `environment.d` would
-reach only the latter. Already-open terminals get it at the next login;
-`setup.sh` also pushes it into the running user manager for systemd units. The
+reach only the latter. The line's `true` flag (`hl.env`'s `dbus` argument) also
+exports it to the systemd user manager and the D-Bus activation environment each
+session, which uwsm's fixed export list would not, so systemd units and
+D-Bus-activated apps (Ghostty) see it. Already-open terminals get it at the next
+login; `setup.sh`'s `set-environment` only covers the current session until then. The
 tracked `ssh/config` holds only `AddKeysToAgent yes`.
 `~/.ssh` is outside the repo, so `scripts/ssh/setup.sh` (run by `install.sh`
 after the deploy step, no prompt) gives it a pointer: `Include ~/.config/ssh/config`

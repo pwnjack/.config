@@ -31,6 +31,11 @@ _ssh_home() {
     printf '%s' "$HOME"
 }
 
+# Whether a user bus is reachable from this shell.
+_ssh_user_bus() {
+    systemctl --user show-environment >/dev/null 2>&1
+}
+
 # Whether the user manager can see the unit file at all.
 _ssh_unit_present() {
     systemctl --user cat "$1" >/dev/null 2>&1
@@ -66,7 +71,7 @@ _ssh_assignment() {
 # _ssh_socket_name <envvars.lua> — the "/name" after `runtime ..` in the
 # hl.env("SSH_AUTH_SOCK", ...) line. scripts/ssh/setup.sh uses the same sed.
 _ssh_socket_name() {
-    sed -n '/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)").*/\1/p;q;}' "$1" 2>/dev/null
+    sed -n '/^[[:space:]]*--/b;/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)" *\(, *true *\)\{0,1\}).*/\1/p;q;}' "$1" 2>/dev/null
 }
 
 check_ssh() {
@@ -89,7 +94,7 @@ check_ssh() {
     fi
     sock="$(_ssh_runtime_dir)$name"
     # su, sudo -u and cron carry no runtime dir: the socket path is unknowable.
-    if [ -z "$(_ssh_runtime_dir)" ]; then nosock=1; fi
+    if [ -z "$(_ssh_runtime_dir)" ] || ! _ssh_user_bus; then nosock=1; fi
     fix="bash $(doctor_q "$setup")"
 
     if [ "$nosock" -eq 1 ]; then
@@ -140,7 +145,7 @@ check_ssh() {
     fi
 
     if [ "$nosock" -eq 1 ]; then
-        note "no XDG_RUNTIME_DIR in this shell — cannot check the agent unit or socket"
+        note "no user session bus in this shell — cannot check the agent unit or socket"
         found=1
     elif [ "$found" -eq 0 ]; then
         session=$(_ssh_session_sock)

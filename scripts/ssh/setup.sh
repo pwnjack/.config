@@ -100,7 +100,9 @@ elif [ -n "$backup" ] && { [ -e "$backup/.ssh/config" ] || [ -L "$backup/.ssh/co
   echo "ssh: $backup/.ssh/config already exists; not overwriting it, so $config is unchanged" >&2
   failed=1
 else
-  if grep -qiE '^[[:space:]]*AddKeysToAgent([[:space:]]|=|$)' -- "$config" 2>/dev/null; then
+  # Only a value other than yes conflicts with the tracked one.
+  if grep -iE '^[[:space:]]*AddKeysToAgent([[:space:]]|=|$)' -- "$config" 2>/dev/null \
+      | grep -qviE '^[[:space:]]*AddKeysToAgent[[:space:]]*[= ][[:space:]]*"?yes"?[[:space:]]*$'; then
     echo "ssh: $config sets AddKeysToAgent; the tracked 'AddKeysToAgent yes' now takes"
     echo "  precedence because ssh uses the first value it reads. To keep yours,"
     echo "  change $repo/ssh/config."
@@ -109,7 +111,9 @@ else
     echo "ssh: backing up $config to $backup/.ssh/config"
     run mkdir -p -- "$backup/.ssh"
     run cp -a -- "$config" "$backup/.ssh/config"
-    echo "ssh: to restore: cp -a $backup/.ssh/config $config"
+    if ! $dry; then
+      printf 'ssh: to restore: cp -a %q %q\n' "$backup/.ssh/config" "$config"
+    fi
   else
     echo "ssh: --no-backup given; not backing up $config"
   fi
@@ -130,7 +134,7 @@ fi
 # The name comes from the SSH_AUTH_SOCK line of envvars.lua (checks/ssh.sh
 # parses the same line with the same sed).
 envlua="$repo/hypr/config/setup/envvars.lua"
-name=$(sed -n '/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)").*/\1/p;q;}' "$envlua" 2>/dev/null || true)
+name=$(sed -n '/^[[:space:]]*--/b;/hl\.env("SSH_AUTH_SOCK"/{s/.*hl\.env("SSH_AUTH_SOCK", *runtime *\.\. *"\([^"]*\)" *\(, *true *\)\{0,1\}).*/\1/p;q;}' "$envlua" 2>/dev/null || true)
 if [ -z "$name" ]; then
   echo "ssh: no SSH_AUTH_SOCK line in $envlua; skipping set-environment"
 elif [ -n "${XDG_RUNTIME_DIR:-}" ] && have_unit; then

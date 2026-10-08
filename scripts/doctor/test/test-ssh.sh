@@ -29,6 +29,7 @@ ssh_expected="/run/user/test/ssh-agent.socket"
 
 ssh_enabled=yes
 ssh_present=yes
+ssh_bus=yes
 ssh_live=yes
 ssh_session="$ssh_expected"
 ssh_mode=644
@@ -36,6 +37,7 @@ ssh_rundir=/run/user/test
 
 # Host probes are the only pieces replaced.
 _ssh_unit_enabled() { [ "$ssh_enabled" = yes ]; }
+_ssh_user_bus() { [ "$ssh_bus" = yes ]; }
 _ssh_unit_present() { [ "$ssh_present" = yes ]; }
 _ssh_socket_live() { [ "$ssh_live" = yes ] && [ "$1" = "$ssh_expected" ]; }
 _ssh_home() { printf '%s' "$ssh_home"; }
@@ -49,7 +51,7 @@ ssh_run() {
     ssh_out=$(cat "$DOCTOR_TEST_TMP/ssh.out")
 }
 ssh_healthy() {
-    ssh_enabled=yes; ssh_present=yes; ssh_live=yes; ssh_session="$ssh_expected"; ssh_mode=644; ssh_rundir=/run/user/test
+    ssh_enabled=yes; ssh_present=yes; ssh_bus=yes; ssh_live=yes; ssh_session="$ssh_expected"; ssh_mode=644; ssh_rundir=/run/user/test
     rm -f "$ssh_home/.ssh/real" "$ssh_home/.ssh/config"
     printf '%s\nHost x\n' "$ssh_include" > "$ssh_home/.ssh/config"
 }
@@ -62,6 +64,26 @@ mkdir -p "$DOCTOR_TEST_TMP/ssh-novar/hypr/config/setup"
 echo 'return function() end' > "$DOCTOR_TEST_TMP/ssh-novar/hypr/config/setup/envvars.lua"
 ssh_run "$DOCTOR_TEST_TMP/ssh-novar"
 assert_eq "$ssh_out" "" "ssh: an envvars.lua without SSH_AUTH_SOCK prints nothing"
+
+# Commented-out Lua lines are ignored; only a commented line counts as absent.
+mkdir -p "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup"
+cat > "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup/envvars.lua" <<'EOT'
+    -- hl.env("SSH_AUTH_SOCK", runtime .. "/old")
+return function() end
+EOT
+ssh_run "$DOCTOR_TEST_TMP/ssh-cmt"
+assert_eq "$ssh_out" "" "ssh: a commented-out line counts as absent"
+cat > "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup/envvars.lua" <<'EOT'
+    -- hl.env("SSH_AUTH_SOCK", runtime .. "/old")
+    if runtime then hl.env("SSH_AUTH_SOCK", runtime .. "/new.socket") end
+EOT
+assert_eq "$(_ssh_socket_name "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup/envvars.lua")" "/new.socket" \
+    "ssh: the live line wins over a commented one above it"
+cat > "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup/envvars.lua" <<'EOT'
+    if runtime then hl.env("SSH_AUTH_SOCK", runtime .. "/new.socket", true) end
+EOT
+assert_eq "$(_ssh_socket_name "$DOCTOR_TEST_TMP/ssh-cmt/hypr/config/setup/envvars.lua")" "/new.socket" \
+    "ssh: the optional dbus flag is accepted"
 
 # The real tree: the parse must keep working against what is tracked.
 assert_eq "$(_ssh_socket_name "$REPO_DIR/hypr/config/setup/envvars.lua")" "/ssh-agent.socket" \
@@ -177,7 +199,7 @@ mv "$DOCTOR_TEST_TMP/ssh-frag.bak" "$ssh_root/ssh/config"
 ssh_healthy; ssh_rundir=""; ssh_live=no; ssh_session=""
 ssh_run
 assert_eq "$DOCTOR_WARNINGS$DOCTOR_NOTICES" "01" "ssh: no runtime dir is one note, no warning"
-assert_contains "$ssh_out" "no XDG_RUNTIME_DIR in this shell" "ssh: the note says why"
+assert_contains "$ssh_out" "no user session bus in this shell" "ssh: the note says why"
 assert_not_contains "$ssh_out" "/ssh-agent.socket" "ssh: no invented socket path"
 assert_not_contains "$ssh_out" "passphrase once per login" "ssh: no ok without a runtime dir"
 ssh_healthy; ssh_rundir=""; ssh_mode=664
@@ -223,3 +245,10 @@ ln -s "$DOCTOR_TEST_TMP/nonexistent-dir/cfg" "$ssh_home/.ssh/config"
 ssh_run
 assert_eq "$DOCTOR_WARNINGS" 1 "ssh: a dangling symlink is one warning"
 assert_contains "$ssh_out" "$DOCTOR_TEST_TMP/nonexistent-dir/cfg" "ssh: the hint names the dangling target"
+
+# No reachable user bus (runtime dir set): not "unit not installed".
+ssh_healthy; ssh_bus=no; ssh_present=no; ssh_enabled=no; ssh_live=no
+ssh_run
+assert_eq "$DOCTOR_WARNINGS$DOCTOR_NOTICES" "01" "ssh: no user bus is one note, no warning"
+assert_contains "$ssh_out" "no user session bus in this shell" "ssh: the note names the bus"
+assert_not_contains "$ssh_out" "not installed" "ssh: no false not-installed"

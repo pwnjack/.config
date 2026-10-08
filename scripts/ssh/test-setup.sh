@@ -286,6 +286,20 @@ assert_contains "$out" "skipping set-environment" "no env line: says it skips"
 assert_contains "$out" "Log out" "re-login note prints even when set-environment is skipped"
 TEST_REPO="$TMP/repo"
 
+# --- commented-out Lua line is ignored ----------------------------------------
+mk_repo "$TMP/repocmt"
+printf '    -- hl.env("SSH_AUTH_SOCK", runtime .. "/old")\nlocal runtime = 1\nhl.env("SSH_AUTH_SOCK", runtime .. "/new.socket", true)\n' \
+    > "$TMP/repocmt/hypr/config/setup/envvars.lua"
+TEST_REPO="$TMP/repocmt"
+fresh_home
+setup
+assert_contains "$(cat "$STUB_LOG")" "SSH_AUTH_SOCK=/run/user/test/new.socket" \
+    "comment: the live line wins and the dbus flag is accepted"
+printf '    -- hl.env("SSH_AUTH_SOCK", runtime .. "/old")\n' > "$TMP/repocmt/hypr/config/setup/envvars.lua"
+setup
+assert_contains "$out" "skipping set-environment" "comment: only a commented line counts as absent"
+TEST_REPO="$TMP/repo"
+
 # --- AddKeysToAgent already in the user's config -----------------------------
 fresh_home
 mkdir -p "$h/.ssh"
@@ -300,11 +314,33 @@ existing_config 600
 setup --backup-dir "$h/bak"
 assert_not_contains "$out" "precedence" "no AddKeysToAgent: no notice"
 
+# --- AddKeysToAgent yes does not conflict ------------------------------------
+fresh_home
+mkdir -p "$h/.ssh"
+printf 'Host x\n  AddKeysToAgent YES\n' > "$h/.ssh/config"
+setup --backup-dir "$h/bak"
+assert_not_contains "$out" "precedence" "AddKeysToAgent yes: no notice"
+assert_eq "$(head -n 1 "$h/.ssh/config")" "$INC" "AddKeysToAgent yes: still proceeds"
+
 # --- restore command ---------------------------------------------------------
 fresh_home
 existing_config 600
 setup --backup-dir "$h/bak"
 assert_contains "$out" "cp -a $h/bak/.ssh/config $h/.ssh/config" "backup: prints the restore command"
+
+# a backup dir with a space: the printed command restores the file when eval'd
+fresh_home
+existing_config 600
+setup --backup-dir "$h/my bak"
+cmd=$(printf '%s\n' "$out" | sed -n 's/^ssh: to restore: //p')
+assert_contains "$cmd" "my\\ bak" "restore: the path is quoted"
+rm -f "$h/.ssh/config"
+(eval "$cmd")
+assert_eq "$(same "$TMP/original$n" "$h/.ssh/config")" same "restore: the printed command restores the file"
+fresh_home
+existing_config 600
+setup --dry-run --backup-dir "$h/bak"
+assert_not_contains "$out" "to restore" "dry run: no restore command"
 
 # --- dry run wording ---------------------------------------------------------
 fresh_home

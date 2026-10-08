@@ -6,10 +6,13 @@ return function(cursor_theme)
     hl.env("QT_QPA_PLATFORMTHEME", "qt6ct")
 
     -- SSH_AUTH_SOCK for everything Hyprland launches, in both the plain and the
-    -- uwsm session (environment.d only reaches the latter). The socket is
+    -- uwsm session (environment.d only reaches the latter). The final `true`
+    -- also imports it into the systemd user manager and the D-Bus activation
+    -- environment, which uwsm's fixed export list would leave out: systemd
+    -- units and D-Bus-activated apps (Ghostty) need it. The socket is
     -- OpenSSH's ssh-agent.socket, enabled by scripts/ssh/setup.sh; setup.sh and
     -- scripts/doctor/checks/ssh.sh read the socket name from this line. The
     -- guard matters: concatenating nil would break the whole configuration.
     local runtime = os.getenv("XDG_RUNTIME_DIR")
-    if runtime and runtime ~= "" then hl.env("SSH_AUTH_SOCK", runtime .. "/ssh-agent.socket") end
+    if runtime and runtime ~= "" then hl.env("SSH_AUTH_SOCK", runtime .. "/ssh-agent.socket", true) end
 end
