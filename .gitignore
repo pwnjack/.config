@@ -3,7 +3,6 @@
 # Excludes cache, logs, temporary files, and machine-specific data
 # ==============================================================================
 
-zsh/
 create-next-app-nodejs/
 nextjs-nodejs/
 aichat/sessions
@@ -231,7 +230,6 @@ obs-studio/**
 heroic/**
 spotify/**
 GIMP/**
-Cursor/**
 net.imput.helium/**
 vesktop/**
 Kvantum/**
