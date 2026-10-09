@@ -4,7 +4,8 @@
 # palette when pywal has never run: the repo tracks symlinks to these files,
 # and a dangling one is a doctor ERROR on a fresh checkout.
 #
-# swaync only reloads a live consumer and renders nothing, so it is not run.
+# swaync only reloads a live consumer and renders nothing, so it is not run;
+# nvim is the same kind and is tested separately below.
 # pkill and hyprctl are stubbed so no running cava or Hyprland is touched.
 #
 
@@ -71,6 +72,26 @@ if [ "$(cat "$tmp/rendered")" = "$expected" ]; then
     pass "wal_render substitutes prefix-overlapping tokens correctly"
 else
     fail "wal_render produced '$(cat "$tmp/rendered")', expected '$expected'"
+fi
+
+# nvim renders nothing (pywal writes colors-wal.vim itself); its script only
+# asks running instances to re-apply. It must exit 0 whether nvim is missing,
+# or an instance's socket is stale and every request fails.
+mkdir -p "$tmp/run" "$tmp/nobin"
+python3 -c 'import socket,sys; socket.socket(socket.AF_UNIX).bind(sys.argv[1])' "$tmp/run/nvim.123.0"
+printf '#!/bin/sh\necho "$@" >> "%s"\nexit 1\n' "$tmp/nvim-calls" > "$tmp/bin/nvim"
+chmod +x "$tmp/bin/nvim"
+if PATH="$tmp/bin:$PATH" XDG_RUNTIME_DIR="$tmp/run" "$ROOT/nvim/apply_wal_colors.sh" \
+    && grep -q -- "--server $tmp/run/nvim.123.0 --remote-expr" "$tmp/nvim-calls"; then
+    pass "nvim asks each running instance to re-apply, and a failed request is not a failure"
+else
+    fail "nvim/apply_wal_colors.sh failed, or never addressed the instance's socket"
+fi
+for cmd in bash timeout id; do ln -sf "$(command -v "$cmd")" "$tmp/nobin/$cmd"; done
+if PATH="$tmp/nobin" XDG_RUNTIME_DIR="$tmp/run" "$tmp/nobin/bash" "$ROOT/nvim/apply_wal_colors.sh"; then
+    pass "nvim/apply_wal_colors.sh is a no-op without nvim"
+else
+    fail "nvim/apply_wal_colors.sh exits nonzero without nvim"
 fi
 
 test_summary

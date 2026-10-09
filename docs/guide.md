@@ -190,8 +190,11 @@ wal -i /path/to/wallpaper.jpg
 ```
 
 Colors automatically apply to Hyprland, Waybar, Rofi, SwayNC, ghostty, Thunar,
-cava, btop and the Starship prompt. fastfetch follows too, without any config
-of its own — it colours by ANSI index, and the terminal palette is pywal's.
+cava, btop, Neovim and the Starship prompt. Open Neovim windows re-theme in
+place unless you picked another colour scheme in them; before pywal has run
+once, Neovim uses LazyVim's tokyonight. fastfetch and bat (and so man pages)
+follow too, without rendering anything — they colour by ANSI index, and the
+terminal palette is pywal's.
 
 Components needing more than a plain include own a
 `<component>/apply_wal_colors.sh`, rendering into `~/.cache/wal/`. The repo
