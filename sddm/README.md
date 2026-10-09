@@ -10,7 +10,6 @@ Scripts that keep the SDDM login screen background in sync with your desktop wal
 | `update_sddm.sh` | User-side updater; delegates to the installed root-owned helper via sudo |
 | `update_sddm_root.sh` | Tracked source for the privileged helper; decodes as the target user, then atomically installs the SDDM theme background as root |
 | `setup-sudo.sh` | Installs or upgrades the root-owned helper and its passwordless-sudo rule |
-| `default.conf` | Reference SDDM configuration (copy to `/etc/sddm.conf` if desired) |
 
 ## Setup
 

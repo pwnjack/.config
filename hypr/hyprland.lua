@@ -2,9 +2,8 @@
 -- HYPRLAND CONFIGURATION
 -- Modern dark theme - Pywal dynamic colors
 --
--- Hyprland 0.55+ loads this file instead of hyprland.conf. Keeping the
--- configuration split into modules also contains errors: Hyprland evaluates
--- each require() in its own protected scope.
+-- Keeping the configuration split into modules contains errors: Hyprland
+-- evaluates each require() in its own protected scope.
 --
 
 local apps = require("config.apptype")
