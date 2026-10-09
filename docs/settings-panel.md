@@ -69,6 +69,9 @@ wallpaper carousel remains a separate application with its existing lifecycle.
 - `persist.js` and `hyprctl.js` own the shared persistence layer. Apply/save
   waits for Hyprland's `ok`; failed writes reload the saved config;
   resets remove just the selected override and reload the actual Lua defaults.
+  Overrides are per-machine state in `${XDG_STATE_HOME:-~/.local/state}/hypr/overrides.lua`,
+  never a tracked file, so using the panel leaves git clean; `hyprland.lua` loads
+  it last if present and skips it, with a notification, if it fails to run.
 - The backend updates hypridle/sunset fields in place, preserving unrelated
   content, and restores files if applying them fails. SwayNC retains unrelated
   keys. Night light liveness uses `nightlight.sh`, never an identity getter.

@@ -10,7 +10,7 @@ catalog.rows.push({id:'test.option-slider',source:'option',key:'test-slider',kin
 catalog.rows.push({id:'test.gtk-raw',source:'gtk',key:'gtk-theme',ini:{key:'gtk-theme-name'}})
 const files = new Map([
     [base + '/quickshell/settings-panel/catalog.json', JSON.stringify(catalog)],
-    [base + '/hypr/config/overrides.lua', ''],
+    ['/fixture/.local/state/hypr/overrides.lua', ''],
     [base + '/hypr/hypridle.conf', '# Keep this comment\ngeneral { ignore_dbus_inhibit = false }\nlistener {\n timeout = 305\n on-timeout = loginctl lock-session\n}\nlistener {\n timeout = 600\n on-timeout = hyprctl dispatch \'hl.dsp.dpms({action = "off"})\'\n}\n'],
     [base + '/hypr/hyprsunset.conf', '# Keep this comment\nmax-gamma = 100\nprofile {\n time = 07:00\n temperature = 6000\n}\nprofile {\n time = 20:00\n temperature = 4000\n}\n'],
     [base + '/swaync/config.json', JSON.stringify({timeout:5,unrelated:{keep:true}})],
@@ -184,6 +184,7 @@ globalThis.settingsMocks = {
         get_user_name: () => "alex", get_real_name: () => "Alex Example", get_host_name: () => "workstation",
         SeekType: {SET:0,END:2},
         get_home_dir: () => '/fixture', get_user_config_dir: () => base, Error: class extends Error {},
+        mkdir_with_parents: () => 0,
         file_read_link: path => {
             if (path !== '/etc/localtime') return null
             if (localtimeMissing) throw new Error('No such file: '+path)
@@ -524,9 +525,9 @@ for (const [text, expected] of [['banana\n', true], ['\n', true], ['disabled\n',
 console.log('ok: bar layout rows persist typed values, enumerate monitors and validate before applying')
 
 await dispatch({op:'set',id:'anim.windows',value:8})
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/speed = 8/)
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/bezier = "ease"/)
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/style = "popin 80%"/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/speed = 8/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/bezier = "ease"/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/style = "popin 80%"/)
 console.log('ok: animation speed edits preserve the live curve and style')
 
 await dispatch({op:'set',id:'notif.timeout',value:8})
@@ -625,18 +626,18 @@ assert.equal(events.some(e => e[1] === 'eval'),false)
 await dispatch({op:'set',id:'input.kb-variant',value:''})
 await dispatch({op:'set',id:'input.kb-options',value:'caps:escape,grp:alt_shift_toggle'})
 await dispatch({op:'set',id:'input.kb-layout',value:'us,it'})
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_variant = ""/)
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_layout = "us,it"/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/kb_variant = ""/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/kb_layout = "us,it"/)
 console.log('ok: keyboard layout, variant and options are checked against XKB before applying')
 
 await dispatch({op:'set',id:'input.kb-variant',value:'intl'})
 events=[]
 await assert.rejects(dispatch({op:'reset',id:'input.kb-layout'}),/Reset Layout Variant first/)
 assert.equal(events.some(e => e[1] === 'reload'),false)
-assert.match(files.get(base+'/hypr/config/overrides.lua'),/kb_layout = "us,it"/)
+assert.match(files.get('/fixture/.local/state/hypr/overrides.lua'),/kb_layout = "us,it"/)
 await dispatch({op:'reset',id:'input.kb-variant'})
 await dispatch({op:'reset',id:'input.kb-layout'})
-assert.doesNotMatch(files.get(base+'/hypr/config/overrides.lua'),/@override input:kb_layout /)
+assert.doesNotMatch(files.get('/fixture/.local/state/hypr/overrides.lua'),/@override input:kb_layout /)
 console.log('ok: resetting the keyboard layout while a variant override exists is rejected until the variant is reset first')
 
 result = await dispatch({op:'read',ids:['appearance.gtk-theme','appearance.icon-theme']})

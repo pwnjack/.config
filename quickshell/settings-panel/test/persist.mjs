@@ -9,9 +9,10 @@ let configErrors = []
 let release = null
 let held = false
 const events = []
+const dirs = []
 const encoder = new TextEncoder()
 globalThis.panelMocks = {
-    GLib: { get_home_dir: () => '/fixture', Error: class extends Error {} },
+    GLib: { get_home_dir: () => '/fixture', getenv: () => null, mkdir_with_parents: dir => { dirs.push(dir); return 0 }, Error: class extends Error {} },
     Gio: {
         FileCreateFlags: { NONE: 0 },
         File: { new_for_path: () => ({
@@ -60,6 +61,7 @@ assert.deepEqual(events, ['eval'], 'second edit must wait for the first transact
 release()
 await Promise.all([first, second])
 assert.deepEqual(events, ['eval', 'save', 'eval', 'save'])
+assert.equal(dirs[0], '/fixture/.local/state/hypr', 'overrides live in XDG state, and its directory is created before saving')
 assert.equal(p.getOverride('general:gaps_in'), '8')
 assert.equal(p.getOverride('general:gaps_out'), '15')
 console.log('ok: edits await confirmation and serialize without losing other settings')

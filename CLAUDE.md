@@ -224,7 +224,9 @@ The snapshot refreshes after edits and on every fresh opening.
 `scripts/settings/panel-request.sh` serializes requests with a cache-backed
 lock. Text fields apply with Return or Apply; sliders save on release.
 
-`quickshell/settings-panel/persist.js` serializes Hyprland apply/save operations. It waits for an
+`quickshell/settings-panel/persist.js` serializes Hyprland apply/save operations into the untracked
+`${XDG_STATE_HOME:-~/.local/state}/hypr/overrides.lua`, which `hyprland.lua` loads last (skipped,
+with a notification, if it fails to run), so panel use never dirties the repo. It waits for an
 `ok` reply before saving, reloads the saved configuration if a write fails,
 and propagates failures to the panel's visible status message. Its regression
 tests exercise that implementation directly. Resets remove

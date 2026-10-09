@@ -2,12 +2,17 @@ import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 import { luaValue, setKeyword, reloadConfig } from "./hyprctl.js"
 
-const OVERRIDES_PATH = GLib.get_home_dir() + "/.config/hypr/config/overrides.lua"
+// Per-machine state, never a tracked file: changing a setting must not dirty
+// the dotfiles repo. hyprland.lua loads this file last, if it exists.
+const STATE_HOME = GLib.getenv("XDG_STATE_HOME") || `${GLib.get_home_dir()}/.local/state`
+const OVERRIDES_DIR = `${STATE_HOME}/hypr`
+const OVERRIDES_PATH = `${OVERRIDES_DIR}/overrides.lua`
 
 const HEADER = `--
 -- PANEL-MANAGED OVERRIDES
 -- Written by the Super+I settings panel (quickshell/settings-panel/persist.js).
--- Required last from hyprland.lua so these values win over tracked defaults.
+-- Loaded last by ~/.config/hypr/hyprland.lua so these values win over the
+-- tracked defaults. Per machine; not part of the dotfiles repo.
 -- One hl.config() or hl.animation() call per line. Do not edit by hand; use the
 -- panel, or delete a line to fall back to the tracked default.
 --
@@ -27,6 +32,7 @@ function readLines() {
 function writeLines(lines) {
     const body = lines.filter(l => l.trim() !== "" && !l.startsWith("--")).join("\n")
     const text = HEADER + (body ? body + "\n" : "")
+    GLib.mkdir_with_parents(OVERRIDES_DIR, 0o755)
     const [ok] = Gio.File.new_for_path(OVERRIDES_PATH).replace_contents(
         new TextEncoder().encode(text), null, false, Gio.FileCreateFlags.NONE, null)
     if (!ok) throw new Error("Cannot save settings")
