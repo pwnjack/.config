@@ -5,4 +5,6 @@ textbox-prompt-colon {
 }
 listview     { columns: 5; }
 element      { padding: 20px 10px; }
-element-text { font: "FiraCode Nerd Font 26"; }
+// Propo, not the mono variant: mono gives every icon a one-cell advance its ink
+// overflows to the right, so centring by advance left each label off-centre.
+element-text { font: "FiraCode Nerd Font Propo 26"; }
