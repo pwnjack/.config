@@ -1,8 +1,8 @@
 #!/bin/bash
 #
 # Tests for scripts/hyprland/lock.sh against the real record.sh and the
-# capture fakes: a running recording is saved before hyprlock starts, and a
-# running hyprlock is never started twice.
+# capture fakes: hyprlock starts first and never waits for the recorder, a
+# running recording is saved afterwards, and hyprlock is never started twice.
 #
 set -uo pipefail
 
@@ -16,25 +16,66 @@ TMP="$(mktemp -d)"
 
 export FAKE_LOG="$TMP/log" CAPTURE_OPTIONS="$TMP/options"
 export CAPTURE_STATE_DIR="$TMP/state" CAPTURE_VIDEOS="$TMP/videos"
+export XDG_RUNTIME_DIR="$TMP/run"
 # lock.sh finds record.sh under $XDG_CONFIG_HOME, which is this checkout.
 export XDG_CONFIG_HOME="$ROOT"
 export PATH="$ROOT/scripts/capture/fakes:$PATH"
-mkdir -p "$FAKE_LOG" "$CAPTURE_OPTIONS"
-trap 'bash "$RECORD" stop >/dev/null 2>&1; rm -rf "$TMP"' EXIT
+mkdir -p "$FAKE_LOG" "$CAPTURE_OPTIONS" "$XDG_RUNTIME_DIR"
+cleanup() {
+    bash "$RECORD" stop >/dev/null 2>&1
+    pkill -KILL -f "$ROOT/scripts/capture/fakes/gpu-screen-recorder" 2>/dev/null
+    rm -rf "$TMP"
+}
+trap cleanup EXIT
+
+reset_lock() { rm -f "$FAKE_LOG/hyprlock" "$FAKE_LOG/hyprlock.running"; }
+# wait_for CMD... -- poll up to 10 s.
+wait_for() {
+    local i
+    for ((i = 0; i < 100; i++)); do "$@" && return 0; sleep 0.1; done
+    return 1
+}
+saved_clip() { compgen -G "$CAPTURE_VIDEOS/*.mp4" >/dev/null && [ -s "$(compgen -G "$CAPTURE_VIDEOS/*.mp4" | head -1)" ]; }
+saved_toast() { grep -q 'Recording saved' "$FAKE_LOG/notify" 2>/dev/null; }
+idle() { ! bash "$RECORD" status >/dev/null; }
 
 bash "$RECORD" start region 100x100+0+0
 bash "$RECORD" status >/dev/null && pass "fixture: a recording is running" || fail "fixture: a recording is running"
 
 bash "$TEST_DIR/lock.sh"
-assert_eq "$(cat "$FAKE_LOG/hyprlock")" "saved=yes args=" "hyprlock starts once, after the recording was saved"
-bash "$RECORD" status >/dev/null; rc=$?
-assert_eq "$rc" 1 "no recording after locking"
+assert_eq "$(cat "$FAKE_LOG/hyprlock")" "args=" "hyprlock starts once"
+wait_for idle && pass "no recording after locking" || fail "no recording after locking"
+wait_for saved_clip && pass "the recording is saved after the lock" || fail "the recording is saved after the lock"
+wait_for saved_toast && pass "the saved toast is shown" || fail "the saved toast is shown"
 
 bash "$TEST_DIR/lock.sh" --grace 30
 assert_eq "$(wc -l < "$FAKE_LOG/hyprlock")" 1 "a running hyprlock is not started again"
 
-rm -f "$FAKE_LOG/hyprlock" "$FAKE_LOG/hyprlock.running"
+reset_lock
 bash "$TEST_DIR/lock.sh" --grace 30
-assert_eq "$(cat "$FAKE_LOG/hyprlock")" "saved=yes args=--grace 30" "arguments reach hyprlock"
+assert_eq "$(cat "$FAKE_LOG/hyprlock")" "args=--grace 30" "arguments reach hyprlock"
+
+# A recorder that ignores SIGINT must not delay the lock.
+reset_lock
+FAKE_GSR=hang bash "$RECORD" start region 100x100+0+0
+start=$SECONDS
+CAPTURE_STOP_WAIT=3 bash "$TEST_DIR/lock.sh"
+[ -s "$FAKE_LOG/hyprlock" ] && [ $((SECONDS - start)) -le 1 ] \
+    && pass "a recorder that hangs does not delay the lock" || fail "a recorder that hangs does not delay the lock"
+wait_for idle && pass "the hung recorder is eventually killed" || fail "the hung recorder is eventually killed"
+
+# A missing record.sh must not prevent the lock.
+reset_lock
+mkdir -p "$TMP/empty"
+XDG_CONFIG_HOME="$TMP/empty" bash "$TEST_DIR/lock.sh"
+assert_eq "$(cat "$FAKE_LOG/hyprlock")" "args=" "hyprlock starts without record.sh"
+
+# Two concurrent callers start one hyprlock.
+reset_lock
+export FAKE_HYPRLOCK_HOLD=1
+bash "$TEST_DIR/lock.sh" & p1=$!
+bash "$TEST_DIR/lock.sh" & p2=$!
+wait "$p1" "$p2"
+assert_eq "$(wc -l < "$FAKE_LOG/hyprlock")" 1 "concurrent locks start one hyprlock"
 
 test_summary lock

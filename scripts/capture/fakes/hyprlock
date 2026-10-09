@@ -1,10 +1,10 @@
 #!/bin/bash
-# Test stand-in for hyprlock: notes whether a recording had been saved (an mp4
-# with content and no state file) when it started, and its arguments; then
-# marks itself running for the fake pidof.
-saved=no
-for f in "${CAPTURE_VIDEOS:-/nonexistent}"/*.mp4; do
-    [ -s "$f" ] && [ ! -e "${CAPTURE_STATE_DIR:-/nonexistent}/recording.json" ] && saved=yes
-done
-printf 'saved=%s args=%s\n' "$saved" "$*" >> "$FAKE_LOG/hyprlock"
+# Test stand-in for hyprlock: logs its arguments and marks itself running for
+# the fake pgrep. FAKE_HYPRLOCK_HOLD (seconds) keeps it alive, holding whatever
+# descriptors it inherited, then clears the mark; without it the mark stays.
+printf 'args=%s\n' "$*" >> "$FAKE_LOG/hyprlock"
 touch "$FAKE_LOG/hyprlock.running"
+if [ -n "${FAKE_HYPRLOCK_HOLD:-}" ]; then
+    sleep "$FAKE_HYPRLOCK_HOLD"
+    rm -f "$FAKE_LOG/hyprlock.running"
+fi

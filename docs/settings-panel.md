@@ -274,8 +274,8 @@ Traps:
 - **Formats use `SetLocale`** (system-wide, polkit): a per-user `locale.conf` is not
   effective because the systemd user manager already exports `LANG`/`LC_TIME`.
 - **Stale hyprlock is not a lock.** `pgrep -x hyprlock` alone is not a lock test: stale
-  instances (0 CPU time) linger for a day, and they also defeat hypridle's
-  `pidof`-guarded `lock_cmd`. Check `ps -o time= -p PID` before any synthetic input.
+  instances (0 CPU time) linger for a day, and they also make
+  `lock.sh` (hypridle's `lock_cmd`) skip starting a lock. Check `ps -o time= -p PID` before any synthetic input.
 
 ## Startup
 

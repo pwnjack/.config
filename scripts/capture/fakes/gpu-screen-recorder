@@ -5,6 +5,7 @@ Appends its argument vector to $FAKE_LOG/gsr.argv, then behaves per FAKE_GSR:
   ok (default)  run until SIGINT, then write the -o file and exit 0
   die           print an error and exit 1 at once
   empty         run until SIGINT, then exit without writing anything
+  hang          ignore SIGINT; only SIGKILL ends it
 FAKE_GSR_FINISH delays the finish by that many seconds.
 
 Python, not bash: a background job of a non-interactive shell starts with
@@ -34,6 +35,6 @@ def finish(*_):
     sys.exit(0)
 
 
-signal.signal(signal.SIGINT, finish)
+signal.signal(signal.SIGINT, signal.SIG_IGN if mode == "hang" else finish)
 while True:
     time.sleep(0.05)

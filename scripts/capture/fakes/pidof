@@ -1,4 +1,0 @@
-#!/bin/bash
-# Test stand-in for pidof: knows only hyprlock, "running" once the fake started.
-[ "$1" = hyprlock ] && [ -e "$FAKE_LOG/hyprlock.running" ] && { echo 4242; exit 0; }
-exit 1
