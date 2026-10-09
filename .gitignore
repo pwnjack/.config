@@ -143,10 +143,6 @@ micro/**/plugins/
 fish/fish_variables
 fish/history
 
-# Atuin
-atuin/**/history.db
-atuin/**/session.db
-
 # -------------------------------------------------------------------------------
 # MACHINE-SPECIFIC FILES
 # -------------------------------------------------------------------------------
