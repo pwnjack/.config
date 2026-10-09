@@ -13,6 +13,8 @@ return function(apps)
     hl.bind("SUPER + B", hl.dsp.exec_cmd(apps.browser)) -- Web browser ($browser)
     hl.bind("SUPER + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot.sh region")) -- Screenshot a region
     hl.bind("SUPER + ALT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot.sh region --annotate")) -- Screenshot a region and annotate
+    hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/capture-bar.sh screenshot")) -- Capture bar: screenshot
+    hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("~/.config/scripts/hyprland/capture-bar.sh record")) -- Capture bar: record, or stop
     hl.bind("SUPER + G", hl.dsp.exec_cmd(apps.codeeditor)) -- Code editor ($codeeditor)
     hl.bind("SUPER + K", hl.dsp.exec_cmd("gnome-calculator")) -- Calculator
     hl.bind("SUPER + A", hl.dsp.exec_cmd("~/.config/scripts/hyprland/launch-chatbox.sh")) -- AI assistant sidebar
@@ -33,8 +35,6 @@ return function(apps)
     -- ## Rofi Menus
     hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("~/.config/rofi/launcher.sh")) -- App launcher
     hl.bind("SUPER + SHIFT + L", hl.dsp.exec_cmd("~/.config/rofi/powermenu.sh")) -- Power menu
-    hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/capture-bar.sh screenshot")) -- Capture bar: screenshot
-    hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("~/.config/scripts/hyprland/capture-bar.sh record")) -- Capture bar: record, or stop
     hl.bind("SUPER + C", hl.dsp.exec_cmd("~/.config/rofi/clipboard.sh")) -- Clipboard history
     hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("~/.config/scripts/hyprland/colorpicker.sh")) -- Colour picker (copies hex)
     hl.bind("SUPER + period", hl.dsp.exec_cmd("rofi -modi emoji -show emoji")) -- Emoji picker

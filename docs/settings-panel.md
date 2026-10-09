@@ -17,7 +17,7 @@ system live in the title bar's ⋯ menu; Restart bar and Update now also appear 
 buttons in the Bar and Default Apps sections they belong to. Things another surface already owns stay there: the
 keybind cheatsheet (Super+H), Do Not Disturb, output volume, mute and per-app
 volume (SwayNC),
-updates (Waybar), screenshot options (Rofi) and wallpapers (the carousel).
+updates (Waybar), screenshot and recording options (the capture bar) and wallpapers (the carousel).
 The palette is read through `scripts/theming/palette.sh` on every launch. The
 wallpaper carousel remains a separate application with its existing lifecycle.
 

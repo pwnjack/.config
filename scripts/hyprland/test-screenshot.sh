@@ -83,7 +83,7 @@ assert_contains "$(sed -n 2p "$EVENTS")" "hyprshot -m output -m TEST-1 --raw" "t
 shot region
 case "$(cat "$EVENTS")" in sleep*) fail "no delay by default" ;; *) pass "no delay by default" ;; esac
 
-for bad in "bogus" "region --delay x" "region --frobnicate"; do
+for bad in "bogus" "output" "region --delay x" "region --frobnicate"; do
     # shellcheck disable=SC2086
     shot $bad 2>/dev/null; rc=$?
     assert_eq "$rc" 2 "usage error: $bad"

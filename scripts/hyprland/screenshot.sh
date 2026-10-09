@@ -2,7 +2,7 @@
 #
 # Capture a screenshot.
 #
-# Usage: screenshot.sh screen|window|region|output [--annotate] [--delay N]
+# Usage: screenshot.sh screen|window|region [--annotate] [--delay N]
 #
 # The one capture command: Super+S, Super+Alt+S and the capture strip all call
 # it, so all of them honour options/capture-freeze ("true" freezes the screen
@@ -11,7 +11,6 @@
 #   screen     the focused monitor, no selection
 #   window     click a window (hyprshot's own picker)
 #   region     drag a rectangle
-#   output     pick a monitor (the rofi menu's entry, until that menu goes)
 #   --annotate open the shot in swappy instead of writing it; where it lands
 #              is then swappy's decision, from swappy/config
 #   --delay N  wait N seconds first (the strip's delay; Super+S has none)
@@ -34,7 +33,7 @@
 #
 
 usage() {
-    echo "usage: ${0##*/} screen|window|region|output [--annotate] [--delay N]" >&2
+    echo "usage: ${0##*/} screen|window|region [--annotate] [--delay N]" >&2
     exit 2
 }
 
@@ -50,7 +49,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 case "$mode" in
-    screen|window|region|output) ;;
+    screen|window|region) ;;
     *) usage ;;
 esac
 [[ "$delay" =~ ^[0-9]+$ ]] || usage

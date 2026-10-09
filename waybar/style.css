@@ -32,8 +32,8 @@
    disappears is placed so that it only ever moves empty space.
 
    recording, media, network, volume, bluetooth, updates, battery and tray
-   stand alone. Volume is a control rather than a status readout. Media, network,
-   updates, bluetooth and battery stand alone because all but bluetooth
+   stand alone. Volume is a control rather than a status readout. Recording, media,
+   network, updates, bluetooth and battery stand alone because all but bluetooth
    hide themselves whenever there is nothing to report — a module that comes
    and goes cannot be load-bearing for a gap, so each carries its own 15px
    on both sides and the rhythm holds either way. [brackets] mark the
