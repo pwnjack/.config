@@ -681,6 +681,8 @@ async function change(request) {
             if (row.key === "font" || row.key === "font-gtk") await execAsync(["bash", configDir + "/scripts/fonts/apply-font.sh"])
             if (row.key === "clock" || row.key === "clock-seconds") await execAsync(["bash", configDir + "/scripts/waybar/clock-format.sh"])
             if (row.key.startsWith("bar-")) await execAsync(["bash", configDir + "/scripts/waybar/bar-modes.sh"])
+            // Every app's "Show in folder" asks D-Bus, which this points at the new choice.
+            if (row.key === "filemanager") await execAsync(["bash", configDir + "/scripts/settings/file-manager.sh"])
             // The Lua configuration reads these options at parse time.
             if (row.reload) await persistReload()
             if (row.key === "cursortheme") await cursor(readOption(row.key), Number(await execAsync(["gsettings", "get", ...gsettingsArgs("cursor-size")])))

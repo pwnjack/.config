@@ -243,6 +243,10 @@ if ! execute "$CONFIG_DIR/scripts/theming/apply-wal.sh"; then
     warning "Some theme components failed; run scripts/theming/apply-wal.sh to retry"
 fi
 
+# "Show in folder" everywhere goes through D-Bus; several file managers claim
+# that service, so point it at the one in options/filemanager.
+execute bash "$CONFIG_DIR/scripts/settings/file-manager.sh"
+
 if ! execute bash "$CONFIG_DIR/scripts/waybar/clock-format.sh" --no-reload; then
     warning "Could not render the Waybar clock format"
 fi

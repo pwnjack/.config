@@ -20,7 +20,18 @@ cat > "$TMP/bin/hyprshot" <<'EOF'
 #!/bin/bash
 printf 'hyprshot %s\n' "$*" >> "$EVENTS"
 [[ " $* " == *" --raw "* ]] && printf 'PNG'
+# A save writes -o/-f, unless the test cancels the selection.
+out="" name=""
+while [ $# -gt 0 ]; do
+    case $1 in -o) out=$2; shift ;; -f) name=$2; shift ;; esac
+    shift
+done
+[ -n "$name" ] && [ -z "${SHOT_CANCEL:-}" ] && mkdir -p "$out" && printf 'PNG' > "$out/$name"
 exit 0
+EOF
+cat > "$TMP/bin/notify-send" <<'EOF'
+#!/bin/bash
+printf 'notify %s\n' "$*" >> "$EVENTS.notify"
 EOF
 cat > "$TMP/bin/swappy" <<'EOF'
 #!/bin/bash
@@ -44,11 +55,25 @@ freeze() { printf '%s\n' "$1" > "$TMP/home/.config/options/capture-freeze"; }
 
 freeze false
 shot region
-if [[ $(cat "$EVENTS") =~ ^hyprshot\ -m\ region\ -o\ $TMP/home/Pictures/Screenshots\ -f\ Screenshot_[0-9-]+_[0-9:]+\.png$ ]]; then
+if [[ $(cat "$EVENTS") =~ ^hyprshot\ -m\ region\ -s\ -o\ $TMP/home/Pictures/Screenshots\ -f\ Screenshot_[0-9-]+_[0-9:]+\.png$ ]]; then
     pass "region writes to ~/Pictures/Screenshots"
 else
     fail "region argv" "$(cat "$EVENTS")"
 fi
+
+# The toast is detached; give it a moment to log. The real sleep, not the fake.
+toast_log() {
+    local _
+    for _ in $(seq 50); do [ -s "$EVENTS.notify" ] && break; /usr/bin/sleep 0.05; done
+    cat "$EVENTS.notify" 2>/dev/null
+}
+assert_contains "$(toast_log)" "Screenshot saved" "a saved shot gets the shared toast"
+assert_contains "$(cat "$EVENTS.notify")" "Show in folder" "the toast offers Show in folder"
+rm -f "$EVENTS.notify"
+rm -rf "$TMP/home/Pictures/Screenshots"   # same-second names would collide
+SHOT_CANCEL=1 shot region
+/usr/bin/sleep 0.3
+assert_eq "$(cat "$EVENTS.notify" 2>/dev/null)" "" "a cancelled selection gets no toast"
 
 freeze true
 shot region

@@ -733,7 +733,8 @@ assert.equal(events.length,0)
 await dispatch({op:'set',id:'apps.filemanager',value:'nautilus'})
 assert.equal(files.get(base+'/options/filemanager'),'nautilus\n')
 assert.ok(events.some(e=>e[1]==='reload'))
-console.log('ok: app rows must name an installed command and reload Hyprland')
+assert.equal(events.filter(e => e[0] === 'bash' && String(e[1]).endsWith('/scripts/settings/file-manager.sh')).length, 1)
+console.log('ok: app rows must name an installed command and reload Hyprland; the file manager also claims D-Bus')
 
 events=[]
 result = await dispatch({op:'read',ids:['mime.folders','mime.images']})

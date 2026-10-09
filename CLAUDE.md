@@ -180,7 +180,12 @@ identifies processes by pid plus `/proc` start time (`since` in
 `$XDG_RUNTIME_DIR/capture/recording.json`), serialises stops with a flock, and
 drives Waybar `custom/recording` (`interval: once`, signal 11, which it sends on
 each change and once a second while recording, so an idle bar runs nothing).
-`screenshot.sh` stays the only screenshot command. `scripts/hyprland/lock.sh` is
+`screenshot.sh` stays the only screenshot command. Both post the shared saved
+toast (`scripts/capture/toast.sh`, Open / Show in folder); Show in folder goes
+through D-Bus `org.freedesktop.FileManager1`, which several installed file
+managers claim, so `scripts/settings/file-manager.sh` (install.sh, and the
+panel's File manager row) copies the configured one's service file into
+`~/.local/share/dbus-1/services/`. `scripts/hyprland/lock.sh` is
 the only lock path (Super+L, power menu, hypridle `lock_cmd`; the one exception is
 `scripts/hyprland/startup.sh`, which runs hyprlock directly on autologin, when
 nothing records) and locks FIRST:

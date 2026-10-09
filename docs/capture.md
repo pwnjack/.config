@@ -80,6 +80,16 @@ portal dialog.
   `record.sh stop` first, bounded to 12 s, so a running recording is saved.
 - **Stop** sends SIGINT and waits up to 10 s for the file; the toast offers
   Open and Show in folder. Nothing goes to the clipboard.
+- **Saved toasts.** Recordings and screenshots post the same toast
+  (`scripts/capture/toast.sh`): Open, and Show in folder, which selects the file
+  through D-Bus's `org.freedesktop.FileManager1`. hyprshot runs with `-s`, since
+  its own toast has no actions; a cancelled selection writes no file and posts
+  nothing. Nautilus, Dolphin and Thunar all claim that D-Bus name, and D-Bus
+  picked Nautilus whatever the preference said, so
+  `scripts/settings/file-manager.sh` copies the configured file manager's own
+  service file into `~/.local/share/dbus-1/services/`, which wins. install.sh
+  and the panel's File manager row run it; it covers every app's Show in
+  folder, not only ours.
 - **Waybar.** The module runs once and on signal 11; record.sh sends it on each
   change and once a second while recording, so an idle bar runs nothing. The
   glyph is in `<span size='large'>`, the module carries its own 15 px edges, red

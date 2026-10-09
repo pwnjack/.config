@@ -154,22 +154,12 @@ window_rects() {
         | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
 }
 
-# saved <file> -- the toast. Open and Show in folder are handled by a detached
-# notify-send --wait, so this script returns at once.
+# shellcheck source=scripts/capture/toast.sh
+. "${BASH_SOURCE[0]%/*}/toast.sh"
+
+# saved <file> -- the toast, detached; fds 7 and 8 (our locks) stay behind.
 saved() {
-    (
-        exec </dev/null >/dev/null 2>&1
-        choice=$(notify-send -a Capture -i video-x-generic --wait \
-            -A open=Open -A folder='Show in folder' 'Recording saved' "${1##*/}") || exit 0
-        case $choice in
-            open) exec xdg-open "$1" ;;
-            folder)
-                gdbus call --session --dest org.freedesktop.FileManager1 \
-                    --object-path /org/freedesktop/FileManager1 \
-                    --method org.freedesktop.FileManager1.ShowItems "['file://$1']" '' \
-                    || exec xdg-open "${1%/*}" ;;
-        esac
-    ) 7>&- 8>&- &
+    saved_toast video-x-generic 'Recording saved' "${1##*/}" "$1" 7>&- 8>&-
 }
 
 # ticker <recorder-pid> <since> -- one Waybar refresh a second while the recorder

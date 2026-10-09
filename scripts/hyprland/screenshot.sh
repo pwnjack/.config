@@ -71,6 +71,15 @@ fi
 
 if (( annotate )); then
     hyprshot "${args[@]}" --raw | swappy -f -
-else
-    exec hyprshot "${args[@]}" -o "$HOME/Pictures/Screenshots" -f "Screenshot_$(date '+%Y-%m-%d_%H:%M:%S').png"
+    exit
 fi
+
+# hyprshot saves and copies to the clipboard; -s drops its own toast, which has
+# no actions, for the shared one with Open and Show in folder. A cancelled
+# selection writes no file and gets no toast.
+file="$HOME/Pictures/Screenshots/Screenshot_$(date '+%Y-%m-%d_%H:%M:%S').png"
+hyprshot "${args[@]}" -s -o "${file%/*}" -f "${file##*/}"
+[ -s "$file" ] || exit 0
+# shellcheck source=scripts/capture/toast.sh
+. "${BASH_SOURCE[0]%/*}/../capture/toast.sh"
+saved_toast "$file" 'Screenshot saved' "${file##*/}, also copied to the clipboard" "$file"
