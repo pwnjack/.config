@@ -232,3 +232,39 @@ doctor_reset
 check_binaries > "$bin_empty_file" 2>&1
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" \
     "absent keybinds/autostart files produce no findings"
+
+# --- capture helper capability ------------------------------------------
+# The helper's name comes from record.sh; the path and getcap are stubbed,
+# since the real answers depend on the machine running the suite.
+DOCTOR_ROOT="$bin_fixture"
+mkdir -p "$bin_fixture/scripts/capture"
+echo 'readonly KMS_SERVER=gsr-kms-server' > "$bin_fixture/scripts/capture/record.sh"
+_bin_kms_path() { [ "$1" = gsr-kms-server ] && echo /usr/bin/gsr-kms-server; }
+
+_bin_capability() { echo "/usr/bin/gsr-kms-server cap_net_raw=ep"; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_contains "$(bin_line "$bin_out_file" "cap_sys_admin")" "WARN" \
+    "helper without cap_sys_admin is WARN"
+assert_contains "$(bin_line "$bin_out_file" "setcap")" "/usr/bin/gsr-kms-server" \
+    "the hint names the helper's path"
+
+_bin_capability() { echo "/usr/bin/gsr-kms-server cap_sys_admin=ep"; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "helper with cap_sys_admin: no finding"
+
+_bin_capability() { return 1; }   # getcap absent
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "no getcap: no finding"
+
+_bin_kms_path() { :; }             # recorder not installed
+_bin_capability() { echo ""; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "helper not installed: no finding"
+
+# Restore the real probes for anything sourced after this file.
+_bin_kms_path() { command -v "$1" 2>/dev/null; }
+_bin_capability() { command -v getcap >/dev/null 2>&1 || return 1; getcap "$1" 2>/dev/null; }
