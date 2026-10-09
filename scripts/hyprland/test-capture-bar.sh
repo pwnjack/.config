@@ -29,7 +29,7 @@ exit 0
 EOF
 cat > "$TMP/bin/qs" <<'EOF'
 #!/bin/bash
-printf 'qs %s mode=%s\n' "$*" "${CAPTURE_MODE-}" >> "$LOG"
+printf 'qs %s mode=%s bg=%s accent=%s fg=%s ink=%s\n' "$*" "${CAPTURE_MODE-}" "${CAPTURE_BACKGROUND-}" "${CAPTURE_ACCENT-}" "${CAPTURE_FOREGROUND-}" "${CAPTURE_ON_ACCENT-}" >> "$LOG"
 case "$*" in
     *"ipc call capture toggle"*) exit 1 ;;   # nothing running yet
     *"ipc call capture ping"*) exit 0 ;;
@@ -37,7 +37,6 @@ esac
 exit 0
 EOF
 printf '#!/bin/bash\nexit 0\n' > "$TMP/bin/notify-send"
-printf '#!/bin/bash\necho "{\\"x\\":0}"\n' > "$TMP/bin/hyprctl"
 chmod +x "$config/scripts/capture/record.sh" "$TMP/bin/"*
 
 launch() {
@@ -58,6 +57,12 @@ rm -f "$LOG.recording"
 launch record
 assert_contains "$(cat "$LOG")" "ipc call capture toggle record" "asks a running strip first"
 assert_contains "$(cat "$LOG")" "--daemonize mode=record" "starts the strip on the Record tab"
+
+case "$(cat "$LOG")" in *"record stop"*) fail "an idle record launch does not stop anything" ;; *) pass "an idle record launch does not stop anything" ;; esac
+daemon_line=$(grep -- '--daemonize' "$LOG")
+for var in bg accent fg ink; do
+    case "$daemon_line" in *" $var= "*|*" $var="|*" $var=$") fail "palette export $var reaches qs" ;; *" $var=#"*) pass "palette export $var reaches qs" ;; *) fail "palette export $var reaches qs" ;; esac
+done
 
 launch bogus 2>/dev/null; rc=$?
 assert_eq "$rc" 2 "a bad mode is a usage error"

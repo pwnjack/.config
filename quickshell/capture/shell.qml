@@ -35,6 +35,7 @@ ShellRoot {
     property bool opened: false
     property bool closing: false
     property var pending: []            // argv to start once the layer is gone
+    property bool launched: false
 
     function readOptions() {
         const texts = {};
@@ -90,9 +91,12 @@ ShellRoot {
         layerFallback.start();
     }
     function launch() {
-        if (!pending.length || launcher.running) return;
+        if (!pending.length || launched) return;
+        launched = true;                // a late closelayer after the fallback starts nothing twice
         layerFallback.stop();
-        launcher.command = ["setsid", "-f"].concat(pending);
+        // Detached with stdio closed: the capture outlives this process, and a
+        // write to our pipes after Qt.quit would kill it with SIGPIPE.
+        launcher.command = ["bash", "-c", "setsid -f \"$@\" </dev/null >/dev/null 2>&1", "bash"].concat(pending);
         launcher.running = true;
     }
     Component.onCompleted: open(Quickshell.env("CAPTURE_MODE") || "screenshot")
@@ -107,6 +111,7 @@ ShellRoot {
             blockLoading: true
             printErrors: false
             atomicWrites: true
+            blockWrites: true   // the started script reads what the strip shows
         }
     }
 
@@ -132,7 +137,12 @@ ShellRoot {
         }
     }
     Timer { id: layerFallback; interval: 400; onTriggered: root.launch() }
-    Process { id: launcher; onExited: Qt.quit() }
+    Process {
+        id: launcher
+        onExited: Qt.quit()
+        // No exited() when the command fails to start: quit anyway.
+        onRunningChanged: if (!running && root.launched) Qt.quit()
+    }
 
     IpcHandler {
         target: "capture"
@@ -148,7 +158,7 @@ ShellRoot {
             else root.open(mode);
         }
         function close(): void { root.close(); }
-        // Press the action button (Return); used by the live checks, which have no pointer.
+        // For scripted checks (no pointer): presses the action button, and only acts while the strip is open.
         function run(): void { root.run(); }
         function status(): string {
             return JSON.stringify({ opened: root.opened, closing: root.closing, state: root.state,
