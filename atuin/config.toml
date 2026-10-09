@@ -1,8 +1,0 @@
-# Only the settings that differ from atuin's defaults.
-# Full reference: https://docs.atuin.sh/configuration/config/
-
-# Run the selected command immediately instead of editing it first.
-enter_accept = true
-
-[sync]
-records = true

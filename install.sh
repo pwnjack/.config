@@ -110,7 +110,7 @@ PACKAGES=(
     # Headset battery, for scripts/devices/devices.sh
     "headsetcontrol"
     # Script dependencies
-    "jq" "ffmpeg" "inotify-tools" "zoxide" "atuin" "aichat" "shellcheck"
+    "jq" "ffmpeg" "inotify-tools" "zoxide" "git-delta" "aichat" "shellcheck"
     # Native Waybar workspace module (scripts/waybar/build-workspaces.sh)
     "gcc" "make" "pkgconf" "gtk3" "json-glib"
     # Isolated deployment/hook fixtures and panel persistence tests

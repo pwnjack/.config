@@ -134,6 +134,7 @@ cliphist list | rofi -dmenu | cliphist decode | wl-copy
 | Terminal | `~/.config/ghostty/config` |
 | Shell | `~/.config/fish/config.fish` |
 | Fuzzy finder (Ctrl+R history, Ctrl+T file, Alt+C cd) | `~/.config/fish/conf.d/fzf.fish` |
+| Git diffs (delta; identity stays in `~/.gitconfig`) | `~/.config/git/config` |
 | Editor | `~/.config/nvim/` |
 | Keybinds | `~/.config/hypr/config/software/keybinds.lua` |
 
@@ -398,7 +399,7 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
-               zoxide atuin shellcheck python nodejs gjs pacman-contrib ttf-firacode-nerd \
+               zoxide git-delta shellcheck python nodejs gjs pacman-contrib ttf-firacode-nerd \
                ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
                noto-fonts-emoji
 
