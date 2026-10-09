@@ -111,6 +111,8 @@ PACKAGES=(
     "headsetcontrol"
     # Script dependencies
     "jq" "ffmpeg" "inotify-tools" "zoxide" "git-delta" "aichat" "shellcheck"
+    # SpotX repacks Spotify's xpui.spa (scripts/spotify/launch.sh)
+    "zip" "unzip"
     # Native Waybar workspace module (scripts/waybar/build-workspaces.sh)
     "gcc" "make" "pkgconf" "gtk3" "json-glib"
     # Isolated deployment/hook fixtures and panel persistence tests
@@ -246,6 +248,12 @@ fi
 # "Show in folder" everywhere goes through D-Bus; several file managers claim
 # that service, so point it at the one in options/filemanager.
 execute bash "$CONFIG_DIR/scripts/settings/file-manager.sh"
+
+# Spotify (if spotify-launcher is installed) starts through a wrapper that
+# keeps SpotX applied across client updates; this points its desktop entry there.
+if ! execute bash "$CONFIG_DIR/scripts/spotify/setup.sh"; then
+    warning "Spotify desktop entry not set up; run scripts/spotify/setup.sh to retry"
+fi
 
 if ! execute bash "$CONFIG_DIR/scripts/waybar/clock-format.sh" --no-reload; then
     warning "Could not render the Waybar clock format"
