@@ -86,11 +86,13 @@ assert_eq "$(cat "$FAKE_LOG/hyprlock")" "args=" "hyprlock starts when the lock f
 
 # A lock held elsewhere, with no hyprlock running, delays the lock by about 1 s only.
 reset_lock
+unset FAKE_HYPRLOCK_HOLD
 flock "$XDG_RUNTIME_DIR/lock.sh.lock" sleep 3 & holder=$!
 sleep 0.3
-start=$SECONDS
+start=$EPOCHREALTIME
 bash "$TEST_DIR/lock.sh"
-[ -s "$FAKE_LOG/hyprlock" ] && [ $((SECONDS - start)) -le 2 ] \
+elapsed=$(awk -v a="$start" -v b="$EPOCHREALTIME" 'BEGIN { printf "%d", (b - a) * 1000 }')
+[ -s "$FAKE_LOG/hyprlock" ] && [ "$elapsed" -le 2000 ] \
     && pass "a stuck lock file does not prevent the lock" || fail "a stuck lock file does not prevent the lock"
 kill "$holder" 2>/dev/null; wait "$holder" 2>/dev/null
 

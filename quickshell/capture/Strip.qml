@@ -263,7 +263,7 @@ FocusScope {
                         onClicked: strip.controller.toggleOption("audio")
                     }
                     StripButton {
-                        strip: strip; objectName: "record-mic"; glyph: 0xF036D
+                        strip: strip; objectName: "record-mic"; glyph: strip.current.mic ? 0xF036C : 0xF036D
                         label: "Mic"; on: strip.current.mic
                         tip: "Record the microphone"
                         onClicked: strip.controller.toggleOption("mic")

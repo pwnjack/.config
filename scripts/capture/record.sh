@@ -16,7 +16,7 @@
 # strip writes them and this script reads them, so the keybind and the strip
 # can never record differently.
 #
-# State: $XDG_RUNTIME_DIR/capture/recording.json, one line,
+# State: $XDG_RUNTIME_DIR/capture/recording.json (/run/user/UID/capture if unset, never /tmp), one line,
 #   {"pid":…,"since":…,"started":…,"output":"…","phase":"countdown|recording|stopping"}
 # For a countdown, pid is this script and started is when recording begins;
 # otherwise pid is the recorder and started is when it began. A process is
@@ -43,7 +43,7 @@ set -uo pipefail
 
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 options_dir="${CAPTURE_OPTIONS:-$config_dir/options}"
-state_dir="${CAPTURE_STATE_DIR:-${XDG_RUNTIME_DIR:-/tmp}/capture}"
+state_dir="${CAPTURE_STATE_DIR:-${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/capture}"
 videos="${CAPTURE_VIDEOS:-$HOME/Videos/Recordings}"
 recorder="${CAPTURE_RECORDER:-gpu-screen-recorder}"
 stop_wait="${CAPTURE_STOP_WAIT:-10}"
@@ -176,7 +176,7 @@ saved() {
 # runs. When it ends: a stop leaves stopped.<pid>.<since> and the ticker stays silent;
 # otherwise the recorder died by itself, so say so (whoever cleaned the state).
 ticker() {
-    local line=""
+    local line="" out=""
     while alive "$1" "$2"; do
         sleep 1
         signal_bar
@@ -186,7 +186,8 @@ ticker() {
     else
         { read -r line < "$state"; } 2>/dev/null
         [[ $line == *"\"pid\":$1,"* ]] && rm -f "$state"
-        notify dialog-error 'Recording stopped' "$(first_error)"
+        out=${line#*\"output\":\"}; out=${out%%\"*}
+        notify dialog-error 'Recording stopped' "$(first_error)${out:+ Partial file kept: ${out##*/}.}"
     fi
     signal_bar
 }
@@ -279,7 +280,7 @@ stop_locked() {
         kill -KILL "$pid" 2>/dev/null
         rm -f "$state"
         signal_bar
-        notify dialog-error 'Recording not saved' "The recorder did not finish within ${stop_wait} s. Log: $log"
+        notify dialog-error 'Recording not saved' "The recorder did not finish within ${stop_wait} s. Partial file kept: ${output##*/}. Log: $log"
         return 1
     fi
     rm -f "$state"

@@ -25,7 +25,7 @@
 #
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
 lock_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/lock.sh.lock"
-if { exec 9>"$lock_file"; } 2>/dev/null; then
+if { command exec 9>"$lock_file"; } 2>/dev/null; then
     flock -w 1 9
 fi
 pgrep -xu "$(id -u)" hyprlock >/dev/null && exit 0

@@ -2,7 +2,7 @@
 
 Super+Shift+S opens the capture strip on its Screenshot tab, Super+Shift+R on
 its Record tab. Super+S (region to disk) and Super+Alt+S (region to swappy)
-are unchanged. While a recording runs, a red timer sits at the left of
+keep their own target. While a recording runs, a red timer sits at the left of
 Waybar's right-hand modules; click it, or press Super+Shift+R, to stop and save.
 During a start delay the pill is amber and a click cancels the countdown.
 
@@ -39,8 +39,9 @@ changes. `record.sh` reads `capture-rec-target`, `capture-delay`,
 `capture-audio` and `capture-mic`, so the keybind and the strip never record
 differently; `screenshot.sh` reads `capture-freeze`. `capture-shot-target` and
 `capture-annotate` are read only by the strip, which passes target, annotate
-and delay to `screenshot.sh` as argv. Super+S and Super+Alt+S ignore the strip's
-options by design. The files:
+and delay to `screenshot.sh` as argv. The Freeze toggle (`capture-freeze`) applies to every screenshot path,
+including Super+S and Super+Alt+S (Super+Alt+S did not freeze before the strip);
+they ignore the strip's other options by design. The files:
 `capture-shot-target`, `capture-rec-target` (`screen|window|region`),
 `capture-delay` (decimal seconds, `0` = off, so `08` is 8 s), `capture-freeze`,
 `capture-annotate`, `capture-audio`, `capture-mic` (`true|false`).
@@ -65,8 +66,12 @@ portal dialog.
   time (`since` in the state), so a recycled pid is never mistaken for it. Stops
   are serialised by a flock. A click that lands on the countdown boundary
   cancels and discards. If the recorder dies mid-recording, a "Recording
-  stopped" toast says so and the bar clears. While the file is finalised the
+  stopped" toast says so and the bar clears; the partial file stays in
+  `~/Videos/Recordings` and the toast names it. The same holds for a stop that
+  times out and is killed ("Recording not saved", partial file kept). While the file is finalised the
   module reads "saving".
+- **Power menu.** Log out, Reboot and Shut down (once confirmed) run
+  `record.sh stop` first, bounded to 12 s, so a running recording is saved.
 - **Stop** sends SIGINT and waits up to 10 s for the file; the toast offers
   Open and Show in folder. Nothing goes to the clipboard.
 - **Waybar.** The module runs once and on signal 11; record.sh sends it on each
