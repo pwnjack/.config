@@ -289,4 +289,37 @@ opt capture-delay abc
 rec start screen
 [ -e "$FAKE_LOG/gsr.argv" ] && pass "a non-numeric delay starts at once" || fail "a non-numeric delay starts at once"
 
+# A cancel after the recorder was forked (the countdown's boundary) discards it.
+# CAPTURE_TEST_HOLD / _LATE widen the two windows in which the flag is checked.
+for hold in CAPTURE_TEST_HOLD CAPTURE_TEST_HOLD_LATE; do
+    reset
+    opt capture-delay 1
+    export "$hold=1.5"
+    bash "$RECORD" start screen & starter=$!
+    wait_grep "$CAPTURE_STATE_DIR/recording.json" '"phase":"recording"'
+    pid=$(sed -n 's/.*"pid":\([0-9]*\).*/\1/p' "$CAPTURE_STATE_DIR/recording.json")
+    kill -TERM "$starter"
+    wait "$starter"; rc=$?
+    unset "$hold"
+    assert_eq "$rc" 0 "$hold: a TERM after the fork exits 0"
+    kill -0 "$pid" 2>/dev/null && fail "$hold: the recorder is still running" || pass "$hold: no recorder left running"
+    [ -z "$(ls -A "$CAPTURE_VIDEOS" 2>/dev/null)" ] && pass "$hold: no output file left" || fail "$hold: output file left" "$(ls "$CAPTURE_VIDEOS")"
+    [ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && ! compgen -G "$CAPTURE_STATE_DIR/stopped.*" >/dev/null \
+        && pass "$hold: no state, no stop marker" || fail "$hold: state or marker left"
+    [ ! -e "$FAKE_LOG/notify" ] && pass "$hold: no toast" || fail "$hold: toast" "$(cat "$FAKE_LOG/notify")"
+    assert_contains "$(tail -n1 "$FAKE_LOG/pkill")" "-RTMIN+11 waybar" "$hold: Waybar signalled"
+done
+
+# A videos directory that cannot be created after a countdown clears the countdown.
+reset
+opt capture-delay 1
+: > "$TMP/notadir"
+export CAPTURE_VIDEOS="$TMP/notadir/videos"
+rec start screen; rc=$?
+export CAPTURE_VIDEOS="$TMP/videos"
+assert_eq "$rc" 1 "an uncreatable videos directory exits 1"
+[ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && pass "its countdown state is cleared" || fail "its countdown state is cleared"
+assert_contains "$(cat "$FAKE_LOG/notify")" "Cannot create" "its toast names the problem"
+assert_contains "$(tail -n1 "$FAKE_LOG/pkill")" "-RTMIN+11 waybar" "Waybar signalled after it"
+
 test_summary record

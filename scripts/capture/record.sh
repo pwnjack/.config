@@ -27,7 +27,7 @@
 #
 # stop takes $state_dir/stop.lock, so concurrent stops (keybind, lock, bar
 # click) run one after another; the second finds nothing left to do. stop
-# leaves $state_dir/stopped.<pid> for the ticker, which toasts "Recording
+# leaves $state_dir/stopped.<pid>.<since> for the ticker, which toasts "Recording
 # stopped" for a recorder that died without one, however the state was read.
 #
 # Waybar's module runs once and on signal 11. This script sends that signal on
@@ -173,7 +173,7 @@ saved() {
 }
 
 # ticker <recorder-pid> <since> -- one Waybar refresh a second while the recorder
-# runs. When it ends: a stop leaves stopped.<pid> and the ticker stays silent;
+# runs. When it ends: a stop leaves stopped.<pid>.<since> and the ticker stays silent;
 # otherwise the recorder died by itself, so say so (whoever cleaned the state).
 ticker() {
     local line=""
@@ -181,8 +181,8 @@ ticker() {
         sleep 1
         signal_bar
     done
-    if [ -e "$state_dir/stopped.$1" ]; then
-        rm -f "$state_dir/stopped.$1"
+    if [ -e "$state_dir/stopped.$1.$2" ]; then
+        rm -f "$state_dir/stopped.$1.$2"
     else
         { read -r line < "$state"; } 2>/dev/null
         [[ $line == *"\"pid\":$1,"* ]] && rm -f "$state"
@@ -267,7 +267,7 @@ stop_locked() {
         return 0
     fi
     # The marker comes first: the ticker must never see the recorder go before it.
-    : > "$state_dir/stopped.$pid"
+    : > "$state_dir/stopped.$pid.$since"
     write_state "$pid" stopping "$output" "$started" "$since"
     signal_bar
     kill -INT "$pid" 2>/dev/null
@@ -290,6 +290,24 @@ stop_locked() {
         notify dialog-error 'Recording not saved' "$(first_error)"
         return 1
     fi
+}
+
+# discard_recording -- a cancel that arrived after the recorder was forked.
+# Not a stop: the recorder ignores SIGINT until it has installed its handler, so
+# a stop this early would wait out stop_wait and leave a broken file. Kill it,
+# wait until it is gone, and leave nothing behind.
+discard_recording() {
+    local i line=""
+    kill -KILL "$rec_pid" 2>/dev/null
+    { wait "$rec_pid"; } 2>/dev/null
+    for ((i = 0; i < 20; i++)); do
+        alive "$rec_pid" "$rec_since" || break
+        sleep 0.1
+    done
+    rm -f "$file" "$state_dir/stopped.$rec_pid.$rec_since"
+    { read -r line < "$state"; } 2>/dev/null
+    [[ $line == *"\"pid\":$rec_pid,"* ]] && rm -f "$state"
+    signal_bar
 }
 
 cancel() {
@@ -358,7 +376,12 @@ start() {
     [ "$(option capture-audio false)" = true ] && audio=default_output
     [ "$(option capture-mic false)" = true ] && audio+="${audio:+|}default_input"
     [ -n "$audio" ] && args+=(-a "$audio")
-    if ! mkdir -p "$videos"; then
+    if ! mkdir -p "$videos" 2>/dev/null; then
+        # After a countdown the state still says so; clear it, or the bar freezes.
+        if (( delay > 0 )); then
+            rm -f "$state"
+            signal_bar
+        fi
         notify dialog-error 'Recording failed' "Cannot create $videos."
         return 1
     fi
@@ -384,28 +407,39 @@ start() {
     rec_pid=$!
     rec_since=""
     proc_stat "$rec_pid" && rec_since=$proc_since
-    write_state "$rec_pid" recording "$file" "$(now)" "${rec_since:-0}"
+    rec_since=${rec_since:-0}
+    write_state "$rec_pid" recording "$file" "$(now)" "$rec_since"
+    signal_bar
+    # Test seam: widens the window between the state write and the first check.
+    [ -n "${CAPTURE_TEST_HOLD-}" ] && sleep "$CAPTURE_TEST_HOLD"
+    # The countdown's TERM trap stays until the ticker runs: a click on the
+    # boundary discards the recording (see discard_recording), never half-saves it.
     if (( cancelled )); then
-        # A click on the boundary: save the (near-empty) clip, as a stop would.
+        discard_recording
         trap - TERM
-        stop
-        rm -f "$state_dir/stopped.$rec_pid"
         return 0
     fi
-    trap - TERM
-    signal_bar
     sleep 0.5
+    [ -n "${CAPTURE_TEST_HOLD_LATE-}" ] && sleep "$CAPTURE_TEST_HOLD_LATE"
     if ! alive "$rec_pid" "$rec_since"; then
-        if [ -e "$state_dir/stopped.$rec_pid" ]; then
+        if [ -e "$state_dir/stopped.$rec_pid.$rec_since" ]; then
             # A second press stopped it inside this window: that stop owns the cleanup.
-            rm -f "$state_dir/stopped.$rec_pid"
+            rm -f "$state_dir/stopped.$rec_pid.$rec_since"
+            trap - TERM
             return 0
         fi
         rm -f "$state"
         signal_bar
         notify dialog-error 'Recording failed' "$(first_error)"
+        trap - TERM
         return 1
     fi
+    if (( cancelled )); then
+        discard_recording
+        trap - TERM
+        return 0
+    fi
+    trap - TERM
     ticker "$rec_pid" "$rec_since" </dev/null >/dev/null 2>&1 7>&- 8>&- &
     return 0
 }
