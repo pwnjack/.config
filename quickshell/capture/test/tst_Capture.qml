@@ -15,7 +15,8 @@ Item {
         property color foreground: "#cfddde"
         property color accent: "#6097a1"
         property color accentInk: "#05090c"
-        property string monoFont: "monospace"
+        // The font the strip ships with (the launcher passes options/font).
+        property string monoFont: "FiraCode Nerd Font"
         property real uiScale: 1
         property var state: Model.initialState({}, "screenshot")
         property var status: Model.parseStatus("")
@@ -77,9 +78,19 @@ Item {
         function test_noElidedLabel() {
             const names = ["target-screen", "target-window", "target-region",
                 "screenshot-delay", "screenshot-freeze", "screenshot-annotate",
-                "record-delay", "record-audio", "record-mic", "tab-screenshot", "tab-record", "action"];
+                "record-delay", "record-audio", "record-mic", "action"];
             for (const name of names) verify(!labelOf(name).truncated, name + " is elided");
             controller.setMode("record");
+            controller.status = { phase: "recording", seconds: 35999 };
+            wait(20);
+            controller.status = { phase: "countdown", seconds: 10 };
+            wait(20);
+            compare(labelOf("action").text, "Cancel 10");
+            verify(!labelOf("action").truncated, "Cancel 10 is elided");
+            controller.status = Model.parseStatus("");
+            wait(20);
+            compare(labelOf("action").text, "Record");
+            verify(!labelOf("action").truncated, "Record is elided");
             controller.status = { phase: "recording", seconds: 35999 };
             wait(20);
             compare(labelOf("action").text, "Stop 9:59:59");
@@ -102,6 +113,31 @@ Item {
             compare(controller.runs, 1);
             keyClick(Qt.Key_Escape);
             compare(controller.closes, 1);
+        }
+        // Tab labels have no width constraint, so they cannot elide by construction.
+        function test_held_keys_act_once() {
+            const before = controller.runs;
+            verify(strip.handleKey(Qt.Key_Return, true), "the held key is still claimed");
+            compare(controller.runs, before, "an auto-repeated Return is ignored");
+        }
+        function test_arrows_move_and_clamp() {
+            compare(controller.state.shotTarget, "region");
+            keyClick(Qt.Key_Right);
+            compare(controller.state.shotTarget, "region");
+            keyClick(Qt.Key_Left);
+            compare(controller.state.shotTarget, "window");
+            keyClick(Qt.Key_Left);
+            keyClick(Qt.Key_Left);
+            compare(controller.state.shotTarget, "screen");
+        }
+        function test_backtab_switches_mode() {
+            keyClick(Qt.Key_Backtab);
+            compare(controller.state.mode, "record");
+        }
+        function test_target_click_does_not_close() {
+            mouseClick(findChild(strip, "target-screen"));
+            compare(controller.closes, 0);
+            compare(controller.runs, 0);
         }
         function test_tabColour() {
             verify(Qt.colorEqual(findChild(strip, "tab-screenshot").color, controller.accent));

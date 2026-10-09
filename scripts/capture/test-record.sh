@@ -277,6 +277,13 @@ before=$(wc -l < "$FAKE_LOG/pkill")
 rec cancel; wait "$starter"
 [ "$(wc -l < "$FAKE_LOG/pkill")" -gt "$before" ] && pass "cancelling a countdown signals Waybar" || fail "cancel signals Waybar"
 
+# A zero-padded delay is decimal: '08' counts down, it is not an octal error.
+reset
+opt capture-delay 08
+rec start screen & starter=$!
+if wait_phase countdown; then pass "a zero-padded delay (08) counts down"; else fail "a zero-padded delay (08) counts down"; fi
+rec cancel; wait "$starter"
+
 reset
 opt capture-delay 1
 rec start screen

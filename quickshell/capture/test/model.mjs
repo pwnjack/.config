@@ -81,6 +81,9 @@ const files = { 'capture-shot-target': 'window\n', 'capture-rec-target': 'region
     assert.equal(M.action(rec, { phase: 'recording', seconds: 3723 }).label, 'Stop 1:02:03')
     assert.equal(M.action(rec, { phase: 'countdown', seconds: 3 }).label, 'Cancel 3')
     assert.equal(M.action(rec, { phase: 'recording', seconds: 1 }).kind, 'stop')
+    assert.deepEqual(M.action(rec, { phase: 'stopping', seconds: 9 }), { kind: 'stop', glyph: 0xF04DB, label: 'Saving…' })
+    assert.deepEqual(M.command(rec, { phase: 'stopping', seconds: 9 }, { screenshot: '/s.sh', record: '/r.sh' }), ['/r.sh', 'stop'])
+    assert.equal(M.parseOptions({ 'capture-delay': '08' }).delay, 8, 'a zero-padded delay is decimal')
     assert.equal(M.formatElapsed(59), '0:59')
     assert.equal(M.formatElapsed(600), '10:00')
 

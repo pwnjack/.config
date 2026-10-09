@@ -33,7 +33,7 @@ export function parseOptions(texts) {
     return {
         shotTarget: target('shotTarget'),
         recTarget: target('recTarget'),
-        delay: /^\d+$/.test(delayText) ? Number(delayText) : DEFAULTS.delay,
+        delay: /^\d+$/.test(delayText) ? parseInt(delayText, 10) : DEFAULTS.delay,
         freeze: flag('freeze'),
         annotate: flag('annotate'),
         audio: flag('audio'),
@@ -108,12 +108,15 @@ export function parseStatus(text) {
 // The action button. kind picks the colour: capture = accent, record/stop = red.
 export function action(state, status) {
     if (state.mode !== 'record') return { kind: 'capture', glyph: 0xF0100, label: 'Capture' }
+    if (status.phase === 'stopping') return { kind: 'stop', glyph: 0xF04DB, label: 'Saving…' }
     if (status.phase === 'countdown') return { kind: 'stop', glyph: 0xF04DB, label: `Cancel ${status.seconds}` }
     if (status.phase !== 'idle') return { kind: 'stop', glyph: 0xF04DB, label: `Stop ${formatElapsed(status.seconds)}` }
     return { kind: 'record', glyph: 0xF044A, label: 'Record' }
 }
 
-// The widest label action() can produce at the 1:1 size, for a fixed button width.
+// The widest label action() normally produces at the 1:1 size, for a fixed
+// button width. A recording past 10 h or a 6-digit hand-written delay elides
+// the label; the width stays fixed.
 export const WIDEST_ACTION_LABEL = 'Stop 9:59:59'
 
 // The argv the action runs, started detached by shell.qml once the strip is gone.

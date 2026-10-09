@@ -11,6 +11,8 @@ Rectangle {
     property string label: ""
     property string tip: ""
     property bool on: false
+    // Targets and toggles are checkable; the close button (no label) is not.
+    property bool checkable: label !== ""
     property int baseWidth: 52
     signal clicked()
 
@@ -23,7 +25,10 @@ Rectangle {
     border.width: 1
     border.color: on ? Qt.rgba(strip.accent.r, strip.accent.g, strip.accent.b, 0.7) : "transparent"
     Behavior on color { ColorAnimation { duration: 120 } }
+    Accessible.role: Accessible.Button
     Accessible.name: label || tip
+    Accessible.checkable: checkable
+    Accessible.checked: on
 
     Column {
         anchors.centerIn: parent

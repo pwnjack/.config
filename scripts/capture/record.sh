@@ -368,7 +368,7 @@ start() {
     esac
 
     delay=$(option capture-delay 0)
-    [[ $delay =~ ^[0-9]+$ ]] || delay=0
+    [[ $delay =~ ^[0-9]+$ ]] && delay=$((10#$delay)) || delay=0
     cancelled=0
     (( delay > 0 )) && countdown "$delay"
 

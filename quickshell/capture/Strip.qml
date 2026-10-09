@@ -72,7 +72,8 @@ FocusScope {
 
     // Tab switches mode, arrows move the target, Return runs, Esc closes.
     // No letter shortcuts for the toggles.
-    Keys.onPressed: event => {
+    // Returns whether the key was one the strip handles.
+    function handleKey(key, autoRepeat) {
         const names = {};
         names[Qt.Key_Tab] = "Tab";
         names[Qt.Key_Backtab] = "Tab";
@@ -81,14 +82,14 @@ FocusScope {
         names[Qt.Key_Return] = "Return";
         names[Qt.Key_Enter] = "Return";
         names[Qt.Key_Escape] = "Escape";
-        const name = names[event.key];
-        if (!name) return;
-        event.accepted = true;
+        const name = names[key];
+        if (!name) return false;
+        // A held Return/Enter/Escape/Tab must act once; arrows may repeat.
+        if (autoRepeat && name !== "Left" && name !== "Right") return true;
         controller.key(name);
+        return true;
     }
-    // A click on the strip's own surface must not reach the window's
-    // click-outside-closes area.
-    MouseArea { anchors.fill: parent }
+    Keys.onPressed: event => { event.accepted = strip.handleKey(event.key, event.isAutoRepeat); }
 
     Rectangle {
         id: tabs
@@ -99,6 +100,9 @@ FocusScope {
         color: strip.surface
         border.width: 1
         border.color: strip.hairline
+        // A click on the pill itself must not reach the window's
+        // click-outside-closes area; the space beside it must.
+        MouseArea { anchors.fill: parent }
         Row {
             id: tabRow
             anchors.centerIn: parent
@@ -116,6 +120,10 @@ FocusScope {
                     height: tabContent.implicitHeight + strip.px(10)
                     radius: strip.px(8)
                     color: active ? (modelData.mode === "record" ? strip.red : strip.accent) : "transparent"
+                    Accessible.role: Accessible.RadioButton
+                    Accessible.name: modelData.label
+                    Accessible.checkable: true
+                    Accessible.checked: active
                     Row {
                         id: tabContent
                         anchors.centerIn: parent
@@ -140,9 +148,28 @@ FocusScope {
                         }
                     }
                     MouseArea {
+                        id: tabMouse
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: strip.controller.setMode(tab.modelData.mode)
+                    }
+                    ToolTip {
+                        popupType: Popup.Item
+                        visible: tabMouse.containsMouse
+                        delay: 600
+                        text: tab.modelData.label + " (Tab)"
+                        contentItem: Text {
+                            text: tab.modelData.label + " (Tab)"
+                            color: strip.foreground
+                            font.family: strip.monoFont
+                            font.pixelSize: strip.px(12)
+                        }
+                        background: Rectangle {
+                            color: strip.background
+                            radius: strip.px(6)
+                            border.color: strip.hairline
+                        }
                     }
                 }
             }
@@ -169,6 +196,8 @@ FocusScope {
         color: strip.surface
         border.width: 1
         border.color: strip.hairline
+        // As for the pill: swallow clicks on the panel only.
+        MouseArea { anchors.fill: parent }
 
         Row {
             id: row
@@ -211,7 +240,7 @@ FocusScope {
                         onClicked: strip.controller.toggleOption("freeze")
                     }
                     StripButton {
-                        strip: strip; objectName: "screenshot-annotate"; glyph: 0xF03EB; baseWidth: 58
+                        strip: strip; objectName: "screenshot-annotate"; glyph: 0xF03EB; baseWidth: 60
                         label: "Annotate"; on: strip.current.annotate
                         tip: "Open the shot in swappy to mark it up"
                         onClicked: strip.controller.toggleOption("annotate")
@@ -251,6 +280,8 @@ FocusScope {
                 height: strip.px(62)
                 radius: strip.px(9)
                 color: (red ? strip.red : strip.accent)
+                Accessible.role: Accessible.Button
+                Accessible.name: strip.act.label
                 scale: actionMouse.pressed ? 0.97 : 1
                 Behavior on scale { NumberAnimation { duration: 100 } }
                 TextMetrics { id: widest; font: actionLabel.font; text: Model.WIDEST_ACTION_LABEL }
@@ -289,8 +320,20 @@ FocusScope {
                     popupType: Popup.Item
                     visible: actionMouse.containsMouse
                     delay: 600
-                    text: strip.mode === "screenshot" ? "Take the screenshot (Return)"
+                    readonly property string tip: strip.mode === "screenshot" ? "Take the screenshot (Return)"
                         : actionButton.red ? "Stop and save (Return)" : "Start recording (Return)"
+                    text: tip
+                    contentItem: Text {
+                        text: parent.tip
+                        color: strip.foreground
+                        font.family: strip.monoFont
+                        font.pixelSize: strip.px(12)
+                    }
+                    background: Rectangle {
+                        color: strip.background
+                        radius: strip.px(6)
+                        border.color: strip.hairline
+                    }
                 }
             }
             StripButton {
