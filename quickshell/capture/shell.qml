@@ -72,15 +72,18 @@ ShellRoot {
             window.screen = Quickshell.screens.find(s => focused && s.name === focused.name) || Quickshell.screens[0];
         }
         state = Model.initialState(readOptions(), mode);
-        closing = false;
+        // opened before closing, and closing before opened in close(): the
+        // window's visible binding re-evaluates after each assignment, and a
+        // moment with both false unmaps the layer (a blink, a reopen mid-fade).
         opened = true;
+        closing = false;
         statusProbe.running = true;
         strip.appear();
     }
     function close() {
         if (!opened) return;
-        opened = false;
         closing = true;
+        opened = false;
         strip.disappear();
     }
     function run() {
