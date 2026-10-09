@@ -199,6 +199,23 @@ status() {
     esac
 }
 
+# countdown <seconds> -- the amber Waybar countdown. record.sh cancel or stop
+# (a click on it) sends TERM, which ends this script with nothing recorded.
+countdown() {
+    local t
+    t=$(now)
+    write_state $$ countdown "" $(( t + $1 ))
+    trap 'rm -f "$state"; signal_bar; exit 0' TERM
+    signal_bar
+    while (( $(now) < t + $1 )); do
+        # A waited-on background sleep, unlike a foreground one, lets the TERM trap run at once.
+        sleep 1 7>&- &
+        wait $!
+        signal_bar
+    done
+    trap - TERM
+}
+
 stop() {
     local i
     read_state || return 0
@@ -292,7 +309,7 @@ start() {
 
     delay=$(option capture-delay 0)
     [[ $delay =~ ^[0-9]+$ ]] || delay=0
-    # Task 2 adds: (( delay > 0 )) && countdown "$delay"
+    (( delay > 0 )) && countdown "$delay"
 
     args+=(-c mp4 -k h264 -ac aac -f 60 -q very_high -cursor yes)
     [ "$(option capture-audio false)" = true ] && audio=default_output

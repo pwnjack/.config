@@ -168,4 +168,48 @@ rec stop; rc=$?
 assert_eq "$rc" 0 "stop with nothing running is a no-op"
 [ ! -e "$FAKE_LOG/notify" ] && pass "no toast for a no-op stop" || fail "no toast for a no-op stop"
 
+# --- countdown -------------------------------------------------------------------------
+# wait_phase <phase> -- up to 3 s for status --json to report it.
+wait_phase() {
+    local i
+    for ((i = 0; i < 30; i++)); do
+        [[ $(rec status --json) == *"\"phase\":\"$1\""* ]] && return 0
+        sleep 0.1
+    done
+    return 1
+}
+for ender in cancel stop toggle; do
+    reset
+    opt capture-delay 2
+    rec start screen & starter=$!
+    if wait_phase countdown; then pass "$ender: countdown phase reported"; else fail "$ender: countdown phase reported"; fi
+    rec "$ender" >/dev/null
+    wait "$starter"; rc=$?
+    assert_eq "$rc" 0 "$ender during the countdown: start exits 0"
+    [ ! -e "$FAKE_LOG/gsr.argv" ] && [ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && [ ! -e "$FAKE_LOG/notify" ] \
+        && pass "$ender during the countdown: nothing recorded, no state, no toast" \
+        || fail "$ender during the countdown leaves nothing behind"
+done
+
+reset
+opt capture-delay 2
+rec start screen & starter=$!
+wait_phase countdown
+json=$(rec status --json)
+assert_contains "$json" '"class":"countdown"' "countdown class for Waybar"
+assert_contains "$json" $'\U000F051B' "countdown shows the timer glyph"
+rec cancel; wait "$starter"
+
+reset
+opt capture-delay 1
+rec start screen
+[ -e "$FAKE_LOG/gsr.argv" ] && pass "after the countdown the recorder starts" || fail "after the countdown the recorder starts"
+rec status >/dev/null && pass "recording after the countdown" || fail "recording after the countdown"
+rec stop >/dev/null
+
+reset
+opt capture-delay abc
+rec start screen
+[ -e "$FAKE_LOG/gsr.argv" ] && pass "a non-numeric delay starts at once" || fail "a non-numeric delay starts at once"
+
 test_summary record
