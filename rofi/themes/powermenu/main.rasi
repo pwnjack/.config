@@ -1,7 +1,7 @@
 @import "../menu.rasi"
 
 textbox-prompt-colon {
-    str:                         " System";
+    str:                         " System";
 }
 listview     { columns: 5; }
 element      { padding: 20px 10px; }
