@@ -17,7 +17,7 @@ system live in the title bar's ⋯ menu; Restart bar and Update now also appear 
 buttons in the Bar and Default Apps sections they belong to. Things another surface already owns stay there: the
 keybind cheatsheet (Super+H), Do Not Disturb, output volume, mute and per-app
 volume (SwayNC),
-updates (Waybar), screenshot options (Rofi) and wallpapers (the carousel).
+updates (Waybar), screenshot and recording options (the capture bar) and wallpapers (the carousel).
 The palette is read through `scripts/theming/palette.sh` on every launch. The
 wallpaper carousel remains a separate application with its existing lifecycle.
 
@@ -274,8 +274,8 @@ Traps:
 - **Formats use `SetLocale`** (system-wide, polkit): a per-user `locale.conf` is not
   effective because the systemd user manager already exports `LANG`/`LC_TIME`.
 - **Stale hyprlock is not a lock.** `pgrep -x hyprlock` alone is not a lock test: stale
-  instances (0 CPU time) linger for a day, and they also defeat hypridle's
-  `pidof`-guarded `lock_cmd`. Check `ps -o time= -p PID` before any synthetic input.
+  instances (0 CPU time) linger for a day, and they also make
+  `lock.sh` (hypridle's `lock_cmd`) skip starting a lock. Check `ps -o time= -p PID` before any synthetic input.
 
 ## Startup
 

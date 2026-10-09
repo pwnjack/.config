@@ -98,9 +98,12 @@ ShellRoot {
     function open() {
         if (opened) return;
         // A reopen during the close fade cancels the close.
+        // opened before closing, and closing before opened in close(): the
+        // window's visible binding re-evaluates after each assignment, and a
+        // moment with both false unmaps the layer (a blink).
         if (closing) {
-            closing = false;
             opened = true;
+            closing = false;
             card.appear();
             return;
         }
@@ -133,8 +136,8 @@ ShellRoot {
     }
     function close() {
         if (closing) return;
-        opened = false;
         closing = true;
+        opened = false;
         card.disappear();
     }
     function start() {

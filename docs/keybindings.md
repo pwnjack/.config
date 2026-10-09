@@ -30,6 +30,8 @@ checkout.
 | `Super + B` | Web browser (`options/browser`) |
 | `Super + S` | Screenshot a region |
 | `Super + Alt + S` | Screenshot a region and annotate |
+| `Super + Shift + S` | Capture bar: screenshot |
+| `Super + Shift + R` | Capture bar: record, or stop |
 | `Super + G` | Code editor (`options/codeeditor`) |
 | `Super + K` | Calculator |
 | `Super + A` | AI assistant sidebar |
@@ -55,7 +57,6 @@ checkout.
 |-----|--------|
 | `Super + Space` | App launcher |
 | `Super + Shift + L` | Power menu |
-| `Super + Shift + S` | Screenshot menu |
 | `Super + C` | Clipboard history |
 | `Super + Shift + C` | Colour picker (copies hex) |
 | `Super + .` | Emoji picker |

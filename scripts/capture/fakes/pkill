@@ -1,0 +1,7 @@
+#!/bin/bash
+# Test stand-in for pkill: records the request, so no test signals the real Waybar.
+# With FAKE_PKILL_STATUS set it also does what Waybar does on the signal: run
+# record.sh status --json (FAKE_RECORD names the script).
+printf '%s\n' "$*" >> "$FAKE_LOG/pkill"
+[ -n "${FAKE_PKILL_STATUS-}" ] && bash "$FAKE_RECORD" status --json >/dev/null 2>&1
+exit 0

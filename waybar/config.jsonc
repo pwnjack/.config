@@ -35,6 +35,7 @@
 
   // Modules Right
   "modules-right": [
+    "custom/recording",
     "custom/media",
     "custom/network",
     "group/resources",
@@ -109,6 +110,20 @@
     "exec": "~/.config/scripts/hyprland/nightlight.sh waybar",
     "on-click": "~/.config/scripts/hyprland/nightlight.sh toggle",
     "on-click-right": "~/.config/scripts/hyprland/nightlight.sh auto",
+  },
+
+  // Recording
+  // Hidden unless scripts/capture/record.sh is counting down or recording.
+  // record.sh is the only writer of that state: it sends signal 11 on every
+  // change and once a second while recording, so an idle bar runs nothing
+  // (no interval). A click stops and saves, or cancels a countdown.
+  "custom/recording": {
+    "format": "{}",
+    "return-type": "json",
+    "interval": "once",
+    "signal": 11,
+    "exec": "~/.config/scripts/capture/record.sh status --json",
+    "on-click": "~/.config/scripts/capture/record.sh stop",
   },
 
   // Settings

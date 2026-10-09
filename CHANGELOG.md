@@ -2,6 +2,20 @@
 
 All notable changes to this dotfiles repository.
 
+## [2026-10-09] - Capture Bar
+
+### Added
+
+- Screen recording (gpu-screen-recorder, KMS) and an on-demand capture strip:
+  Super+Shift+S for screenshots, Super+Shift+R to record or stop. A red Waybar
+  timer shows a recording and stops it on click. Locking locks first and saves
+  the recording in a detached process, so a slow save never delays the lock.
+
+### Removed
+
+- The rofi screenshot menu, its `output` target and its sticky
+  `~/.cache/screenshot-delay`.
+
 ## [2026-09-29] - Public-Ready Cleanup and Agent Harness
 
 ### Added

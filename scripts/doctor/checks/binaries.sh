@@ -6,6 +6,8 @@
 # command extends coverage automatically. Application-table references are
 # resolved from options/ and hypr/config/apptype.lua.
 #
+# It also checks that the screen recorder's KMS helper holds cap_sys_admin.
+#
 # Everything here is WARN, never ERROR. A keybind pointing at an absent
 # binary means one shortcut silently does nothing; the session still starts
 # and every other binding still works.
@@ -198,6 +200,41 @@ _bin_scan_lua() {
         "$DOCTOR_ROOT/$conf")
 }
 
+# _bin_kms_path <name> -> the helper's absolute path, or empty. Its own
+# function so the tests can stub it.
+_bin_kms_path() {
+    command -v "$1" 2>/dev/null
+}
+
+# _bin_capability <path> -> getcap's line for it; 1 when getcap is absent.
+# Its own function so the tests can stub it.
+_bin_capability() {
+    command -v getcap >/dev/null 2>&1 || return 1
+    getcap "$1" 2>/dev/null
+}
+
+# _bin_check_capture
+# Screen recording (scripts/capture/record.sh) captures through KMS, which
+# needs the recorder's helper to hold cap_sys_admin; the package's install
+# script sets it with setcap. A copy, or an install from a cache that lost the
+# xattr, drops it, and every recording then fails at start. The helper's
+# name is read from record.sh, so this check names no binary itself. A
+# recorder that is not installed is record.sh's to report (it toasts).
+_bin_check_capture() {
+    local name path caps
+    name=$(sed -n 's/^readonly KMS_SERVER=\([A-Za-z0-9_.-]*\)$/\1/p' \
+        "$DOCTOR_ROOT/scripts/capture/record.sh" 2>/dev/null)
+    [ -n "$name" ] || return 0
+    path=$(_bin_kms_path "$name")
+    [ -n "$path" ] || return 0
+    caps=$(_bin_capability "$path") || return 0
+    case "$caps" in
+        *cap_sys_admin*) return 0 ;;
+    esac
+    warn "$path lacks cap_sys_admin, so screen recording cannot capture the screen" \
+         "sudo setcap cap_sys_admin+ep $(doctor_q "$path")"
+}
+
 check_binaries() {
     group "Binaries"
 
@@ -206,10 +243,11 @@ check_binaries() {
 
     _bin_scan_lua "hypr/config/software/keybinds.lua"
     _bin_scan_lua "hypr/config/setup/autostart.lua"
+    _bin_check_capture
 
     if [ "$DOCTOR_ERRORS" = "$before_e" ] \
         && [ "$DOCTOR_WARNINGS" = "$before_w" ] \
         && [ "$DOCTOR_NOTICES" = "$before_n" ]; then
-        ok "every binary referenced by keybinds and autostart is installed"
+        ok "every referenced binary is installed and the capture helper has its capability"
     fi
 }

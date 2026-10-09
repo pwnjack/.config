@@ -232,3 +232,46 @@ doctor_reset
 check_binaries > "$bin_empty_file" 2>&1
 assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" \
     "absent keybinds/autostart files produce no findings"
+
+# --- capture helper capability ------------------------------------------
+bin_real_kms_path=$(declare -f _bin_kms_path)
+bin_real_capability=$(declare -f _bin_capability)
+# The helper's name comes from record.sh; the path and getcap are stubbed,
+# since the real answers depend on the machine running the suite.
+DOCTOR_ROOT="$bin_fixture"
+mkdir -p "$bin_fixture/scripts/capture"
+echo 'readonly KMS_SERVER=gsr-kms-server' > "$bin_fixture/scripts/capture/record.sh"
+_bin_kms_path() { [ "$1" = gsr-kms-server ] && echo /usr/bin/gsr-kms-server; }
+
+_bin_capability() { echo "/usr/bin/gsr-kms-server cap_net_raw=ep"; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_contains "$(bin_line "$bin_out_file" "cap_sys_admin")" "WARN" \
+    "helper without cap_sys_admin is WARN"
+assert_contains "$(bin_line "$bin_out_file" "setcap")" "/usr/bin/gsr-kms-server" \
+    "the hint names the helper's path"
+
+_bin_capability() { echo "/usr/bin/gsr-kms-server cap_sys_admin=ep"; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "helper with cap_sys_admin: no finding"
+
+_bin_capability() { return 1; }   # getcap absent
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "no getcap: no finding"
+
+_bin_kms_path() { :; }             # recorder not installed
+_bin_capability() { echo ""; }
+doctor_reset
+check_binaries > "$bin_out_file" 2>&1
+assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "helper not installed: no finding"
+
+# Restore the real probes for anything sourced after this file.
+eval "$bin_real_kms_path"
+eval "$bin_real_capability"
+
+# The extraction in binaries.sh must find a name in the real record.sh, or the
+# check silently turns itself off while the fixture-based cases stay green.
+bin_real_name=$(sed -n 's/^readonly KMS_SERVER=\([A-Za-z0-9_.-]*\)$/\1/p' "$REPO_DIR/scripts/capture/record.sh")
+assert_eq "$bin_real_name" "gsr-kms-server" "the helper name is extractable from the real record.sh"

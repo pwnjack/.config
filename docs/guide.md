@@ -27,7 +27,7 @@ customization and maintenance. Keybindings have their own generated page,
 ├── hypr/          # Hyprland: modular Lua config from hyprland.lua,
 │                  # plus Hyprlang configs for hyprlock/idle/sunset
 ├── waybar/        # Bar: config.jsonc, style.css, pywal colors
-├── rofi/          # Launcher, power/screenshot/clipboard menus
+├── rofi/          # Launcher, power and clipboard menus
 ├── swaync/        # Notification daemon and sidebar
 ├── quickshell/    # On-demand settings panel, wallpaper carousel, keybinds overlay
 ├── options/       # User preferences, one value per text file
@@ -79,8 +79,8 @@ The **colour picker** (`Super + Shift + C`) copies the selected screen pixel as
 a lowercase hex value and sends a notification.
 
 **Annotation** is opt-in, so the quick grab stays quick: `Super + Alt + S`
-captures a region straight into swappy, and the same flow is the fourth entry
-of the `Super + Shift + S` menu. Saved images land in `~/Pictures/Screenshots`
+captures a region straight into swappy, and the capture strip
+(`Super + Shift + S`) has an Annotate toggle for the same flow. Saved images land in `~/Pictures/Screenshots`
 with an `_annotated` suffix. swappy reports success by closing, which means you
 can save *or* copy one annotation, not both.
 

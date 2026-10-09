@@ -1,0 +1,7 @@
+#!/bin/bash
+# Test stand-in for slurp: records its arguments (and, with -r, its stdin),
+# then prints $FAKE_SLURP, or exits 1 like Esc when FAKE_SLURP is "cancel".
+printf '%s\n' "$*" >> "$FAKE_LOG/slurp.argv"
+[[ " $* " == *" -r "* ]] && cat > "$FAKE_LOG/slurp.stdin"
+[ "${FAKE_SLURP-}" = cancel ] && exit 1
+printf '%s\n' "${FAKE_SLURP:-800x600+10+20}"

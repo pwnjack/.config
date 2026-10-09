@@ -43,12 +43,19 @@ chosen=$({
     -mesg $'\U000F0954'" Uptime: $(uptime -p | sed 's/up //')" \
     -theme "$theme")
 
-# Lock and suspend go the way hypridle does, so neither can start a second
-# hyprlock; hypridle's before_sleep_cmd locks the session before suspending.
+# Lock goes through lock.sh, the one lock path (it locks at once, a running
+# recording is saved by a detached stop, and it never starts a second
+# hyprlock); suspend goes through hypridle,
+# whose before_sleep_cmd locks the session the same way.
+# Log out, reboot and shut down end the session, and systemd would only SIGTERM
+# a running recorder, which may lose the clip: save it first, bounded so a stuck
+# recorder cannot hold the menu.
+stop_recording() { timeout -k 1 12 "$HOME/.config/scripts/capture/record.sh" stop; }
+
 case "$chosen" in
-    0) pidof hyprlock >/dev/null || hyprlock ;;
+    0) "$HOME/.config/scripts/hyprland/lock.sh" ;;
     1) systemctl suspend ;;
-    2) confirmed "Log out of Hyprland?" && hyprctl dispatch 'hl.dsp.exit()' ;;
-    3) confirmed "Reboot now?" && systemctl reboot ;;
-    4) confirmed "Shut down now?" && systemctl poweroff ;;
+    2) confirmed "Log out of Hyprland?" && { stop_recording; hyprctl dispatch 'hl.dsp.exit()'; } ;;
+    3) confirmed "Reboot now?" && { stop_recording; systemctl reboot; } ;;
+    4) confirmed "Shut down now?" && { stop_recording; systemctl poweroff; } ;;
 esac

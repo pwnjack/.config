@@ -163,6 +163,34 @@ by `updates/setup-sudo.sh`, one no-argument NOPASSWD rule), then Flatpak, and
 the pure `model.mjs` the card also imports, so card and bar agree. AUR updates
 stay in the terminal (`scripts/updates/terminal.sh`). See `docs/updates.md`.
 
+### Capture bar (Super+Shift+S / Super+Shift+R)
+
+`quickshell/capture/shell.qml` is the on-demand screenshot/recording strip
+started by `scripts/hyprland/capture-bar.sh` (lock, IPC toggle, exits on close;
+`record` while recording stops instead). IPC target `capture`: `ping`,
+`toggle <mode>`, `open <mode>`, `close`, `status`, and `run` (a scripted-check
+seam: presses the action button, acts only while the strip is open). It writes
+only `options/capture-*`, synchronously (`blockWrites`) so the started script
+reads what the strip shows. The capture starts detached with stdio closed after
+Hyprland reports the `capture-bar` layer closed (400 ms fallback); the layer
+rules are blur + `no_anim`, so the strip is never in the shot.
+`scripts/capture/record.sh` is the only driver of gpu-screen-recorder; it
+identifies processes by pid plus `/proc` start time (`since` in
+`$XDG_RUNTIME_DIR/capture/recording.json`), serialises stops with a flock, and
+drives Waybar `custom/recording` (`interval: once`, signal 11, which it sends on
+each change and once a second while recording, so an idle bar runs nothing).
+`screenshot.sh` stays the only screenshot command. `scripts/hyprland/lock.sh` is
+the only lock path (Super+L, power menu, hypridle `lock_cmd`; the one exception is
+`scripts/hyprland/startup.sh`, which runs hyprlock directly on autologin, when
+nothing records) and locks FIRST:
+it starts hyprlock at once and hands `record.sh stop` to a detached process,
+because logind's `InhibitDelayMaxSec` is 5 s and a slow save must never delay
+the lock; a clip may end with about a second of the lock screen. hypridle sets
+`inhibit_sleep = 3` because its auto mode keys on the string "hyprlock" in
+`lock_cmd`, which lock.sh's path lacks. The guard fails closed (`flock -w 1`;
+only a running same-user hyprlock skips locking). `model.mjs` is the pure
+model. See `docs/capture.md`.
+
 ### Settings panel (Super+I)
 
 `quickshell/settings-panel/shell.qml` starts on demand through
@@ -313,7 +341,7 @@ fixed what, and which tuning ideas were measured and rejected (gamemode buys
 
 ### User Preferences (`options/`)
 
-Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `screenshot`, `clock`, and the settings panel's Bar page modes `bar-cpu`, `bar-memory`, `bar-gpu`, `bar-disk`, `bar-network`, `bar-updates` and layout `bar-position`, `bar-style`, `bar-opacity`, `bar-border`, `bar-output` (empty = every monitor), `clock-seconds`, `bar-workspaces` (see `docs/settings-panel.md`). `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` and `bar-output` are the preferences that are legitimately empty: empty means "no preference" (for `bar-output`, every monitor), and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
+Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `capture-freeze`, `capture-shot-target`, `capture-rec-target`, `capture-delay`, `capture-annotate`, `capture-audio`, `capture-mic` (the capture strip's), `clock`, and the settings panel's Bar page modes `bar-cpu`, `bar-memory`, `bar-gpu`, `bar-disk`, `bar-network`, `bar-updates` and layout `bar-position`, `bar-style`, `bar-opacity`, `bar-border`, `bar-output` (empty = every monitor), `clock-seconds`, `bar-workspaces` (see `docs/settings-panel.md`). `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` and `bar-output` are the preferences that are legitimately empty: empty means "no preference" (for `bar-output`, every monitor), and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
 
 ### AI agent harness (`claude/`, `codex/`)
 

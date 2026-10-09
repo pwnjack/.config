@@ -100,8 +100,8 @@ PACKAGES=(
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch" "cava"
     # checkupdates, for the waybar updates module
     "pacman-contrib"
-    # Clipboard, screenshots, media
-    "cliphist" "wl-clipboard" "playerctl"
+    # Clipboard, screenshots, screen recording, media
+    "cliphist" "wl-clipboard" "gpu-screen-recorder" "slurp" "playerctl"
     # Theming
     "python-pywal" "qt5ct" "qt6ct" "nwg-look"
     # Applets and controls

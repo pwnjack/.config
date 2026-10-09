@@ -1,4 +1,0 @@
-@import "../menu.rasi"
-
-window   { width: 450; }
-listview { columns: 3; }

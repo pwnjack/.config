@@ -1,0 +1,7 @@
+#!/bin/bash
+# Test stand-in for pgrep: knows only 'pgrep -xu UID hyprlock', "running" while
+# the fake hyprlock is.
+case "$*" in
+    *hyprlock*) [ -e "$FAKE_LOG/hyprlock.running" ] && { echo 4242; exit 0; } ;;
+esac
+exit 1
