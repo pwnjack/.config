@@ -16,7 +16,7 @@ Design: `docs/superpowers/specs/2026-10-09-capture-bar-design.md` (local).
 | `scripts/hyprland/capture-bar.sh` | Launcher: lock, IPC toggle, palette, daemonize. `record` while recording stops instead. |
 | `scripts/capture/record.sh` | The only driver of gpu-screen-recorder. State in `$XDG_RUNTIME_DIR/capture/recording.json`, recorder log in `gsr.log` beside it. |
 | `scripts/hyprland/screenshot.sh` | The only screenshot command (hyprshot): `screen`, `window`, `region`. |
-| `scripts/hyprland/lock.sh` | The only lock path; locks first, saves a recording in a detached process. |
+| `scripts/hyprland/lock.sh` | The only lock path (autologin in `startup.sh` runs hyprlock directly; nothing records then); locks first, saves a recording in a detached process. |
 | Waybar `custom/recording` | Hidden when idle; `interval: once` plus signal 11; click stops (or cancels a countdown). |
 
 ## The strip
@@ -35,7 +35,12 @@ that no label is elided beat the mockup's 58 px with FiraCode Nerd Font.
 ## Options
 
 One value per file in `options/`, written by the strip the moment a control
-changes and read by the scripts, so the keybind and the strip never disagree:
+changes. `record.sh` reads `capture-rec-target`, `capture-delay`,
+`capture-audio` and `capture-mic`, so the keybind and the strip never record
+differently; `screenshot.sh` reads `capture-freeze`. `capture-shot-target` and
+`capture-annotate` are read only by the strip, which passes target, annotate
+and delay to `screenshot.sh` as argv. Super+S and Super+Alt+S ignore the strip's
+options by design. The files:
 `capture-shot-target`, `capture-rec-target` (`screen|window|region`),
 `capture-delay` (decimal seconds, `0` = off, so `08` is 8 s), `capture-freeze`,
 `capture-annotate`, `capture-audio`, `capture-mic` (`true|false`).

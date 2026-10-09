@@ -78,8 +78,8 @@ Item {
         function test_noElidedLabel() {
             // The tab labels are left out: they have no width constraint, so they cannot elide by construction.
             const names = ["target-screen", "target-window", "target-region",
-                "screenshot-delay", "screenshot-freeze", "screenshot-annotate",
-                "record-delay", "record-audio", "record-mic", "action"];
+                "shot-delay", "screenshot-freeze", "screenshot-annotate",
+                "rec-delay", "record-audio", "record-mic", "action"];
             for (const name of names) verify(!labelOf(name).truncated, name + " is elided");
             controller.setMode("record");
             controller.status = { phase: "recording", seconds: 35999 };
@@ -103,9 +103,9 @@ Item {
             compare(controller.runs, 0);
         }
         function test_delayCycles() {
-            mouseClick(findChild(strip, "screenshot-delay"));
+            mouseClick(findChild(strip, "shot-delay"));
             compare(controller.state.delay, 3);
-            compare(labelOf("screenshot-delay").text, "3s");
+            compare(labelOf("shot-delay").text, "3s");
         }
         function test_keys() {
             keyClick(Qt.Key_Tab);

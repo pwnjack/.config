@@ -228,7 +228,7 @@ FocusScope {
                     visible: strip.mode === "screenshot"
                     spacing: strip.px(4)
                     StripButton {
-                        strip: strip; objectName: "screenshot-delay"; glyph: 0xF051B
+                        strip: strip; objectName: "shot-delay"; glyph: 0xF051B
                         label: Model.delayLabel(strip.current.delay); on: strip.current.delay > 0
                         tip: "Wait before capturing. Click: Off, 3, 5, 10 s"
                         onClicked: strip.controller.cycleDelay()
@@ -251,7 +251,7 @@ FocusScope {
                     visible: strip.mode === "record"
                     spacing: strip.px(4)
                     StripButton {
-                        strip: strip; objectName: "record-delay"; glyph: 0xF051B
+                        strip: strip; objectName: "rec-delay"; glyph: 0xF051B
                         label: Model.delayLabel(strip.current.delay); on: strip.current.delay > 0
                         tip: "Count down in the bar before recording. Click: Off, 3, 5, 10 s"
                         onClicked: strip.controller.cycleDelay()

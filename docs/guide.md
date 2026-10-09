@@ -79,8 +79,8 @@ The **colour picker** (`Super + Shift + C`) copies the selected screen pixel as
 a lowercase hex value and sends a notification.
 
 **Annotation** is opt-in, so the quick grab stays quick: `Super + Alt + S`
-captures a region straight into swappy, and the same flow is the fourth entry
-of the `Super + Shift + S` menu. Saved images land in `~/Pictures/Screenshots`
+captures a region straight into swappy, and the capture strip
+(`Super + Shift + S`) has an Annotate toggle for the same flow. Saved images land in `~/Pictures/Screenshots`
 with an `_annotated` suffix. swappy reports success by closing, which means you
 can save *or* copy one annotation, not both.
 

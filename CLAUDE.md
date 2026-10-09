@@ -180,7 +180,9 @@ identifies processes by pid plus `/proc` start time (`since` in
 drives Waybar `custom/recording` (`interval: once`, signal 11, which it sends on
 each change and once a second while recording, so an idle bar runs nothing).
 `screenshot.sh` stays the only screenshot command. `scripts/hyprland/lock.sh` is
-the only lock path (Super+L, power menu, hypridle `lock_cmd`) and locks FIRST:
+the only lock path (Super+L, power menu, hypridle `lock_cmd`; the one exception is
+`scripts/hyprland/startup.sh`, which runs hyprlock directly on autologin, when
+nothing records) and locks FIRST:
 it starts hyprlock at once and hands `record.sh stop` to a detached process,
 because logind's `InhibitDelayMaxSec` is 5 s and a slow save must never delay
 the lock; a clip may end with about a second of the lock screen. hypridle sets
