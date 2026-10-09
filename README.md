@@ -10,11 +10,19 @@ notifications, terminal and lock screen all re-theme themselves.
 
 ## Screenshots
 
+Each wallpaper re-themes the whole desktop: bar, borders, terminal and overlays.
+
 | | |
 |---|---|
-| ![Space Earth](screenshots/space-earth-1.png) | ![Space Earth colors](screenshots/space-earth-2.png) |
-| ![Cyborg Girl](screenshots/cyborg-girl-1.png) | ![Cyborg Girl colors](screenshots/cyborg-girl-2.png) |
-| ![Violet](screenshots/violet-animegirl-1.png) | ![Violet colors](screenshots/violet-animegirl-2.png) |
+| ![Cosy retreat](screenshots/cosy-1.webp) | ![Cosy retreat, terminals](screenshots/cosy-2.webp) |
+| ![Northern lights](screenshots/aurora-1.webp) | ![Northern lights, terminals](screenshots/aurora-2.webp) |
+| ![Synthwave](screenshots/synthwave-1.webp) | ![Synthwave, terminals](screenshots/synthwave-2.webp) |
+
+| Settings (`Super + I`) | Keybindings (`Super + H`) |
+|---|---|
+| ![Settings panel](screenshots/settings.webp) | ![Keybindings overlay](screenshots/keybinds.webp) |
+| **Wallpaper carousel (`Super + Ctrl + W`)** | **Capture bar (`Super + Shift + S`)** |
+| ![Wallpaper carousel](screenshots/carousel.webp) | ![Capture bar](screenshots/capture.webp) |
 
 ## Install
 
