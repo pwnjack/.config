@@ -1,0 +1,10 @@
+#!/bin/bash
+# Test stand-in for hyprlock: notes whether a recording had been saved (an mp4
+# with content and no state file) when it started, and its arguments; then
+# marks itself running for the fake pidof.
+saved=no
+for f in "${CAPTURE_VIDEOS:-/nonexistent}"/*.mp4; do
+    [ -s "$f" ] && [ ! -e "${CAPTURE_STATE_DIR:-/nonexistent}/recording.json" ] && saved=yes
+done
+printf 'saved=%s args=%s\n' "$saved" "$*" >> "$FAKE_LOG/hyprlock"
+touch "$FAKE_LOG/hyprlock.running"

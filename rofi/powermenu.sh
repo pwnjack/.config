@@ -43,10 +43,11 @@ chosen=$({
     -mesg $'\U000F0954'" Uptime: $(uptime -p | sed 's/up //')" \
     -theme "$theme")
 
-# Lock and suspend go the way hypridle does, so neither can start a second
-# hyprlock; hypridle's before_sleep_cmd locks the session before suspending.
+# Lock goes through lock.sh, the one lock path (it saves a running recording
+# first and never starts a second hyprlock); suspend goes through hypridle,
+# whose before_sleep_cmd locks the session the same way.
 case "$chosen" in
-    0) pidof hyprlock >/dev/null || hyprlock ;;
+    0) "$HOME/.config/scripts/hyprland/lock.sh" ;;
     1) systemctl suspend ;;
     2) confirmed "Log out of Hyprland?" && hyprctl dispatch 'hl.dsp.exit()' ;;
     3) confirmed "Reboot now?" && systemctl reboot ;;

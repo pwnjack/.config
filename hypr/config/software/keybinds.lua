@@ -28,7 +28,7 @@ return function(apps)
     hl.bind("SUPER + O", hl.dsp.layout("togglesplit")) -- Toggle split direction
     hl.bind("SUPER + P", hl.dsp.window.pseudo()) -- Toggle pseudo-tiling
     hl.bind("SUPER + SHIFT + V", hl.dsp.window.pin()) -- Pin window (always on top)
-    hl.bind("SUPER + L", hl.dsp.exec_cmd("pidof hyprlock || hyprlock")) -- Lock screen
+    hl.bind("SUPER + L", hl.dsp.exec_cmd("~/.config/scripts/hyprland/lock.sh")) -- Lock screen
 
     -- ## Rofi Menus
     hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("~/.config/rofi/launcher.sh")) -- App launcher
