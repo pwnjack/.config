@@ -174,14 +174,23 @@ ShellRoot {
         visible: root.opened || (root.closing && !root.pending.length)
         color: "transparent"
         anchors { top: true; bottom: true; left: true; right: true }
-        // Normal: a bottom Waybar's exclusive zone is respected, so the strip
-        // sits 28 px above the bar rather than over it.
-        exclusionMode: ExclusionMode.Normal
+        // Ignore: the dim backdrop covers the bar too. The strip sits a tenth of
+        // the screen up, well clear of a bottom bar, so no exclusive zone is needed.
+        exclusionMode: ExclusionMode.Ignore
         WlrLayershell.namespace: "capture-bar"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: root.opened ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         MouseArea { anchors.fill: parent; onClicked: root.close() }
+
+        // Dims the whole screen while the strip is up, so it is noticed at once
+        // even when the eye is elsewhere. It follows the strip's own fade, and
+        // the layer unmaps before any capture starts, so it is never in a shot.
+        Rectangle {
+            anchors.fill: parent
+            color: "black"
+            opacity: 0.35 * strip.fade
+        }
 
         Strip {
             id: strip
@@ -189,7 +198,9 @@ ShellRoot {
             focus: true
             enabled: root.opened
             x: Math.round((window.width - width) / 2)
-            y: window.height - height - Math.round(28 * root.uiScale)
+            // A tenth of the screen up from the bottom edge: off the edge,
+            // where it went unnoticed, yet clear of what is being captured.
+            y: window.height - height - Math.round(window.height * 0.1)
             onGone: if (root.closing && !root.pending.length) Qt.quit()
         }
     }
