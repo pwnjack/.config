@@ -25,14 +25,14 @@
    GROUPS
      left     workspaces | taskbar | window
      center   clock · weather
-     right    [media] | [net] | [cpu·mem·gpu·disk] | [upd] | bt | [bat] | vol | tray | night·notif·set·power
+     right    [rec] | [media] | [net] | [cpu·mem·gpu·disk] | [upd] | bt | [bat] | vol | tray | night·notif·set·power
 
    The glanced modules sit on fixed anchors: workspaces on the left edge,
    clock and weather as one centred block. Anything that appears and
    disappears is placed so that it only ever moves empty space.
 
-   media, network, volume, bluetooth, updates, battery and tray stand alone.
-   Volume is a control rather than a status readout. Media, network,
+   recording, media, network, volume, bluetooth, updates, battery and tray
+   stand alone. Volume is a control rather than a status readout. Media, network,
    updates, bluetooth and battery stand alone because all but bluetooth
    hide themselves whenever there is nothing to report — a module that comes
    and goes cannot be load-bearing for a gap, so each carries its own 15px
@@ -182,6 +182,7 @@ window#waybar {
    A module that comes and goes cannot be load-bearing for a gap: with 15px
    on both sides of each, every neighbouring gap stays 30px whether the
    battery is showing or not. */
+#custom-recording,
 #custom-media,
 #custom-updates,
 #custom-network,
@@ -364,8 +365,12 @@ tooltip label {
    countdown before it the bar's alert amber. Idle prints nothing, which
    hides the module. */
 
+/* The pill keeps a 10px inner padding; the outer gap moves into a
+   horizontal margin so its edge sits 30px from the neighbour's ink. */
 #custom-recording.recording,
 #custom-recording.stopping {
+    padding: 0px 10px;
+    margin: 4px 15px;
     background: #ff5555;
     color: #05090c;
     border-radius: 10px;

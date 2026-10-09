@@ -214,13 +214,13 @@ status() {
     fi
     case $phase in
         countdown)
-            printf '{"text":"%s %d","tooltip":"Recording starts in %d s. Click to cancel.","class":"countdown","phase":"countdown","seconds":%d}\n' \
+            printf '{"text":"<span size=\\\"large\\\" letter_spacing=\\\"4096\\\">%s</span> %d","tooltip":"Recording starts in %d s. Click to cancel.","class":"countdown","phase":"countdown","seconds":%d}\n' \
                 "$glyph_timer" "$seconds" "$seconds" "$seconds" ;;
         stopping)
-            printf '{"text":"%s saving","tooltip":"Saving the recording","class":"stopping","phase":"stopping","seconds":%d}\n' \
+            printf '{"text":"<span size=\\\"large\\\" letter_spacing=\\\"4096\\\">%s</span> saving","tooltip":"Saving the recording","class":"stopping","phase":"stopping","seconds":%d}\n' \
                 "$glyph_rec" "$seconds" ;;
         *)
-            printf '{"text":"%s %s","tooltip":"Recording. Click to stop and save.","class":"recording","phase":"recording","seconds":%d}\n' \
+            printf '{"text":"<span size=\\\"large\\\" letter_spacing=\\\"4096\\\">%s</span> %s","tooltip":"Recording. Click to stop and save.","class":"recording","phase":"recording","seconds":%d}\n' \
                 "$glyph_rec" "$(fmt "$seconds")" "$seconds" ;;
     esac
 }
