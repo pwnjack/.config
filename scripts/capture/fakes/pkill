@@ -1,0 +1,3 @@
+#!/bin/bash
+# Test stand-in for pkill: records the request, so no test signals the real Waybar.
+printf '%s\n' "$*" >> "$FAKE_LOG/pkill"

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Test stand-in for notify-send: one line per toast, arguments joined by "|".
+# With --wait it returns at once with no action chosen.
+( IFS='|'; printf '%s\n' "$*" ) >> "$FAKE_LOG/notify"

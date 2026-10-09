@@ -1,0 +1,17 @@
+#!/bin/bash
+# Test stand-in for hyprctl: one focused monitor, DP-1, showing workspace 1,
+# and four clients, of which only the first two are visible windows (the third
+# is on workspace 2, the fourth hidden).
+case "$*" in
+    'monitors -j')
+        echo '[{"name":"DP-1","focused":true,"scale":1,"activeWorkspace":{"id":1}}]' ;;
+    'clients -j')
+        cat <<'EOT'
+[{"mapped":true,"hidden":false,"workspace":{"id":1},"at":[10,20],"size":[800,600]},
+ {"mapped":true,"hidden":false,"workspace":{"id":1},"at":[900,40],"size":[640,480]},
+ {"mapped":true,"hidden":false,"workspace":{"id":2},"at":[0,0],"size":[2560,1440]},
+ {"mapped":true,"hidden":true,"workspace":{"id":1},"at":[5,5],"size":[100,100]}]
+EOT
+        ;;
+    *) exit 1 ;;
+esac
