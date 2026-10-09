@@ -4,6 +4,7 @@
 // controls each mode shows, the keyboard, the action button and the command
 // it runs. shell.qml and Strip.qml only draw it; test/model.mjs runs it under node.
 
+// Qt's V4 engine (QML imports this file) has no object spread: Object.assign.
 export const MODES = ['screenshot', 'record']
 export const TARGETS = ['screen', 'window', 'region']
 export const DELAYS = [0, 3, 5, 10]
@@ -41,11 +42,11 @@ export function parseOptions(texts) {
 }
 
 export function initialState(texts, mode) {
-    return { mode: MODES.includes(mode) ? mode : 'screenshot', ...parseOptions(texts) }
+    return Object.assign({ mode: MODES.includes(mode) ? mode : 'screenshot' }, parseOptions(texts))
 }
 
 export function withMode(state, mode) {
-    return MODES.includes(mode) ? { ...state, mode } : state
+    return MODES.includes(mode) ? Object.assign({}, state, { mode }) : state
 }
 
 export const targetKey = mode => mode === 'record' ? 'recTarget' : 'shotTarget'
@@ -60,7 +61,7 @@ export const delayLabel = d => d ? `${d}s` : 'Off'
 // -> { state, write: [file, text] | null }; a write only when the value changed.
 export function setOption(state, key, value) {
     if (state[key] === value) return { state, write: null }
-    return { state: { ...state, [key]: value }, write: [FILES[key], String(value)] }
+    return { state: Object.assign({}, state, { [key]: value }), write: [FILES[key], String(value)] }
 }
 
 // name: Tab | Left | Right | Return | Escape (shell.qml maps Qt keys to these).
@@ -69,18 +70,18 @@ export function reduceKey(state, name) {
     const same = { state, write: null, effect: 'none' }
     switch (name) {
     case 'Tab':
-        return { ...same, state: withMode(state, state.mode === 'record' ? 'screenshot' : 'record') }
+        return Object.assign({}, same, { state: withMode(state, state.mode === 'record' ? 'screenshot' : 'record') })
     case 'Left':
     case 'Right': {
         const key = targetKey(state.mode)
         const i = TARGETS.indexOf(state[key]) + (name === 'Left' ? -1 : 1)
         if (i < 0 || i >= TARGETS.length) return same
-        return { ...setOption(state, key, TARGETS[i]), effect: 'none' }
+        return Object.assign({}, setOption(state, key, TARGETS[i]), { effect: 'none' })
     }
     case 'Return':
-        return { ...same, effect: 'run' }
+        return Object.assign({}, same, { effect: 'run' })
     case 'Escape':
-        return { ...same, effect: 'close' }
+        return Object.assign({}, same, { effect: 'close' })
     default:
         return same
     }
@@ -99,7 +100,7 @@ export function parseStatus(text) {
         const j = JSON.parse(text)
         const phase = ['countdown', 'recording', 'stopping'].includes(j.phase) ? j.phase : 'idle'
         return { phase, seconds: phase === 'idle' ? 0 : Math.max(0, Number(j.seconds) || 0) }
-    } catch {
+    } catch (e) {
         return { phase: 'idle', seconds: 0 }
     }
 }
