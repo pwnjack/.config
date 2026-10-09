@@ -16,6 +16,7 @@ TMP="$(mktemp -d)"
 
 export FAKE_LOG="$TMP/log" CAPTURE_OPTIONS="$TMP/options"
 export CAPTURE_STATE_DIR="$TMP/state" CAPTURE_VIDEOS="$TMP/videos"
+export FAKE_RECORD="$RECORD"
 export PATH="$TEST_DIR/fakes:$PATH"
 BASE="-c mp4 -k h264 -ac aac -f 60 -q very_high -cursor yes"
 
@@ -33,8 +34,15 @@ wait_grep() {
 }
 # reset -- stop anything left running, then empty every fixture directory.
 reset() {
+    local i
     rec stop >/dev/null 2>&1
-    unset FAKE_GSR FAKE_GSR_FINISH FAKE_SLURP CAPTURE_RECORDER
+    # A stop's marker is consumed by the recording's ticker within a second; let
+    # it, or its late "Recording stopped" would land in the next test's log.
+    for ((i = 0; i < 15; i++)); do
+        compgen -G "$CAPTURE_STATE_DIR/stopped.*" >/dev/null || break
+        sleep 0.1
+    done
+    unset FAKE_GSR FAKE_GSR_FINISH FAKE_SLURP CAPTURE_RECORDER FAKE_PKILL_STATUS
     rm -rf "$FAKE_LOG" "$CAPTURE_OPTIONS" "$CAPTURE_STATE_DIR" "$CAPTURE_VIDEOS"
     mkdir -p "$FAKE_LOG" "$CAPTURE_OPTIONS"
 }
@@ -83,22 +91,22 @@ assert_contains "$(cat "$FAKE_LOG/notify")" "video-x-generic" "saved toast uses 
 reset
 export FAKE_SLURP=800x600+10+20
 rec start region
-assert_eq "$(last_argv | sed 's/ -o .*//')" "-w region -region 800x600+10+20 $BASE -v no" "region from slurp"
+assert_eq "$(last_argv | sed 's/ -o .*//')" "-w 800x600+10+20 $BASE -v no" "region from slurp"
 assert_contains "$(cat "$FAKE_LOG/slurp.argv")" "-f %wx%h+%x+%y" "slurp prints the recorder's geometry format"
 rec stop >/dev/null
 
 reset
 rec start region 300x200+5+6
-assert_eq "$(last_argv | sed 's/ -o .*//')" "-w region -region 300x200+5+6 $BASE -v no" "a given region skips slurp"
+assert_eq "$(last_argv | sed 's/ -o .*//')" "-w 300x200+5+6 $BASE -v no" "a given region skips slurp"
 [ ! -e "$FAKE_LOG/slurp.argv" ] && pass "no slurp for a given region" || fail "no slurp for a given region"
 rec stop >/dev/null
 
 reset
 export FAKE_SLURP=640x480+900+40
 rec start window
-assert_eq "$(cat "$FAKE_LOG/slurp.stdin")" $'10,20 800x600\n900,40 640x480' "window boxes: visible, mapped, unhidden clients only"
+assert_eq "$(cat "$FAKE_LOG/slurp.stdin")" $'10,20 800x600\n900,40 640x480\n50,60 300x200' "window boxes: visible, mapped, unhidden clients, shown special workspace included"
 assert_contains "$(cat "$FAKE_LOG/slurp.argv")" "-r" "window selection is restricted to the boxes"
-assert_eq "$(last_argv | sed 's/ -o .*//')" "-w region -region 640x480+900+40 $BASE -v no" "window recorded as its rectangle"
+assert_eq "$(last_argv | sed 's/ -o .*//')" "-w 640x480+900+40 $BASE -v no" "window recorded as its rectangle"
 rec stop >/dev/null
 
 # --- failures ------------------------------------------------------------------------
@@ -108,6 +116,7 @@ rec start screen; rc=$?
 assert_eq "$rc" 1 "early recorder death exits 1"
 [ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && pass "early death clears state" || fail "early death clears state"
 assert_contains "$(cat "$FAKE_LOG/notify")" "Recording failed" "early death toast"
+assert_contains "$(cat "$FAKE_LOG/pkill")" "-RTMIN+11 waybar" "Waybar signalled after an early failure"
 assert_contains "$(cat "$FAKE_LOG/notify")" "failed to open the capture device" "toast quotes the recorder's error"
 
 reset
@@ -121,7 +130,9 @@ reset
 export FAKE_GSR_FINISH=1
 rec start screen
 output=$(rec status | cut -d' ' -f3-)
+before=$(wc -l < "$FAKE_LOG/pkill")
 rec stop >/dev/null
+[ "$(wc -l < "$FAKE_LOG/pkill")" -ge $((before + 2)) ] && pass "stop signals Waybar (saving, then done)" || fail "stop signals Waybar"
 [ -s "$output" ] && pass "stop waits for the recorder to write the file" || fail "stop waits for the file"
 
 reset
@@ -149,14 +160,28 @@ reset
 mkdir -p "$CAPTURE_STATE_DIR"
 bash -c 'exit 0' & dead=$!
 wait "$dead"
-printf '{"pid":%s,"started":1,"output":"x","phase":"recording"}\n' "$dead" > "$CAPTURE_STATE_DIR/recording.json"
+printf '{"pid":%s,"since":1,"started":1,"output":"x","phase":"recording"}\n' "$dead" > "$CAPTURE_STATE_DIR/recording.json"
 assert_contains "$(rec status --json)" '"phase":"idle"' "a dead pid reads as idle"
 [ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && pass "a dead pid's state is removed" || fail "a dead pid's state is removed"
+assert_contains "$(cat "$FAKE_LOG/pkill")" "-RTMIN+11 waybar" "removing a stale state signals Waybar"
 
+# A live process under the same pid but another start time is not the recorder.
 sleep 30 & other=$!
+printf '{"pid":%s,"since":1,"started":1,"output":"x","phase":"recording"}\n' "$other" > "$CAPTURE_STATE_DIR/recording.json"
+rec status >/dev/null; rc=$?
+assert_eq "$rc" 1 "a recycled pid (wrong start time) reads as idle"
+[ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && pass "a recycled pid's state is removed" || fail "a recycled pid's state is removed"
+printf '{"pid":%s,"since":1,"started":1,"output":"x","phase":"recording"}\n' "$other" > "$CAPTURE_STATE_DIR/recording.json"
+rec stop >/dev/null
+kill -0 "$other" 2>/dev/null && pass "stop never signals an unrelated process" || fail "stop killed an unrelated process"
+# The same process with its true start time is alive; without "since" it is not.
+read -ra pf < <(sed 's/^.*) //' "/proc/$other/stat")
+printf '{"pid":%s,"since":%s,"started":1,"output":"x","phase":"recording"}\n' "$other" "${pf[19]}" > "$CAPTURE_STATE_DIR/recording.json"
+rec status >/dev/null; rc=$?
+assert_eq "$rc" 0 "the same pid with its real start time is alive"
 printf '{"pid":%s,"started":1,"output":"x","phase":"recording"}\n' "$other" > "$CAPTURE_STATE_DIR/recording.json"
 rec status >/dev/null; rc=$?
-assert_eq "$rc" 1 "a recycled pid (not a recorder) reads as idle"
+assert_eq "$rc" 1 "a state without since reads as not alive"
 kill "$other"
 
 # --- idle -----------------------------------------------------------------------------
@@ -167,6 +192,56 @@ assert_contains "$out" '"phase":"idle"' "idle JSON"
 rec stop; rc=$?
 assert_eq "$rc" 0 "stop with nothing running is a no-op"
 [ ! -e "$FAKE_LOG/notify" ] && pass "no toast for a no-op stop" || fail "no toast for a no-op stop"
+
+# --- races ---------------------------------------------------------------------------------
+# A recorder killed mid-recording is reported even when Waybar's status (run on
+# every signal, as the fake pkill does here) clears the state first.
+reset
+export FAKE_PKILL_STATUS=1
+rec start screen
+assert_eq "$(rec status >/dev/null; echo $?)" 0 "recording under a Waybar that runs status on every signal"
+pid=$(sed -n 's/.*"pid":\([0-9]*\).*/\1/p' "$CAPTURE_STATE_DIR/recording.json")
+kill -KILL "$pid"
+wait_grep "$FAKE_LOG/notify" "Recording stopped" && pass "the death toast survives Waybar clearing the state" \
+    || fail "the death toast survives Waybar clearing the state" "$(cat "$FAKE_LOG/notify" 2>/dev/null)"
+[ ! -e "$CAPTURE_STATE_DIR/recording.json" ] && pass "state cleared after the recorder died" || fail "state cleared after the recorder died"
+
+# Two stops at once: one save, one toast, no collision on the state file.
+reset
+export FAKE_GSR_FINISH=1
+rec start screen
+rec stop 2>"$TMP/stop1.err" & s1=$!
+rec stop 2>"$TMP/stop2.err" & s2=$!
+wait "$s1"; wait "$s2"
+wait_grep "$FAKE_LOG/notify" "Recording saved"
+sleep 0.3
+assert_eq "$(grep -c 'Recording saved' "$FAKE_LOG/notify")" 1 "two concurrent stops give exactly one saved toast"
+assert_eq "$(cat "$TMP/stop1.err" "$TMP/stop2.err")" "" "concurrent stops write no errors"
+
+# A double tap: toggle while start is still checking that the recorder lives.
+reset
+rec start screen & starter=$!
+wait_grep "$CAPTURE_STATE_DIR/recording.json" '"phase":"recording"'
+rec toggle
+wait "$starter"; rc=$?
+assert_eq "$rc" 0 "the first start exits 0 after a double tap"
+wait_grep "$FAKE_LOG/notify" "Recording saved"
+sleep 0.3
+assert_eq "$(grep -c 'Recording saved' "$FAKE_LOG/notify")" 1 "a double tap saves once"
+assert_not_contains "$(cat "$FAKE_LOG/notify")" "Recording failed" "a double tap is not a failure"
+
+# Two recordings that start in one wall-clock second keep two files.
+reset
+mkdir -p "$CAPTURE_VIDEOS"
+t=$(printf '%(%s)T' -1)
+for k in 0 1 2; do
+    printf -v n '%s/Recording_%(%Y-%m-%d_%H-%M-%S)T.mp4' "$CAPTURE_VIDEOS" $((t + k))
+    echo keep > "$n"
+done
+rec start screen
+if [[ $(last_argv) =~ _2\.mp4$ ]]; then pass "an existing name gets a _2 suffix"; else fail "name collision" "argv: $(last_argv)"; fi
+rec stop >/dev/null
+assert_eq "$(cat "$n")" keep "the earlier recording is not overwritten"
 
 # --- countdown -------------------------------------------------------------------------
 # wait_phase <phase> -- up to 3 s for status --json to report it.
@@ -198,7 +273,9 @@ wait_phase countdown
 json=$(rec status --json)
 assert_contains "$json" '"class":"countdown"' "countdown class for Waybar"
 assert_contains "$json" $'\U000F051B' "countdown shows the timer glyph"
+before=$(wc -l < "$FAKE_LOG/pkill")
 rec cancel; wait "$starter"
+[ "$(wc -l < "$FAKE_LOG/pkill")" -gt "$before" ] && pass "cancelling a countdown signals Waybar" || fail "cancel signals Waybar"
 
 reset
 opt capture-delay 1

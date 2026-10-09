@@ -17,11 +17,18 @@
 # can never record differently.
 #
 # State: $XDG_RUNTIME_DIR/capture/recording.json, one line,
-#   {"pid":…,"started":…,"output":"…","phase":"countdown|recording|stopping"}
+#   {"pid":…,"since":…,"started":…,"output":"…","phase":"countdown|recording|stopping"}
 # For a countdown, pid is this script and started is when recording begins;
-# otherwise pid is the recorder and started is when it began. A pid that is
-# gone, or now runs something else, means "not recording": status removes the
-# file, so a crash never leaves the bar showing a timer.
+# otherwise pid is the recorder and started is when it began. A process is
+# identified by pid AND "since", its start time (field 22 of /proc/PID/stat):
+# a pid that is gone, a zombie, or now belongs to another process, means "not
+# recording", and read_state removes the file and signals Waybar, so a crash
+# never leaves the bar showing a timer. A state without "since" is not alive.
+#
+# stop takes $state_dir/stop.lock, so concurrent stops (keybind, lock, bar
+# click) run one after another; the second finds nothing left to do. stop
+# leaves $state_dir/stopped.<pid> for the ticker, which toasts "Recording
+# stopped" for a recorder that died without one, however the state was read.
 #
 # Waybar's module runs once and on signal 11. This script sends that signal on
 # every change and, through a ticker child, once a second while recording, so
@@ -66,40 +73,54 @@ signal_bar() { pkill -RTMIN+11 waybar 2>/dev/null || true; }
 notify() { notify-send -a Capture -i "$1" "$2" "${3-}" 2>/dev/null || true; }
 now() { printf '%(%s)T' -1; }
 
-# alive <pid> <needle> -> 0 when pid runs a command line containing needle.
-# A bare kill -0 would accept a recycled pid.
-alive() {
-    local -a args
-    [ -n "$1" ] && [ -r "/proc/$1/cmdline" ] || return 1
-    mapfile -d '' args < "/proc/$1/cmdline" 2>/dev/null || return 1
-    [[ " ${args[*]} " == *"$2"* ]]
+# proc_stat <pid> -> sets proc_state and proc_since (field 22 of /proc/PID/stat).
+# Fields are counted from the text after the LAST ") ", so a comm containing
+# spaces or parentheses cannot shift them. Builtins only: no forks.
+proc_stat() {
+    local stat rest
+    local -a f
+    proc_state="" proc_since=""
+    [ -n "${1-}" ] && [ -r "/proc/$1/stat" ] || return 1
+    { read -r stat < "/proc/$1/stat"; } 2>/dev/null || return 1
+    [[ $stat == *') '* ]] || return 1
+    rest=${stat##*) }
+    read -ra f <<< "$rest"
+    proc_state=${f[0]-} proc_since=${f[19]-}
+    [ -n "$proc_since" ]
 }
 
-# read_state -> sets pid started output phase; 1, removing the file, when
-# nothing is live.
+# alive <pid> <since> -> 0 when that very process (not a recycled pid) still
+# runs and is not a zombie.
+alive() {
+    [ -n "${2-}" ] && proc_stat "$1" && [ "$proc_state" != Z ] && [ "$proc_since" = "$2" ]
+}
+
+# read_state -> sets pid since started output phase; 1, removing the file and
+# signalling Waybar, when nothing is live.
 read_state() {
-    local line="" needle="${recorder##*/}"
-    pid="" started="" output="" phase=""
+    local line=""
+    pid="" since="" started="" output="" phase=""
     { read -r line < "$state"; } 2>/dev/null
     [ -n "$line" ] || return 1
     [[ $line =~ \"pid\":([0-9]+) ]] && pid=${BASH_REMATCH[1]}
+    [[ $line =~ \"since\":([0-9]+) ]] && since=${BASH_REMATCH[1]}
     [[ $line =~ \"started\":([0-9]+) ]] && started=${BASH_REMATCH[1]}
     [[ $line =~ \"output\":\"([^\"]*)\" ]] && output=${BASH_REMATCH[1]}
     [[ $line =~ \"phase\":\"([a-z]+)\" ]] && phase=${BASH_REMATCH[1]}
-    [ "$phase" = countdown ] && needle=record.sh
-    if ! alive "$pid" "$needle"; then
+    if ! alive "$pid" "$since"; then
         rm -f "$state"
+        signal_bar
         return 1
     fi
 }
 
-# write_state <pid> <phase> <output> <started>
+# write_state <pid> <phase> <output> <started> <since>
 write_state() {
     local out=${3//\\/\\\\}
     out=${out//\"/\\\"}
     mkdir -p "$state_dir" || return 1
-    printf '{"pid":%s,"started":%s,"output":"%s","phase":"%s"}\n' "$1" "$4" "$out" "$2" > "$state.tmp" \
-        && mv -f "$state.tmp" "$state"
+    printf '{"pid":%s,"since":%s,"started":%s,"output":"%s","phase":"%s"}\n' "$1" "$5" "$4" "$out" "$2" > "$state.tmp.$$" \
+        && mv -f "$state.tmp.$$" "$state"
 }
 
 # fmt <seconds> -> m:ss, or h:mm:ss from an hour on (model.mjs formatElapsed agrees).
@@ -114,7 +135,7 @@ fmt() {
 
 first_error() {
     local line
-    line=$(grep -m1 -iE 'error|fail' "$log" 2>/dev/null) || line=$(head -n1 "$log" 2>/dev/null)
+    line=$(grep -m1 -iE 'error|fail' "$log" 2>/dev/null)
     printf '%s' "${line:-The recorder exited without a message. Log: $log}"
 }
 
@@ -122,10 +143,12 @@ focused_monitor() {
     hyprctl monitors -j 2>/dev/null | jq -r 'first(.[] | select(.focused) | .name) // empty' 2>/dev/null
 }
 
-# window_rects -> one "X,Y WxH" box per window on a visible workspace, for slurp -r.
+# window_rects -> one "X,Y WxH" box per window on a visible workspace (a monitor's
+# shown special workspace included), for slurp -r.
 window_rects() {
     local visible
-    visible=$(hyprctl monitors -j 2>/dev/null | jq -c '[.[].activeWorkspace.id]' 2>/dev/null) || return 1
+    visible=$(hyprctl monitors -j 2>/dev/null \
+        | jq -c '[.[] | .activeWorkspace.id, (.specialWorkspace.id // 0)] | map(select(. != 0))' 2>/dev/null) || return 1
     hyprctl clients -j 2>/dev/null | jq -r --argjson ws "$visible" '
         .[] | select(.mapped and (.hidden | not) and (.workspace.id as $w | any($ws[]; . == $w)))
         | "\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
@@ -146,20 +169,23 @@ saved() {
                     --method org.freedesktop.FileManager1.ShowItems "['file://$1']" '' \
                     || exec xdg-open "${1%/*}" ;;
         esac
-    ) 7>&- &
+    ) 7>&- 8>&- &
 }
 
-# ticker <recorder-pid> -- one Waybar refresh a second while the recorder runs.
-# If it dies while the state still says "recording" (not a stop), say so.
+# ticker <recorder-pid> <since> -- one Waybar refresh a second while the recorder
+# runs. When it ends: a stop leaves stopped.<pid> and the ticker stays silent;
+# otherwise the recorder died by itself, so say so (whoever cleaned the state).
 ticker() {
     local line=""
-    while alive "$1" "${recorder##*/}"; do
+    while alive "$1" "$2"; do
         sleep 1
         signal_bar
     done
-    { read -r line < "$state"; } 2>/dev/null
-    if [[ $line == *"\"pid\":$1,"* && $line == *'"phase":"recording"'* ]]; then
-        rm -f "$state"
+    if [ -e "$state_dir/stopped.$1" ]; then
+        rm -f "$state_dir/stopped.$1"
+    else
+        { read -r line < "$state"; } 2>/dev/null
+        [[ $line == *"\"pid\":$1,"* ]] && rm -f "$state"
         notify dialog-error 'Recording stopped' "$(first_error)"
     fi
     signal_bar
@@ -201,10 +227,13 @@ status() {
 
 # countdown <seconds> -- the amber Waybar countdown. record.sh cancel or stop
 # (a click on it) sends TERM, which ends this script with nothing recorded.
+# At the end the trap changes to "remember it" and stays until start has written
+# the recorder's state, so a TERM on the boundary is never lost.
 countdown() {
     local t
     t=$(now)
-    write_state $$ countdown "" $(( t + $1 ))
+    proc_stat $$
+    write_state $$ countdown "" $(( t + $1 )) "$proc_since"
     trap 'rm -f "$state"; signal_bar; exit 0' TERM
     signal_bar
     while (( $(now) < t + $1 )); do
@@ -213,32 +242,40 @@ countdown() {
         wait $!
         signal_bar
     done
-    trap - TERM
+    trap 'cancelled=1' TERM
 }
 
 stop() {
+    local rc=0
+    [ -d "$state_dir" ] || return 0
+    exec 8>"$state_dir/stop.lock" || return 1
+    if flock -w $((stop_wait + 2)) 8; then
+        stop_locked || rc=$?
+    else
+        rc=1
+    fi
+    exec 8>&-
+    return "$rc"
+}
+
+# stop_locked -- the body of stop, under stop.lock, on a freshly read state.
+stop_locked() {
     local i
     read_state || return 0
-    case $phase in
-        countdown)
-            kill -TERM "$pid" 2>/dev/null
-            return 0 ;;
-        stopping)
-            # Another stop is saving it; wait, so a lock never beats the save.
-            for ((i = 0; i < (stop_wait + 1) * 10; i++)); do
-                read_state || return 0
-                sleep 0.1
-            done
-            return 0 ;;
-    esac
-    write_state "$pid" stopping "$output" "$started"
+    if [ "$phase" = countdown ]; then
+        kill -TERM "$pid" 2>/dev/null
+        return 0
+    fi
+    # The marker comes first: the ticker must never see the recorder go before it.
+    : > "$state_dir/stopped.$pid"
+    write_state "$pid" stopping "$output" "$started" "$since"
     signal_bar
     kill -INT "$pid" 2>/dev/null
     for ((i = 0; i < stop_wait * 10; i++)); do
-        alive "$pid" "${recorder##*/}" || break
+        alive "$pid" "$since" || break
         sleep 0.1
     done
-    if alive "$pid" "${recorder##*/}"; then
+    if alive "$pid" "$since"; then
         kill -KILL "$pid" 2>/dev/null
         rm -f "$state"
         signal_bar
@@ -261,7 +298,7 @@ cancel() {
 }
 
 start() {
-    local target=${1-} region=${2-} monitor delay file audio="" rec_pid
+    local target=${1-} region=${2-} monitor delay file base n audio="" rec_pid rec_since
     local -a args
     if [ -z "$target" ]; then
         target=$(option capture-rec-target screen)
@@ -286,6 +323,10 @@ start() {
     # One start at a time: a second press while selecting is dropped.
     exec 7>"$state_dir/start.lock"
     flock -n 7 || return 0
+    # Another start may have finished between the first check and the lock.
+    if read_state; then
+        return 0
+    fi
 
     case $target in
         screen)
@@ -296,19 +337,21 @@ start() {
             fi
             args=(-w "$monitor") ;;
         region)
-            # Esc in slurp cancels silently: no toast, nothing written.
+            # Esc in slurp cancels silently: no toast, nothing written. A region is
+            # `-w WxH+X+Y`: gpu-screen-recorder 6.1.3 deprecates `-w region -region`.
             [ -n "$region" ] || region=$(slurp -f '%wx%h+%x+%y') || return 0
             [ -n "$region" ] || return 0
-            args=(-w region -region "$region") ;;
+            args=(-w "$region") ;;
         window)
             # The rectangle is fixed now: moving the window later is not followed.
             region=$(window_rects | slurp -r -f '%wx%h+%x+%y') || return 0
             [ -n "$region" ] || return 0
-            args=(-w region -region "$region") ;;
+            args=(-w "$region") ;;
     esac
 
     delay=$(option capture-delay 0)
     [[ $delay =~ ^[0-9]+$ ]] || delay=0
+    cancelled=0
     (( delay > 0 )) && countdown "$delay"
 
     args+=(-c mp4 -k h264 -ac aac -f 60 -q very_high -cursor yes)
@@ -319,23 +362,51 @@ start() {
         notify dialog-error 'Recording failed' "Cannot create $videos."
         return 1
     fi
-    printf -v file '%s/Recording_%(%Y-%m-%d_%H-%M-%S)T.mp4' "$videos" -1
+    printf -v base '%s/Recording_%(%Y-%m-%d_%H-%M-%S)T' "$videos" -1
+    file=$base.mp4 n=2
+    while [ -e "$file" ]; do
+        file=${base}_$n.mp4
+        n=$((n + 1))
+    done
     args+=(-v no -o "$file")
 
+    # Cancelled on the boundary of the countdown, before anything started.
+    if (( cancelled )); then
+        rm -f "$state"
+        signal_bar
+        trap - TERM
+        return 0
+    fi
     # setsid in a background job execs the recorder in place (the job is not a
-    # process-group leader), so $! is the recorder's own pid.
-    setsid "$recorder" "${args[@]}" </dev/null >"$log" 2>&1 7>&- &
+    # process-group leader), so $! is the recorder's own pid, and its start time
+    # is already final: the state can be written before the exec happens.
+    setsid "$recorder" "${args[@]}" </dev/null >"$log" 2>&1 7>&- 8>&- &
     rec_pid=$!
-    write_state "$rec_pid" recording "$file" "$(now)"
+    rec_since=""
+    proc_stat "$rec_pid" && rec_since=$proc_since
+    write_state "$rec_pid" recording "$file" "$(now)" "${rec_since:-0}"
+    if (( cancelled )); then
+        # A click on the boundary: save the (near-empty) clip, as a stop would.
+        trap - TERM
+        stop
+        rm -f "$state_dir/stopped.$rec_pid"
+        return 0
+    fi
+    trap - TERM
     signal_bar
     sleep 0.5
-    if ! alive "$rec_pid" "${recorder##*/}"; then
+    if ! alive "$rec_pid" "$rec_since"; then
+        if [ -e "$state_dir/stopped.$rec_pid" ]; then
+            # A second press stopped it inside this window: that stop owns the cleanup.
+            rm -f "$state_dir/stopped.$rec_pid"
+            return 0
+        fi
         rm -f "$state"
         signal_bar
         notify dialog-error 'Recording failed' "$(first_error)"
         return 1
     fi
-    ticker "$rec_pid" </dev/null >/dev/null 2>&1 7>&- &
+    ticker "$rec_pid" "$rec_since" </dev/null >/dev/null 2>&1 7>&- 8>&- &
     return 0
 }
 

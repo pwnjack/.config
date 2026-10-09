@@ -1,16 +1,19 @@
 #!/bin/bash
-# Test stand-in for hyprctl: one focused monitor, DP-1, showing workspace 1,
-# and four clients, of which only the first two are visible windows (the third
-# is on workspace 2, the fourth hidden).
+# Test stand-in for hyprctl: one focused monitor, DP-1, showing workspace 1 and special workspace -98,
+# and six clients, of which only the first, second and fifth are visible windows
+# (the third is on workspace 2, the fourth hidden, the sixth on a special
+# workspace that is not shown); the fifth is on the shown special workspace.
 case "$*" in
     'monitors -j')
-        echo '[{"name":"DP-1","focused":true,"scale":1,"activeWorkspace":{"id":1}}]' ;;
+        echo '[{"name":"DP-1","focused":true,"scale":1,"activeWorkspace":{"id":1},"specialWorkspace":{"id":-98,"name":"special:scratch"}}]' ;;
     'clients -j')
         cat <<'EOT'
 [{"mapped":true,"hidden":false,"workspace":{"id":1},"at":[10,20],"size":[800,600]},
  {"mapped":true,"hidden":false,"workspace":{"id":1},"at":[900,40],"size":[640,480]},
  {"mapped":true,"hidden":false,"workspace":{"id":2},"at":[0,0],"size":[2560,1440]},
- {"mapped":true,"hidden":true,"workspace":{"id":1},"at":[5,5],"size":[100,100]}]
+ {"mapped":true,"hidden":true,"workspace":{"id":1},"at":[5,5],"size":[100,100]},
+ {"mapped":true,"hidden":false,"workspace":{"id":-98},"at":[50,60],"size":[300,200]},
+ {"mapped":true,"hidden":false,"workspace":{"id":-99},"at":[70,80],"size":[200,100]}]
 EOT
         ;;
     *) exit 1 ;;
