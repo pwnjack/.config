@@ -55,7 +55,7 @@ check_audio() { # <audio> <mic> <expected -a part, or empty> <label>
     opt capture-audio "$1"
     opt capture-mic "$2"
     rec start screen
-    assert_eq "$(last_argv | sed 's/ -o .*//')" "-w DP-1 $BASE${3:+ $3} -v no" "$4"
+    assert_eq "$(last_argv | sed 's/ -o .*//')" "-w TEST-1 $BASE${3:+ $3} -v no" "$4"
     rec stop >/dev/null
 }
 check_audio false false "" "screen, no audio: focused monitor and the fixed encoder flags"

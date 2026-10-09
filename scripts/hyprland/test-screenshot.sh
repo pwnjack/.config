@@ -32,7 +32,7 @@ printf 'sleep %s\n' "$*" >> "$EVENTS"
 EOF
 cat > "$TMP/bin/hyprctl" <<'EOF'
 #!/bin/bash
-[ "$*" = 'monitors -j' ] && echo '[{"name":"HDMI-A-1","focused":false},{"name":"DP-1","focused":true}]'
+[ "$*" = 'monitors -j' ] && echo '[{"name":"TEST-2","focused":false},{"name":"TEST-1","focused":true}]'
 EOF
 chmod +x "$TMP/bin/"*
 
@@ -61,7 +61,15 @@ shot region
 case "$(cat "$EVENTS")" in *" -z"*) fail "the pre-rename option file is ignored" ;; *) pass "the pre-rename option file is ignored" ;; esac
 
 shot screen
-assert_contains "$(cat "$EVENTS")" "hyprshot -m output -m DP-1 " "screen is the focused monitor"
+assert_contains "$(cat "$EVENTS")" "hyprshot -m output -m TEST-1 " "screen is the focused monitor"
+freeze true
+shot screen
+case "$(cat "$EVENTS")" in *" -z"*) fail "screen never freezes" ;; *) pass "screen never freezes" ;; esac
+freeze false
+shot region --delay 08
+assert_eq "$(head -n1 "$EVENTS")" "sleep 8" "a zero-padded delay is decimal"
+shot region --delay 0
+case "$(cat "$EVENTS")" in sleep*) fail "delay 0 does not sleep" ;; *) pass "delay 0 does not sleep" ;; esac
 shot window
 assert_contains "$(cat "$EVENTS")" "hyprshot -m window " "window target"
 
@@ -70,7 +78,7 @@ assert_eq "$(cat "$EVENTS")" $'hyprshot -m region --raw\nswappy -f - stdin=PNG' 
 
 shot screen --annotate --delay 3
 assert_eq "$(head -n1 "$EVENTS")" "sleep 3" "the delay runs first"
-assert_contains "$(sed -n 2p "$EVENTS")" "hyprshot -m output -m DP-1 --raw" "then the capture"
+assert_contains "$(sed -n 2p "$EVENTS")" "hyprshot -m output -m TEST-1 --raw" "then the capture"
 
 shot region
 case "$(cat "$EVENTS")" in sleep*) fail "no delay by default" ;; *) pass "no delay by default" ;; esac

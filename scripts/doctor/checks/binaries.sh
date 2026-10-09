@@ -248,6 +248,6 @@ check_binaries() {
     if [ "$DOCTOR_ERRORS" = "$before_e" ] \
         && [ "$DOCTOR_WARNINGS" = "$before_w" ] \
         && [ "$DOCTOR_NOTICES" = "$before_n" ]; then
-        ok "every binary referenced by keybinds and autostart is installed"
+        ok "every referenced binary is installed and the capture helper has its capability"
     fi
 }

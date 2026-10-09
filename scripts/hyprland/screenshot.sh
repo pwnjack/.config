@@ -54,6 +54,7 @@ case "$mode" in
     *) usage ;;
 esac
 [[ "$delay" =~ ^[0-9]+$ ]] || usage
+delay=$((10#$delay))
 
 command -v hyprshot >/dev/null 2>&1 || exit 0
 (( annotate )) && ! command -v swappy >/dev/null 2>&1 && exit 0
@@ -65,7 +66,7 @@ if [ "$mode" = screen ]; then
 else
     args=(-m "$mode")
 fi
-grep -qx true "$HOME/.config/options/capture-freeze" 2>/dev/null && args+=(-z)
+[ "$mode" != screen ] && grep -qx true "$HOME/.config/options/capture-freeze" 2>/dev/null && args+=(-z)
 
 (( delay > 0 )) && sleep "$delay"
 

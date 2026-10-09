@@ -234,6 +234,8 @@ assert_eq "$DOCTOR_ERRORS$DOCTOR_WARNINGS" "00" \
     "absent keybinds/autostart files produce no findings"
 
 # --- capture helper capability ------------------------------------------
+bin_real_kms_path=$(declare -f _bin_kms_path)
+bin_real_capability=$(declare -f _bin_capability)
 # The helper's name comes from record.sh; the path and getcap are stubbed,
 # since the real answers depend on the machine running the suite.
 DOCTOR_ROOT="$bin_fixture"
@@ -266,5 +268,10 @@ check_binaries > "$bin_out_file" 2>&1
 assert_eq "$(bin_line "$bin_out_file" "cap_sys_admin")" "" "helper not installed: no finding"
 
 # Restore the real probes for anything sourced after this file.
-_bin_kms_path() { command -v "$1" 2>/dev/null; }
-_bin_capability() { command -v getcap >/dev/null 2>&1 || return 1; getcap "$1" 2>/dev/null; }
+eval "$bin_real_kms_path"
+eval "$bin_real_capability"
+
+# The extraction in binaries.sh must find a name in the real record.sh, or the
+# check silently turns itself off while the fixture-based cases stay green.
+bin_real_name=$(sed -n 's/^readonly KMS_SERVER=\([A-Za-z0-9_.-]*\)$/\1/p' "$REPO_DIR/scripts/capture/record.sh")
+assert_eq "$bin_real_name" "gsr-kms-server" "the helper name is extractable from the real record.sh"

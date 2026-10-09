@@ -1,11 +1,11 @@
 #!/bin/bash
-# Test stand-in for hyprctl: one focused monitor, DP-1, showing workspace 1 and special workspace -98,
+# Test stand-in for hyprctl: one focused monitor, TEST-1, showing workspace 1 and special workspace -98,
 # and six clients, of which only the first, second and fifth are visible windows
 # (the third is on workspace 2, the fourth hidden, the sixth on a special
 # workspace that is not shown); the fifth is on the shown special workspace.
 case "$*" in
     'monitors -j')
-        echo '[{"name":"DP-1","focused":true,"scale":1,"activeWorkspace":{"id":1},"specialWorkspace":{"id":-98,"name":"special:scratch"}}]' ;;
+        echo '[{"name":"TEST-1","focused":true,"scale":1,"activeWorkspace":{"id":1},"specialWorkspace":{"id":-98,"name":"special:scratch"}}]' ;;
     'clients -j')
         cat <<'EOT'
 [{"mapped":true,"hidden":false,"workspace":{"id":1},"at":[10,20],"size":[800,600]},
