@@ -34,6 +34,7 @@ return function(apps)
     hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("~/.config/rofi/launcher.sh")) -- App launcher
     hl.bind("SUPER + SHIFT + L", hl.dsp.exec_cmd("~/.config/rofi/powermenu.sh")) -- Power menu
     hl.bind("SUPER + SHIFT + S", hl.dsp.exec_cmd("~/.config/rofi/screenshot.sh")) -- Screenshot menu
+    hl.bind("SUPER + SHIFT + R", hl.dsp.exec_cmd("~/.config/scripts/capture/record.sh toggle")) -- Start or stop recording
     hl.bind("SUPER + C", hl.dsp.exec_cmd("~/.config/rofi/clipboard.sh")) -- Clipboard history
     hl.bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("~/.config/scripts/hyprland/colorpicker.sh")) -- Colour picker (copies hex)
     hl.bind("SUPER + period", hl.dsp.exec_cmd("rofi -modi emoji -show emoji")) -- Emoji picker

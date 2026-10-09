@@ -96,6 +96,7 @@ window#waybar {
 #custom-network,
 #bluetooth,
 #custom-battery,
+#custom-recording,
 #pulseaudio,
 #tray {
     font-size: 14px;
@@ -129,6 +130,7 @@ window#waybar {
 #custom-network,
 #bluetooth,
 #custom-battery,
+#custom-recording,
 #pulseaudio,
 #tray,
 #custom-nightlight,
@@ -353,6 +355,25 @@ tooltip label {
 #custom-gpu.critical,
 #disk.critical {
     color: #ff5555;
+}
+
+/* ── RECORDING ───────────────────────────────────────────────────────
+   ALERT EXCEPTION — see #pulseaudio.muted above. A recording in progress
+   is the one state on the bar that must never be missed, so it is the
+   fixed red as a pill (the capture strip's Record colour), and the
+   countdown before it the bar's alert amber. Idle prints nothing, which
+   hides the module. */
+
+#custom-recording.recording,
+#custom-recording.stopping {
+    background: #ff5555;
+    color: #05090c;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+#custom-recording.countdown {
+    color: #ffb86c;
 }
 
 /* ── SYS TRAY ────────────────────────────────────────────────────────*/
