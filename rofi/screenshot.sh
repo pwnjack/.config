@@ -26,6 +26,6 @@ case "$chosen" in
     "$monitor")  shoot output ;;
     "$window")   shoot window ;;
     "$region")   shoot region ;;
-    "$annotate") sleep 0.5; "$HOME/.config/scripts/hyprland/screenshot-annotate.sh" ;;
+    "$annotate") sleep 0.5; "$HOME/.config/scripts/hyprland/screenshot.sh" region --annotate ;;
     "$settings") "$HOME/.config/rofi/screenshot-settings.sh" ;;
 esac

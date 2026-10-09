@@ -3,11 +3,11 @@
 # Screenshot Settings
 # Back to the menu, pick a delay, or toggle freezing the screen while selecting.
 #
-# Freeze is a preference (options/screenshot, read by
+# Freeze is a preference (options/capture-freeze, read by
 # scripts/hyprland/screenshot.sh); the delay is transient state in the cache.
 #
 
-freeze_option="$HOME/.config/options/screenshot"
+freeze_option="$HOME/.config/options/capture-freeze"
 
 back=$'\uEB6F' timer=$'\U000F13AB' freeze=$'\U000F1933'
 

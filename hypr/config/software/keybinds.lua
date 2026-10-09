@@ -12,7 +12,7 @@ return function(apps)
     hl.bind("SUPER + T", hl.dsp.exec_cmd("kwrite")) -- Text editor (KWrite)
     hl.bind("SUPER + B", hl.dsp.exec_cmd(apps.browser)) -- Web browser ($browser)
     hl.bind("SUPER + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot.sh region")) -- Screenshot a region
-    hl.bind("SUPER + ALT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot-annotate.sh")) -- Screenshot a region and annotate
+    hl.bind("SUPER + ALT + S", hl.dsp.exec_cmd("~/.config/scripts/hyprland/screenshot.sh region --annotate")) -- Screenshot a region and annotate
     hl.bind("SUPER + G", hl.dsp.exec_cmd(apps.codeeditor)) -- Code editor ($codeeditor)
     hl.bind("SUPER + K", hl.dsp.exec_cmd("gnome-calculator")) -- Calculator
     hl.bind("SUPER + A", hl.dsp.exec_cmd("~/.config/scripts/hyprland/launch-chatbox.sh")) -- AI assistant sidebar
