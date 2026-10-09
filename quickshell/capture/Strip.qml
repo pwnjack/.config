@@ -317,6 +317,8 @@ FocusScope {
                     onClicked: strip.controller.run()
                 }
                 ToolTip {
+                    id: actionTip
+                    objectName: "action-tip"
                     popupType: Popup.Item
                     visible: actionMouse.containsMouse
                     delay: 600
@@ -324,7 +326,8 @@ FocusScope {
                         : actionButton.red ? "Stop and save (Return)" : "Start recording (Return)"
                     text: tip
                     contentItem: Text {
-                        text: parent.tip
+                        // contentItem is reparented to the popup: name the tip, not parent.
+                        text: actionTip.text
                         color: strip.foreground
                         font.family: strip.monoFont
                         font.pixelSize: strip.px(12)

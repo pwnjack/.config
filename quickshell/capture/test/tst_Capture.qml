@@ -76,6 +76,7 @@ Item {
             verify(!findChild(strip, "screenshot-freeze").visible);
         }
         function test_noElidedLabel() {
+            // The tab labels are left out: they have no width constraint, so they cannot elide by construction.
             const names = ["target-screen", "target-window", "target-region",
                 "screenshot-delay", "screenshot-freeze", "screenshot-annotate",
                 "record-delay", "record-audio", "record-mic", "action"];
@@ -114,7 +115,6 @@ Item {
             keyClick(Qt.Key_Escape);
             compare(controller.closes, 1);
         }
-        // Tab labels have no width constraint, so they cannot elide by construction.
         function test_held_keys_act_once() {
             const before = controller.runs;
             verify(strip.handleKey(Qt.Key_Return, true), "the held key is still claimed");
@@ -138,6 +138,21 @@ Item {
             mouseClick(findChild(strip, "target-screen"));
             compare(controller.closes, 0);
             compare(controller.runs, 0);
+        }
+        function test_actionTooltipShowsItsText() {
+            const tip = findChild(strip, "action-tip");
+            verify(tip, "the action tooltip exists");
+            const cases = [
+                ["screenshot", { phase: "idle", seconds: 0 }],
+                ["record", { phase: "idle", seconds: 0 }],
+                ["record", { phase: "recording", seconds: 42 }]];
+            for (const [mode, status] of cases) {
+                controller.setMode(mode);
+                controller.status = status;
+                wait(20);
+                verify(tip.text !== "", mode + " " + status.phase + ": tooltip text is set");
+                compare(tip.contentItem.text, tip.text, mode + " " + status.phase);
+            }
         }
         function test_tabColour() {
             verify(Qt.colorEqual(findChild(strip, "tab-screenshot").color, controller.accent));
