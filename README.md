@@ -8,22 +8,6 @@ notifications, terminal and lock screen all re-theme themselves.
 ![Hyprland](https://img.shields.io/badge/Hyprland-0.55+-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-## Screenshots
-
-Each wallpaper re-themes the whole desktop: bar, borders, terminal and overlays.
-
-| | |
-|---|---|
-| ![Cosy retreat](screenshots/cosy-1.webp) | ![Cosy retreat, terminals](screenshots/cosy-2.webp) |
-| ![Northern lights](screenshots/aurora-1.webp) | ![Northern lights, terminals](screenshots/aurora-2.webp) |
-| ![Synthwave](screenshots/synthwave-1.webp) | ![Synthwave, terminals](screenshots/synthwave-2.webp) |
-
-| Settings (`Super + I`) | Keybindings (`Super + H`) |
-|---|---|
-| ![Settings panel](screenshots/settings.webp) | ![Keybindings overlay](screenshots/keybinds.webp) |
-| **Wallpaper carousel (`Super + Ctrl + W`)** | **Capture bar (`Super + Shift + S`)** |
-| ![Wallpaper carousel](screenshots/carousel.webp) | ![Capture bar](screenshots/capture.webp) |
-
 ## Install
 
 On a fresh Arch Linux or CachyOS system, logged in as your normal user:
@@ -52,6 +36,22 @@ you have no login manager, type `start-hyprland` in the console.
 | `Super + Ctrl + W` | Pick a wallpaper — colors follow |
 | `Super + I` | Settings |
 | `Super + H` | Every shortcut, searchable |
+
+## Screenshots
+
+Each wallpaper re-themes the whole desktop: bar, borders, terminal and overlays.
+
+| | |
+|---|---|
+| ![Cosy retreat](screenshots/cosy-1.webp) | ![Cosy retreat, terminals](screenshots/cosy-2.webp) |
+| ![Northern lights](screenshots/aurora-1.webp) | ![Northern lights, terminals](screenshots/aurora-2.webp) |
+| ![Synthwave](screenshots/synthwave-1.webp) | ![Synthwave, terminals](screenshots/synthwave-2.webp) |
+
+| Settings (`Super + I`) | Keybindings (`Super + H`) |
+|---|---|
+| ![Settings panel](screenshots/settings.webp) | ![Keybindings overlay](screenshots/keybinds.webp) |
+| **Wallpaper carousel (`Super + Ctrl + W`)** | **Capture bar (`Super + Shift + S`)** |
+| ![Wallpaper carousel](screenshots/carousel.webp) | ![Capture bar](screenshots/capture.webp) |
 
 ## More
 
