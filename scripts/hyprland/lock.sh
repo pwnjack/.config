@@ -13,15 +13,21 @@
 # a second of the lock screen. record.sh stop does nothing when nothing
 # records, and cancels a countdown.
 #
-# Never a second hyprlock: a flock on a descriptor the exec'd hyprlock inherits
-# is held exactly while it runs, and a hyprlock of this user already running
-# counts as locked. That includes a stale one that no longer holds the session
-# lock; this script does not look further than the process.
+# Never a second hyprlock, and the guard fails closed: the lock is skipped only
+# when a hyprlock of this user is really running (pgrep). A flock on a descriptor
+# the exec'd hyprlock inherits makes concurrent callers queue for up to 1 s so
+# the first one's hyprlock is visible to the next, but a lock file that cannot
+# be opened or a lock still held after that second never prevent locking; the
+# runtime dir is never /tmp, where another user could plant the file. A stale
+# hyprlock that no longer holds the session lock still counts as locked; this
+# script does not look further than the process.
 # Arguments go to hyprlock (the live check uses --grace 30).
 #
 config_dir="${XDG_CONFIG_HOME:-$HOME/.config}"
-exec 9>"${XDG_RUNTIME_DIR:-/tmp}/lock.sh.lock"
-flock -n 9 || exit 0
+lock_file="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/lock.sh.lock"
+if { exec 9>"$lock_file"; } 2>/dev/null; then
+    flock -w 1 9
+fi
 pgrep -xu "$(id -u)" hyprlock >/dev/null && exit 0
 setsid -f "$config_dir/scripts/capture/record.sh" stop </dev/null >/dev/null 2>&1 9>&-
 exec hyprlock "$@"

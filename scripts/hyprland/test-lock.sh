@@ -78,4 +78,32 @@ bash "$TEST_DIR/lock.sh" & p2=$!
 wait "$p1" "$p2"
 assert_eq "$(wc -l < "$FAKE_LOG/hyprlock")" 1 "concurrent locks start one hyprlock"
 
+# A lock file that cannot be opened must not prevent the lock.
+reset_lock
+mkdir -p "$TMP/run2/lock.sh.lock"
+XDG_RUNTIME_DIR="$TMP/run2" bash "$TEST_DIR/lock.sh"
+assert_eq "$(cat "$FAKE_LOG/hyprlock")" "args=" "hyprlock starts when the lock file cannot be opened"
+
+# A lock held elsewhere, with no hyprlock running, delays the lock by about 1 s only.
+reset_lock
+flock "$XDG_RUNTIME_DIR/lock.sh.lock" sleep 3 & holder=$!
+sleep 0.3
+start=$SECONDS
+bash "$TEST_DIR/lock.sh"
+[ -s "$FAKE_LOG/hyprlock" ] && [ $((SECONDS - start)) -le 2 ] \
+    && pass "a stuck lock file does not prevent the lock" || fail "a stuck lock file does not prevent the lock"
+kill "$holder" 2>/dev/null; wait "$holder" 2>/dev/null
+
+# The detached save must not inherit the lock descriptor.
+reset_lock
+mkdir -p "$TMP/stub/scripts/capture"
+cat > "$TMP/stub/scripts/capture/record.sh" <<'STUB'
+#!/bin/bash
+ls /proc/$$/fd > "$FAKE_LOG/stub.fds"
+STUB
+chmod 755 "$TMP/stub/scripts/capture/record.sh"
+XDG_CONFIG_HOME="$TMP/stub" bash "$TEST_DIR/lock.sh"
+wait_for test -s "$FAKE_LOG/stub.fds" && ! grep -qx 9 "$FAKE_LOG/stub.fds" \
+    && pass "the detached save does not hold the lock descriptor" || fail "the detached save does not hold the lock descriptor"
+
 test_summary lock
