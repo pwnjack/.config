@@ -55,8 +55,8 @@ checkout.
 |-----|--------|
 | `Super + Space` | App launcher |
 | `Super + Shift + L` | Power menu |
-| `Super + Shift + S` | Screenshot menu |
-| `Super + Shift + R` | Start or stop recording |
+| `Super + Shift + S` | Capture bar: screenshot |
+| `Super + Shift + R` | Capture bar: record, or stop |
 | `Super + C` | Clipboard history |
 | `Super + Shift + C` | Colour picker (copies hex) |
 | `Super + .` | Emoji picker |
