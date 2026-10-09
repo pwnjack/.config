@@ -133,6 +133,7 @@ cliphist list | rofi -dmenu | cliphist decode | wl-copy
 | Waybar | `~/.config/waybar/config.jsonc` |
 | Terminal | `~/.config/ghostty/config` |
 | Shell | `~/.config/fish/config.fish` |
+| Fuzzy finder (Ctrl+R history, Ctrl+T file, Alt+C cd) | `~/.config/fish/conf.d/fzf.fish` |
 | Editor | `~/.config/nvim/` |
 | Keybinds | `~/.config/hypr/config/software/keybinds.lua` |
 
@@ -393,7 +394,7 @@ git reset origin/main   # marks repo files as tracked without touching them
 # Core (official/CachyOS repos)
 sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                hyprpicker hyprsunset waybar swaync quickshell rofi rofi-emoji \
-               ghostty fish starship neovim zed kwrite thunar yazi \
+               ghostty fish starship fzf fd neovim zed kwrite thunar yazi \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
