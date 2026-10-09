@@ -46,6 +46,12 @@ they ignore the strip's other options by design. The files:
 `capture-delay` (decimal seconds, `0` = off, so `08` is 8 s), `capture-freeze`,
 `capture-annotate`, `capture-audio`, `capture-mic` (`true|false`).
 
+They are per-machine state, gitignored rather than tracked, so using the strip
+never dirties the repo. A missing or invalid file is the default: region
+screenshots, full-screen recordings, and every toggle off. The defaults live
+in `model.mjs` (`DEFAULTS`) and in the scripts' fallbacks, and the strip
+creates a file the first time its control changes.
+
 ## Recording
 
 `gpu-screen-recorder -w <monitor> | -w WxH+X+Y -c mp4 -k h264 -ac aac -f 60

@@ -332,6 +332,9 @@ TODO.md
 !scripts/
 !wallpapers/
 !options/
+# The capture strip's toggles change on every use: per-machine, never tracked.
+# A missing file is the default (quickshell/capture/model.mjs, record.sh, screenshot.sh).
+options/capture-*
 zed/settings.json
 
 # Environment variables (API keys, secrets)
