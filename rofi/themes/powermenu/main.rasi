@@ -3,4 +3,6 @@
 textbox-prompt-colon {
     str:                         " System";
 }
-listview { columns: 4; }
+listview     { columns: 5; }
+element      { padding: 20px 10px; }
+element-text { font: "FiraCode Nerd Font 26"; }
