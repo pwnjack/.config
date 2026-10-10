@@ -6,9 +6,9 @@
 # with color_theme = "pywal". The tracked btop/themes/pywal.theme is a symlink
 # to the file written here, so no tracked file changes at runtime.
 #
-# btop reads its theme once at startup and offers no reload signal, so a
-# running instance keeps the old colors until it is restarted. Nothing to
-# trigger here.
+# Running instances get SIGUSR2, btop's hot reload (the same as Ctrl+R): it
+# re-reads btop.conf and the themes and redraws. Options changed in btop's menu
+# but not yet saved (btop writes them on exit) revert, as they do with Ctrl+R.
 #
 # main_bg is emitted empty on purpose. btop treats an empty value as "use the
 # terminal default", which is what btop.conf's theme_background = false relies
@@ -84,6 +84,8 @@ _btop_gradient() {
     _btop_gradient download  "${wal[2]}" "${wal[4]}" "${wal[6]}"
     _btop_gradient upload    "${wal[3]}" "${wal[5]}" "${wal[7]}"
     _btop_gradient process   "${wal[1]}" "${wal[4]}" "${wal[7]}"
-} > "$theme_file"
+} > "$theme_file" || exit 1
+
+pkill -USR2 -x btop 2>/dev/null
 
 exit 0
