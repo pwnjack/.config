@@ -12,7 +12,7 @@ local colors = require("config.colors")
 require("config.hardware.monitor")
 require("config.hardware.input")
 
-require("config.setup.envvars")(apps.cursorTheme)
+require("config.setup.envvars")(apps)
 require("config.setup.autostart")(apps)
 
 require("config.looks.decor")(colors)

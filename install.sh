@@ -100,6 +100,8 @@ PACKAGES=(
     "thunar" "yazi" "btop" "bottom" "resources" "fastfetch" "cava"
     # checkupdates, for the waybar updates module
     "pacman-contrib"
+    # Opens Terminal=true desktop entries in options/terminal (scripts/settings/terminal.sh)
+    "xdg-terminal-exec"
     # Clipboard, screenshots, screen recording, media
     "cliphist" "wl-clipboard" "gpu-screen-recorder" "slurp" "playerctl"
     # Theming
@@ -248,6 +250,10 @@ fi
 # "Show in folder" everywhere goes through D-Bus; several file managers claim
 # that service, so point it at the one in options/filemanager.
 execute bash "$CONFIG_DIR/scripts/settings/file-manager.sh"
+
+# Desktop entries with Terminal=true (nvim, yazi, btop) open through
+# xdg-terminal-exec; point it at options/terminal.
+execute bash "$CONFIG_DIR/scripts/settings/terminal.sh"
 
 # Spotify (if spotify-launcher is installed) starts through a wrapper that
 # keeps SpotX applied across client updates; this points its desktop entry there.

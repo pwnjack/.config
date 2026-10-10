@@ -174,6 +174,18 @@ echo "HDMI-A-1" > ~/.config/options/mainmonitor
 nvim ~/.config/hypr/config/software/keybinds.lua
 ```
 
+### Default applications
+
+The settings panel's **Default Apps** page (`Super + I`) sets both kinds of
+default: the apps the keybindings launch (browser, terminal, editors, file
+manager), and what opens each kind of link and file (`mimeapps.list`). The
+first set also becomes `$BROWSER`, `$TERMINAL`, `$EDITOR` and `$VISUAL` for
+every program Hyprland starts, which is what git, `gh`, `sudoedit` and yazi
+read, and the terminal is also the one apps like Thunar open for nvim, yazi or
+btop (`xdg-terminal-exec`). Don't set these in `~/.profile`, and never set
+`TERM`: each terminal sets it itself. `./doctor.sh` warns when one of these
+defaults names a program that is not installed.
+
 ### User Preferences
 
 Simple text files in `~/.config/options/`:
@@ -372,6 +384,9 @@ What it checks:
   and granted as `sudo -l` reports
 - **SSH** — the agent socket is enabled and `~/.ssh/config` includes the
   tracked fragment
+- **Default applications** — `$BROWSER`, `$TERMINAL`, `$EDITOR` and `$VISUAL`,
+  the terminal `xdg-terminal-exec` opens, and each `mimeapps.list` association
+  whose app has a desktop entry here name a program that is installed
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 `core.hooksPath`) runs `shellcheck` on staged shell scripts and the test suites
@@ -428,7 +443,7 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
                zoxide git-delta shellcheck python nodejs gjs pacman-contrib \
                gpu-screen-recorder slurp headsetcontrol zip unzip \
-               gcc make pkgconf gtk3 json-glib ttf-firacode-nerd \
+               gcc make pkgconf gtk3 json-glib xdg-terminal-exec ttf-firacode-nerd \
                ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
                noto-fonts-emoji
 
@@ -438,6 +453,9 @@ paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources
 # Initialize pywal and render every component's cache file
 wal -i ~/.config/wallpapers/wall1.jpg
 ~/.config/scripts/theming/apply-wal.sh
+
+# Open Terminal=true apps (nvim, yazi, btop) in options/terminal
+~/.config/scripts/settings/terminal.sh
 
 # Render Waybar's generated includes and build the workspace module
 ~/.config/scripts/waybar/clock-format.sh --no-reload
