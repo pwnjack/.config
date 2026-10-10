@@ -4,6 +4,18 @@ Everything beyond the [README](../README.md): how the pieces fit, day-to-day use
 customization and maintenance. Keybindings have their own generated page,
 [keybindings.md](keybindings.md).
 
+Deep dives, one per component:
+
+- [Settings panel](settings-panel.md) (`Super + I`)
+- [Capture bar](capture.md): screenshots and screen recording (`Super + Shift + S`)
+- [Wallpaper carousel](wallpaper-carousel.md) (`Super + Ctrl + W`)
+- [Keybindings overlay](keybinds-overlay.md) (`Super + H`)
+- [Update card](updates.md): the bar's updates module
+- [Native workspace module](workspaces-native.md): the bar's workspace dots
+- [Spotify](spotify.md): SpotX ad-blocking and the pywal theme
+- [Virtual surround](virtual-surround.md): 7.1 for headphones
+- [WoW / Battle.net](gaming-wow.md): gaming setup notes
+
 ## Core Stack
 
 | Component | Application |
@@ -29,12 +41,14 @@ customization and maintenance. Keybindings have their own generated page,
 ├── waybar/        # Bar: config.jsonc, style.css, pywal colors
 ├── rofi/          # Launcher, power and clipboard menus
 ├── swaync/        # Notification daemon and sidebar
-├── quickshell/    # On-demand settings panel, wallpaper carousel, keybinds overlay
+├── quickshell/    # On-demand settings panel, wallpaper carousel, keybinds
+│                  # overlay, capture bar and update card
 ├── options/       # User preferences, one value per text file
 ├── scripts/       # doctor/, theming/, waybar/, hyprland/, hooks/, docs/
 ├── fish/ ghostty/ nvim/ btop/ cava/ starship/   # Per-app config
+├── spicetify/ vesktop/ zen/                     # Spotify, Discord, Zen themes
 ├── claude/ codex/ # Optional AI agent harness (see below)
-├── docs/          # This guide and deep dives (keybindings, gaming)
+├── docs/          # This guide and the deep dives listed below
 ├── test/          # Tests for the runner and the generated docs
 ├── install.sh     # Fresh-system setup
 ├── doctor.sh      # Health check (see Maintenance)
@@ -85,11 +99,12 @@ with an `_annotated` suffix. swappy reports success by closing, which means you
 can save *or* copy one annotation, not both.
 
 The **pending-updates module** sits between the disk and network readouts and
-appears only when repository or AUR updates exist — the module showing up is
-the notification. Left-click opens `scripts/settings/update.sh` in your
-configured terminal; right-click forces a refresh. The AUR command comes from
-`options/aurhelper`, and repository checks need `pacman-contrib`
-(`checkupdates`).
+appears only when repository, AUR or Flatpak updates exist — the module showing
+up is the notification. Left-click opens the update card, which lists what is
+pending and runs the repository and Flatpak update with a progress bar; AUR
+updates stay in the terminal. Right-click forces a refresh. The AUR command
+comes from `options/aurhelper`, and repository checks need `pacman-contrib`
+(`checkupdates`). See [updates.md](updates.md).
 
 The **night-light module** reflects the temperature `hyprsunset` has actually
 applied. Left-click (or `Super + Shift + D`) switches between warm and neutral
@@ -101,14 +116,14 @@ back to the schedule in `hypr/hyprsunset.conf` immediately.
 
 ### Idle efficiency
 
-The settings panel and wallpaper carousel are launched on demand and exit when
-closed, so neither keeps a UI runtime resident. Waybar uses signals for
-workspace changes, media controls, night-light actions, and completed updates;
-their intervals are safety fallbacks rather than the primary refresh path.
-Compared with the previous intervals, custom workspace, media, and GPU commands
-drop from about 92 launches per idle minute to 16. The GPU module also limits
-`nvidia-smi` to one probe every 30 seconds. See the component docs for measured
-panel and carousel memory.
+The settings panel, wallpaper carousel, keybindings overlay, capture bar and
+update card are launched on demand and exit when closed, so none keeps a UI
+runtime resident. The workspace dots are a native Waybar module that listens to
+Hyprland's event socket instead of polling. Media, night-light, recording and
+update modules refresh on a Waybar signal when something changes; their
+intervals are safety fallbacks rather than the primary refresh path. The GPU
+module limits `nvidia-smi` to one probe every 30 seconds. See the component
+docs for measured panel and carousel memory.
 
 ### Media
 
@@ -120,8 +135,9 @@ does the same from a terminal.
 # View clipboard history
 cliphist list | rofi -dmenu | cliphist decode | wl-copy
 
-# Or use keybind (check keybinds.lua)
 ```
+
+Or press `Super + C`.
 
 ## Configuration
 
@@ -191,8 +207,10 @@ Generate colors from any wallpaper:
 wal -i /path/to/wallpaper.jpg
 ```
 
-Colors automatically apply to Hyprland, Waybar, Rofi, SwayNC, ghostty, Thunar,
-cava, btop, Neovim and the Starship prompt. Open Neovim windows re-theme in
+Colors automatically apply to Hyprland, Hyprlock, Waybar, Rofi, SwayNC,
+Ghostty, Thunar, cava, btop, Neovim, the Starship prompt, Vesktop (Discord),
+Zen Browser and Spotify (through Spicetify; see [spotify.md](spotify.md)).
+Zen picks up a new palette at its next launch. Open Neovim windows re-theme in
 place unless you picked another colour scheme in them; before pywal has run
 once, Neovim uses LazyVim's tokyonight. fastfetch and bat (and so man pages)
 follow too, without rendering anything — they colour by ANSI index, and the
@@ -209,9 +227,11 @@ a themed component means adding one file and nothing else:
 ~/.config/scripts/theming/apply-wal.sh
 ```
 
-Two components are templated because neither program can include another file:
-edit `cava/config.in` and `starship/starship.toml.in`, never `cava/config` or
-`starship.toml` — those are symlinks to the rendered copies.
+Four components are templated: cava and Starship because neither program can
+include another file, and Vesktop and Zen because their themes are rendered
+CSS. Edit the `.in` file (`cava/config.in`, `starship/starship.toml.in`,
+`vesktop/pywal.theme.css.in`, `zen/userChrome.css.in`), never the rendered
+copy or the symlink that points to it.
 
 ### Visual Tweaks
 
@@ -219,7 +239,7 @@ edit `cava/config.in` and `starship/starship.toml.in`, never `cava/config` or
 ```lua
 hl.config("decoration", {
     rounding = 18,
-    blur = { enabled = true, size = 6, passes = 4 },
+    blur = { enabled = true, size = 4, passes = 2 },
 })
 ```
 
@@ -345,6 +365,13 @@ What it checks:
   installed
 - **Hyprctl Lua compatibility** — tracked runtime calls do not use the removed
   `hyprctl keyword` or positional dispatcher forms
+- **Workspaces** — the native Waybar workspace module is built and current
+- **Hardware** — tracked files name no connector this machine lacks
+- **Autostart** — per-user XDG autostart entries whose program is missing
+- **SDDM** and **updates** — the passwordless helpers are installed, current
+  and granted as `sudo -l` reports
+- **SSH** — the agent socket is enabled and `~/.ssh/config` includes the
+  tracked fragment
 
 A pre-commit hook (`scripts/hooks/pre-commit`, activated by `install.sh` via
 `core.hooksPath`) runs `shellcheck` on staged shell scripts and the test suites
@@ -399,7 +426,9 @@ sudo pacman -S hyprland hyprlock hypridle hyprpolkitagent hyprshot swappy \
                btop bottom fastfetch cava playerctl cliphist wl-clipboard \
                python-pywal qt5ct qt6ct nwg-look pavucontrol blueman \
                nm-connection-editor gnome-calculator jq ffmpeg inotify-tools \
-               zoxide git-delta shellcheck python nodejs gjs pacman-contrib ttf-firacode-nerd \
+               zoxide git-delta shellcheck python nodejs gjs pacman-contrib \
+               gpu-screen-recorder slurp headsetcontrol zip unzip \
+               gcc make pkgconf gtk3 json-glib ttf-firacode-nerd \
                ttf-cascadia-mono-nerd ttf-nerd-fonts-symbols noto-fonts \
                noto-fonts-emoji
 
@@ -409,6 +438,11 @@ paru -S zen-browser-bin vesktop waybar-weather awww waypaper aichat resources
 # Initialize pywal and render every component's cache file
 wal -i ~/.config/wallpapers/wall1.jpg
 ~/.config/scripts/theming/apply-wal.sh
+
+# Render Waybar's generated includes and build the workspace module
+~/.config/scripts/waybar/clock-format.sh --no-reload
+~/.config/scripts/waybar/bar-modes.sh --no-reload
+~/.config/scripts/waybar/build-workspaces.sh
 
 # Set fish as default shell (optional)
 chsh -s $(which fish)
@@ -444,9 +478,12 @@ not symlinks to another configuration tree.
 
 ## Troubleshooting
 
-**Colors not updating after wal:**
+**Colors not updating after `wal -i`:** plain `wal` recolours only the
+terminals; the rest of the desktop follows when the palette is fanned out.
+Changing the wallpaper with the carousel or `Super + Shift + W` does this for
+you; after a manual `wal -i`, run:
 ```bash
-hyprctl reload
+~/.config/scripts/theming/apply-wal.sh
 ```
 
 **Pywal symlink broken:**
@@ -454,10 +491,7 @@ hyprctl reload
 ~/.config/hypr/apply_wal_colors.sh
 ```
 
-**Waybar issues:**
-```bash
-killall waybar && waybar &
-```
+**Waybar issues:** press `Super + Shift + B` to restart the bar.
 
 **Lock screen not working:**
 ```bash
@@ -471,20 +505,18 @@ killall swaync && swaync &
 
 **Colors look wrong everywhere:**
 ```bash
-wal -i ~/.config/wallpapers/wall1.jpg   # regenerate the palette
-~/.config/hypr/apply_wal_colors.sh      # re-render Hyprland + Hyprlock colors
-hyprctl reload
+wal -i ~/.config/wallpapers/wall1.jpg     # regenerate the palette
+~/.config/scripts/theming/apply-wal.sh    # re-render every component
 ```
-btop has no reload signal, so a running instance keeps the old colors until
-you restart it.
+Running Ghostty and btop windows reload the new palette by themselves.
 
 **Logs:**
 ```bash
 # Hyprland log
-cat /tmp/hypr/$(/usr/bin/ls -t /tmp/hypr | head -n 1)/hyprland.log
+cat "$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprland.log"
 
-# Systemd user services
-systemctl --user status hypridle
+# User services (ssh-agent, PipeWire, …) this boot
+journalctl --user -b
 ```
 
 More help: the [Hyprland wiki](https://wiki.hyprland.org).

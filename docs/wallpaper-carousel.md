@@ -51,8 +51,8 @@ but no upstream code was copied because reuse permission was not established.
   verifies the image on every reported output and its saved choice in Waypaper,
   then runs the existing `wall.sh` synchronously once. Waypaper retains its
   transition/fill settings and saved selection for login restoration.
-- `wall.sh`, the theme fan-out, the AGS panel, random selection, and the SDDM
-  watcher keep their existing implementations. The carousel's lock protects its
+- `wall.sh`, the theme fan-out, random selection, and the SDDM watcher
+  keep their existing implementations. The carousel's lock protects its
   submissions only. An external random/Waypaper action can supersede one;
   `wall.sh` continues to read the latest awww state after taking its theme lock.
 - Image delegates exist only around the viewport, with one card-width of extra

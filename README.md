@@ -27,6 +27,21 @@ SSH agent, so your key's passphrase is asked once per login. CachyOS ships the
 When it finishes, log out and choose **Hyprland** at your login screen — or, if
 you have no login manager, type `start-hyprland` in the console.
 
+## What's inside
+
+- **Colours that follow the wallpaper**: Hyprland, Hyprlock, Waybar, Rofi,
+  notifications, Ghostty, Neovim, btop, Discord (Vesktop), Zen Browser and
+  Spotify all re-theme when the wallpaper changes, open windows included
+  (Zen at its next launch).
+- **Settings panel** for displays, sound, network, bar layout, power, date and
+  region, startup apps and more, without editing config files.
+- **Capture bar** for screenshots and screen recording, with annotation.
+- **Wallpaper carousel**, a searchable **keybindings overlay**, and an
+  **update card** that runs system updates from the bar.
+- **Native workspace dots** on the bar, with smooth animation.
+- **`./doctor.sh`** checks the live system against the config and tells you
+  what is broken and how to fix it.
+
 ## First steps
 
 | Keys | Does |
@@ -55,7 +70,8 @@ Each wallpaper re-themes the whole desktop: bar, borders, terminal and overlays.
 
 ## More
 
-- [Guide](docs/guide.md) — customization, troubleshooting, maintenance
+- [Guide](docs/guide.md) — customization, troubleshooting, maintenance, and
+  links to a deep dive for each component
 - [All keybindings](docs/keybindings.md)
 
 ## License
