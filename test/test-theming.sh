@@ -33,6 +33,7 @@ declare -A outputs=(
     [btop]=btop.theme
     [waybar]=colors-waybar.css
     [hypr]=colors-hyprland.lua
+    [vesktop]=vesktop.theme.css
 )
 
 # shellcheck source=scripts/theming/palette.sh
