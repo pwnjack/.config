@@ -1,0 +1,67 @@
+/*
+ * Zen's browser UI from the current wallpaper's pywal palette. Generated from
+ * zen/userChrome.css.in in the dotfiles; edit that file, not this one. Zen
+ * reads it at startup only, so a new palette shows from the next launch.
+ *
+ * Surfaces and the accent follow the palette; text never does. Zen normally
+ * picks its toolbar text to suit the workspace gradient, which this replaces,
+ * so the text is pinned to the white Zen itself uses in dark mode.
+ *
+ * The base uses the Vesktop theme's clamp, in OKLCH: lightness between 0.21
+ * and 0.26 with a small chroma cap, so no palette lifts the surfaces out of the
+ * dark range that white text is readable on, and a near-black palette still
+ * shows its layers. The accent sits lighter than Vesktop's (0.55-0.7), because
+ * here it marks the selected tab and focus rings on those dark surfaces rather
+ * than filling buttons under white labels.
+ *
+ * !important throughout: Zen's gradient generator writes these variables as
+ * inline styles, which only an important rule outranks. It writes the accent
+ * and text colours on the root, but the background on its own background
+ * elements, so those need a rule of their own: one on :root would only be
+ * inherited, and an element's inline value beats an inherited one.
+ *
+ * Private and unsynced windows keep Zen's own look, so they stay recognisable.
+ */
+
+:root:not([zen-private-window="true"], [zen-unsynced-window="true"]) {
+    --pywal-base: oklch(from @color0@ clamp(0.21, l, 0.26) min(c, 0.04) h);
+    --pywal-accent: oklch(from @color4@ clamp(0.55, l, 0.7) min(c, 0.16) h);
+
+    color-scheme: dark !important;
+    --toolbar-color-scheme: dark !important;
+    --toolbox-textcolor: rgba(255, 255, 255, 0.9) !important;
+
+    /* Zen mixes its derived colours from these: the primary colour, and the
+       dark branding background that most of them blend toward. */
+    --zen-primary-color: var(--pywal-accent) !important;
+    --zen-branding-dark: oklch(from var(--pywal-base) calc(l - 0.04) c h) !important;
+
+    --zen-themed-toolbar-bg-transparent: var(--pywal-base) !important;
+    --zen-dialog-background: oklch(from var(--pywal-base) calc(l + 0.02) c h) !important;
+    --arrowpanel-background: oklch(from var(--pywal-base) calc(l + 0.02) c h) !important;
+
+    /*
+     * The background is two stacked layers cross-faded by
+     * --zen-background-opacity: the current gradient and the previous one
+     * (-old). Both get the base, and the fade is pinned, so the workspace
+     * gradient can never show through.
+     */
+    & .zen-browser-generic-background {
+        --zen-main-browser-background: var(--pywal-base) !important;
+        --zen-main-browser-background-toolbar: var(--pywal-base) !important;
+        --zen-main-browser-background-old: var(--pywal-base) !important;
+        --zen-main-browser-background-toolbar-old: var(--pywal-base) !important;
+        --zen-background-opacity: 1 !important;
+    }
+
+    /* The open address bar paints from these, set on the element itself. The
+       transparent one is Zen's acrylic variant: Zen defines it only under this
+       pref, and the bar falls back to the base when it is undefined. */
+    & .urlbar-background {
+        --zen-urlbar-background-base: oklch(from var(--pywal-base) calc(l + 0.03) c h) !important;
+
+        @media -moz-pref("zen.theme.acrylic-urlbar") {
+            --zen-urlbar-background-transparent: oklch(from var(--pywal-base) calc(l + 0.03) c h / 0.92) !important;
+        }
+    }
+}

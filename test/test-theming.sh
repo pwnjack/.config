@@ -14,7 +14,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/bin" "$tmp/cache"
+mkdir -p "$tmp/bin" "$tmp/cache" "$tmp/home"
 for stub in pkill hyprctl; do
     printf '#!/bin/sh\nexit 1\n' > "$tmp/bin/$stub"
     chmod +x "$tmp/bin/$stub"
@@ -34,6 +34,7 @@ declare -A outputs=(
     [waybar]=colors-waybar.css
     [hypr]=colors-hyprland.lua
     [vesktop]=vesktop.theme.css
+    [zen]=zen-userChrome.css
 )
 
 # shellcheck source=scripts/theming/palette.sh
@@ -51,7 +52,9 @@ uses_palette() {
 
 for component in "${!outputs[@]}"; do
     out="$tmp/cache/wal/${outputs[$component]}"
-    if ! PATH="$tmp/bin:$PATH" XDG_CONFIG_HOME="$ROOT" XDG_CACHE_HOME="$tmp/cache" \
+    # HOME too: zen's script links into the browser profile under ~/.zen, and
+    # must never point a real profile at this temporary cache.
+    if ! PATH="$tmp/bin:$PATH" HOME="$tmp/home" XDG_CONFIG_HOME="$ROOT" XDG_CACHE_HOME="$tmp/cache" \
         "$ROOT/$component/apply_wal_colors.sh" >/dev/null 2>&1; then
         fail "$component/apply_wal_colors.sh exits nonzero with no pywal cache"
     elif [ ! -s "$out" ]; then
