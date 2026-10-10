@@ -1,0 +1,14 @@
+/*
+ * The Pywal Spicetify theme: Spotify's stock layout, coloured from color.ini,
+ * which spicetify/apply_wal_colors.sh renders from the wallpaper.
+ *
+ * Kept deliberately small. Spotify renames its generated class names between
+ * releases, so a rule aimed at one stops matching without any error, as the
+ * Tokyo theme's seek animation and volume bar did. Only selectors Spotify
+ * writes by hand belong here.
+ */
+
+/* Spicetify's own update nag, matched by its label. */
+button[aria-label="Update Spicetify"] {
+    display: none !important;
+}

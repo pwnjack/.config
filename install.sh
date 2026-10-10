@@ -255,6 +255,12 @@ if ! execute bash "$CONFIG_DIR/scripts/spotify/setup.sh"; then
     warning "Spotify desktop entry not set up; run scripts/spotify/setup.sh to retry"
 fi
 
+# With Spicetify set up, select the pywal-coloured theme and its live-recolour
+# extension (Spicetify's own config is per-machine and untracked).
+if ! execute bash "$CONFIG_DIR/scripts/spotify/spicetify-theme.sh"; then
+    warning "Spicetify theme not selected; run scripts/spotify/spicetify-theme.sh to retry"
+fi
+
 if ! execute bash "$CONFIG_DIR/scripts/waybar/clock-format.sh" --no-reload; then
     warning "Could not render the Waybar clock format"
 fi
