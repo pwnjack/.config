@@ -43,6 +43,7 @@
 !/starship/
 !/starship.toml
 !/vesktop/
+!/zen/
 
 # Shell, terminal, editor, tools
 !/fish/
