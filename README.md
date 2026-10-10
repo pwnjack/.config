@@ -6,7 +6,7 @@ notifications, terminal and lock screen all re-theme themselves.
 
 ![Arch](https://img.shields.io/badge/Arch_Linux-CachyOS-1793D1)
 ![Hyprland](https://img.shields.io/badge/Hyprland-0.55+-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-GPL--3.0--or--later-blue)
 
 ## Install
 
@@ -60,4 +60,6 @@ Each wallpaper re-themes the whole desktop: bar, borders, terminal and overlays.
 
 ## License
 
-[MIT](LICENSE)
+Copyright © 2026 pwnjack. Licensed under the GNU General Public License,
+version 3 or (at your option) any later version; see [LICENSE](LICENSE).
+Vendored third-party files keep their own notices.
