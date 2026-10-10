@@ -6,7 +6,8 @@
 #
 # swaync only reloads a live consumer and renders nothing, so it is not run;
 # nvim is the same kind and is tested separately below.
-# pkill and hyprctl are stubbed so no running cava or Hyprland is touched.
+# pkill, hyprctl and spicetify are stubbed so no running cava, Hyprland or
+# Spotify is touched.
 #
 
 set -uo pipefail
@@ -15,7 +16,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/bin" "$tmp/cache" "$tmp/home"
-for stub in pkill hyprctl; do
+for stub in pkill hyprctl spicetify; do
     printf '#!/bin/sh\nexit 1\n' > "$tmp/bin/$stub"
     chmod +x "$tmp/bin/$stub"
 done
@@ -35,6 +36,7 @@ declare -A outputs=(
     [hypr]=colors-hyprland.lua
     [vesktop]=vesktop.theme.css
     [zen]=zen-userChrome.css
+    [spicetify]=spicetify-color.ini
 )
 
 # shellcheck source=scripts/theming/palette.sh
@@ -76,6 +78,21 @@ if [ "$(cat "$tmp/rendered")" = "$expected" ]; then
     pass "wal_render substitutes prefix-overlapping tokens correctly"
 else
     fail "wal_render produced '$(cat "$tmp/rendered")', expected '$expected'"
+fi
+
+# wal_oklch is the hex form of the CSS themes' OKLCH clamp: unclamped it must
+# round-trip, and clamped it must hold a light colour inside the dark band.
+if [ "$(wal_oklch '#6097A1' 0 1 1)" = "#6097a1" ] && [ "$(wal_oklch '#05090c' 0 1 1)" = "#05090c" ]; then
+    pass "wal_oklch round-trips a colour it does not clamp"
+else
+    fail "wal_oklch changed an unclamped colour"
+fi
+if [ "$(wal_oklch '#ffffff' 0.21 0.26 0.04)" = "#242424" ] \
+    && [ "$(wal_oklch '#05090c' 0.21 0.26 0.04)" = "#14191d" ] \
+    && [ "$(wal_oklch '#05090c' 0.21 0.26 0.04 -0.04)" = "#0b1013" ]; then
+    pass "wal_oklch clamps lightness and chroma, then applies the offset"
+else
+    fail "wal_oklch clamped to unexpected values"
 fi
 
 # nvim renders nothing (pywal writes colors-wal.vim itself); its script only

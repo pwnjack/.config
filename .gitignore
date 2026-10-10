@@ -44,6 +44,7 @@
 !/starship.toml
 !/vesktop/
 !/zen/
+!/spicetify/
 
 # Shell, terminal, editor, tools
 !/fish/
@@ -87,6 +88,18 @@ vesktop/*
 !vesktop/themes/
 vesktop/themes/*
 !vesktop/themes/pywal.theme.css
+
+# Spicetify's config, backups and downloaded themes; only the Pywal theme,
+# its extension and the theming hook are ours
+spicetify/*
+!spicetify/apply_wal_colors.sh
+!spicetify/test/
+!spicetify/Themes/
+spicetify/Themes/*
+!spicetify/Themes/Pywal/
+!spicetify/Extensions/
+spicetify/Extensions/*
+!spicetify/Extensions/pywal-live.js
 
 # Plugin lock and LazyVim's own state file, both rewritten by Neovim
 nvim/lazy-lock.json

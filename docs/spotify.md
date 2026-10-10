@@ -112,3 +112,24 @@ cat ~/.local/state/spotify/patch.log
 To undo: `rm ~/.local/share/applications/spotify-launcher.desktop`, then
 `spotify-launcher --force-update` for a stock client (and
 `spicetify backup apply` to keep the theme).
+
+## Theme
+
+Spicetify draws Spotify with the tracked **Pywal** theme
+(`spicetify/Themes/Pywal/`), coloured from the wallpaper like the rest of the
+desktop. `scripts/spotify/spicetify-theme.sh` selects it, with the
+`pywal-live.js` extension, in Spicetify's own config; the first time, run
+`spicetify apply` and restart Spotify once.
+
+On every wallpaper change `spicetify/apply_wal_colors.sh` renders the colour
+scheme and runs `spicetify -n refresh`, and the extension swaps the new colours
+into the open window within a few seconds. The refresh never runs alongside
+this wrapper's patch run: it takes the same lock, and when a patch holds it, a
+detached waiter refreshes as soon as the patch is done (the patch may already
+have applied the previous colours).
+
+The theme keeps Spotify's stock layout on purpose. Rules aimed at Spotify's
+generated class names stop matching when a release renames them, silently:
+that is how the Tokyo theme previously used here lost its "no animation while
+seeking" rule, so every seek slid across a full second.
+
