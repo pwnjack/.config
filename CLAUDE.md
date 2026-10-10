@@ -376,6 +376,28 @@ baseline and the historical Faugus recipe as prose — including which flag
 fixed what, and which tuning ideas were measured and rejected (gamemode buys
 `nice -4` here and nothing else). Don't re-derive that survey.
 
+### Default applications
+
+Four mechanisms, one source each. **`mimeapps.list`** (tracked, written by the
+panel's Default Apps page through `xdg-mime`) decides what opens links and files
+for `xdg-open`, GIO, portals and file managers. **Environment variables**
+`BROWSER`, `TERMINAL`, `EDITOR` and `VISUAL` are exported by
+`hypr/config/setup/envvars.lua` from `options/` (via `apptype.lua`), with
+`hl.env`'s D-Bus flag so systemd units and D-Bus-activated apps get them; a
+panel change reloads Hyprland, so new programs see it at once. Nothing in
+`~/.profile` is needed, and a distro default there once left `BROWSER=firefox`
+with Firefox gone (gh failed to open its login page). **xdg-terminal-exec**
+(package, in `install.sh`) opens desktop entries with `Terminal=true` for GLib
+apps and uwsm; `scripts/settings/terminal.sh` (install.sh, and the panel's
+Terminal row) writes the untracked `~/.config/xdg-terminals.list` naming the
+TerminalEmulator entry whose `Exec` runs `options/terminal`, and leaves a
+hand-written list alone. **D-Bus `FileManager1`** is `file-manager.sh`'s (see
+Capture bar). `TERM` is never set by config: each terminal sets it.
+`check_defaults` warns when a variable in this shell or the systemd manager,
+xdg-terminal-exec, or a `mimeapps.list` entry whose desktop file exists names a
+program that is not installed; associations for apps this machine never had are
+skipped, since lookups fall back past them.
+
 ### User Preferences (`options/`)
 
 Simple text files (one value per file) that scripts read at runtime: `browser`, `terminal`, `editor`, `codeeditor`, `filemanager`, `font`, `launchertype`, `mainmonitor`, `cursortheme`, `capture-freeze`, `capture-shot-target`, `capture-rec-target`, `capture-delay`, `capture-annotate`, `capture-audio`, `capture-mic` (the capture strip's, untracked: a missing file is the default), `clock`, and the settings panel's Bar page modes `bar-cpu`, `bar-memory`, `bar-gpu`, `bar-disk`, `bar-network`, `bar-updates` and layout `bar-position`, `bar-style`, `bar-opacity`, `bar-border`, `bar-output` (empty = every monitor), `clock-seconds`, `bar-workspaces` (see `docs/settings-panel.md`). `wallpaper` is a symlink to `~/.cache/current_wallpaper`, maintained by `wall.sh`. Scripts read these with `cat ~/.config/options/<name>` and use the value as-is. `mainmonitor` and `bar-output` are the preferences that are legitimately empty: empty means "no preference" (for `bar-output`, every monitor), and every consumer resolves it itself. hyprlock draws on every monitor via `$monitor =` in `hardware/primary.conf`; `wall.sh`, `restore-wallpaper.sh`, and both SDDM scripts fall back to whichever monitor awww reports first. Nothing guesses a connector name: a tracked default such as `DP-1` or `eDP-1` is wrong on the next machine, which `scripts/doctor/checks/hardware.sh` now guards. `hypr/config/hardware/monitor.lua` is host-neutral for the same reason (per-machine rules live in the untracked `~/.local/state/hypr/monitors.lua`, written by the settings panel's Displays page and loaded if present) and uses `highres@highrr`, not `preferred` or bare `highrr`: measured on this panel, `preferred` selected 2560x1440@59.951, while applying the combined form from 1024x768@60 selected 2560x1440@143.998.
@@ -466,12 +488,13 @@ scripts/doctor/
 │   ├── workspaces.sh        # check_workspaces — placed cffi/* modules: library present and current
 │   ├── hyprctl.sh            # check_hyprctl    — removed runtime CLI forms under the Lua provider
 │   ├── hardware.sh          # check_hardware   — /sys/class/drm present set vs tracked files
-│   └── ssh.sh               # check_ssh        — from hypr/config/setup/envvars.lua and scripts/ssh/setup.sh
+│   ├── ssh.sh               # check_ssh        — from hypr/config/setup/envvars.lua and scripts/ssh/setup.sh
+│   └── defaults.sh          # check_defaults   — from envvars.lua's hl.env(apps.*) lines, options/, mimeapps.list
 └── test/
     ├── run-tests.sh         # Dependency-free harness; auto-discovers test-*.sh
     └── test-*.sh            # One per module; sourced into one shared shell
 ```
 
-All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_wsm_`, `_hctl_`, `_hw_`, `_as_`, `_ssh_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`, `$HOME` via `_wsm_home`, the build script's `--check` via `_wsm_current`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
+All modules are sourced into a single shell, so: one public `check_<name>` function each, private helpers prefixed (`_sym_`, `_ref_`, `_bin_`, `_svc_`, `_sddm_`, `_upd_`, `_way_`, `_wsm_`, `_hctl_`, `_hw_`, `_as_`, `_ssh_`, `_def_`), and reserved names (`group ok err warn note summary doctor_reset doctor_q doctor_require_repo _finding`) are never redefined. Host probes (`pgrep`, `pacman`, `busctl`, `command -v` via `_way_have_cmd`, `/sys/class/drm` via `_hw_present_outputs`, `$HOME` via `_wsm_home`, the build script's `--check` via `_wsm_current`) each live in their own tiny function so tests can stub them — or aim them at a fixture, which is what `DOCTOR_DRM_SYSFS` does.
 
 `ok` is the all-clear and nothing else — print it only when a check found nothing at all, never as a consolation summary. Every path in a fix hint goes through `doctor_q`, and hints never contain `<placeholder>` text (the shell parses `<foo>` as a redirection).

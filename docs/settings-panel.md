@@ -86,7 +86,10 @@ wallpaper carousel remains a separate application with its existing lifecycle.
   (checked against `localectl list-x11-keymap-*`, because a rejected keymap
   leaves Hyprland on the old one with only a log line), `font` (`fc-list`) and
   `command` (on `PATH`). `optional` rows accept an empty value; app rows with
-  `reload` reload Hyprland, which reads `options/` at parse time. A layout
+  `reload` reload Hyprland, which reads `options/` at parse time (and exports
+  `BROWSER`, `TERMINAL`, `EDITOR` and `VISUAL` from them). The File manager row
+  also runs `scripts/settings/file-manager.sh` and the Terminal row
+  `scripts/settings/terminal.sh` (xdg-terminal-exec's list). A layout
   reset is refused while a variant override exists.
 - Sources: `gtk` writes gsettings, and for rows that declare an `ini` key also
   both tracked `settings.ini` files (GTK 3 on Wayland reads some keys from
