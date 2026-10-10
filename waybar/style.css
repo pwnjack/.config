@@ -61,13 +61,13 @@
 
    The bar's background, border and radius are not set here: bar.css
    (rendered by scripts/waybar/bar-modes.sh from the Bar page's options) is
-   imported after colors.css and owns them; a rule here would beat it.
+   imported after the pywal colours and owns them; a rule here would beat it.
 
    Colour is pywal-driven throughout. The two alert states are the
    deliberate exception and are marked where they appear.
    ══════════════════════════════════════════════════════════════════════ */
 
-@import "colors.css";
+@import "../../.cache/wal/colors-waybar.css";
 @import "bar.css";
 
 * {

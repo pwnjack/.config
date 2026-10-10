@@ -71,6 +71,8 @@ Wallpaper image -> `wal -i` -> `scripts/theming/apply-wal.sh` fans the palette o
 
 Components that need more than a plain include own a `<component>/apply_wal_colors.sh`. `scripts/theming/apply-wal.sh` is the driver: it **globs** for those scripts rather than listing them, so adding a themed component is one new file — no edit to the driver, to `wall.sh`, or to `install.sh`. Both of those call the driver and name no component.
 
+Waybar is never reloaded for a new palette: `reload_style_on_change` restyles it in place when `~/.cache/wal/colors-waybar.css` changes. A full reload rebuilds the bar, which drops its reserved zone and resizes every tiled window for a moment (ncurses apps such as tty-clock see a SIGWINCH). `waybar/style.css` imports that file by relative path, as `swaync/style.css` does, not through a symlink: Waybar 0.15's watcher resolves a symlinked import against its own working directory and silently watches nothing.
+
 `wall.sh` holds a cache-backed `flock` while generating and applying a palette,
 reads the current selection after acquiring it, and reports generation or
 component failures without announcing success. The fan-out driver attempts all

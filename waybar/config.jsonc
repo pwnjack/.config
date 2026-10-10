@@ -13,6 +13,10 @@
 
   // General Settings
   "layer": "bottom",
+  // Restyle in place when style.css or an import changes, so a new palette
+  // never rebuilds the bar. Waybar resolves a symlinked import against its own
+  // working directory, so style.css imports the cache file by path instead.
+  "reload_style_on_change": true,
   // position, margin-* and output live in bar.jsonc (Bar page); the main
   // config would win over the include key by key.
   "spacing": 0,

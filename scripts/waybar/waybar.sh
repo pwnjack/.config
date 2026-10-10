@@ -33,11 +33,12 @@ restore_tray_items() {
 }
 
 if ! pkill -USR2 -x waybar 2>/dev/null; then
-    # style.css imports the rendered bar.css, and a missing import is a
-    # stylesheet error Waybar exits on -- not a fallback. Render both includes
-    # before every start so a cleared ~/.local/state recovers here, and the bar
-    # starts from the current options.
+    # style.css imports the rendered bar.css and the pywal colours, and a
+    # missing import is a stylesheet error Waybar exits on -- not a fallback.
+    # Render every include before each start so a cleared ~/.local/state or
+    # ~/.cache recovers here, and the bar starts from the current options.
     script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    bash "$script_dir/../../waybar/apply_wal_colors.sh" || true
     bash "$script_dir/bar-modes.sh" --no-reload || true
     bash "$script_dir/clock-format.sh" --no-reload || true
     waybar &

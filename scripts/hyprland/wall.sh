@@ -46,9 +46,9 @@ printf '* { wallpaper: url("%s", width); }\n' "$escaped" > "$cache_dir/wal/rofi-
 failed=0
 "$config_dir/scripts/theming/apply-wal.sh" 9>&- || failed=1
 
-if [ -x "$config_dir/scripts/waybar/waybar.sh" ]; then
-    "$config_dir/scripts/waybar/waybar.sh" 9>&- || failed=1
-fi
+# Waybar restyles itself when its colours file changes (reload_style_on_change).
+# A full reload would rebuild the bar and briefly drop its reserved zone,
+# resizing every tiled window.
 # The settings panel reads the palette on demand; it has no resident consumer.
 
 [ "$failed" -eq 0 ] || fail "Colors were generated, but some components failed to update. See the wallpaper command's stderr for details."
