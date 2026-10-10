@@ -75,7 +75,16 @@ Waybar is never reloaded for a new palette: `reload_style_on_change` restyles it
 
 `wall.sh` holds a cache-backed `flock` while generating and applying a palette,
 reads the current selection after acquiring it, and reports generation or
-component failures without announcing success. The fan-out driver attempts all
+component failures; success posts no notification, since a toast would land
+on the transition. It generates into a staging
+cache (`PYWAL_CACHE_DIR=~/.cache/wal/next`, schemes shared by symlink) while
+awww's transition plays, and publishes with `wal --theme` 60% of the way
+through the transition Waypaper configured (`publish_delay_ns`) (`awww img` returns as it starts; Waypaper saves its
+config just after, which dates the newest change). Generating in place would
+publish at once, because consumers watch the cache. A wallpaper replaced during
+the wait is staged again; a run that queued behind one which already published
+the same palette exits quietly. `stat` and `awk` run under `LC_ALL=C`, because a
+comma-decimal locale (this machine's) changes their decimal point. The fan-out driver attempts all
 components and returns nonzero on partial failure; `install.sh` handles that
 status as a warning.
 
