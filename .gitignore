@@ -42,6 +42,7 @@
 !/cava/
 !/starship/
 !/starship.toml
+!/vesktop/
 
 # Shell, terminal, editor, tools
 !/fish/
@@ -76,6 +77,15 @@ aichat/models-override.yaml
 # Thunar's own files; only the theming hook is ours
 Thunar/*
 !Thunar/apply_wal_colors.sh
+
+# Vesktop's own state; only the theming hook and its theme are ours
+vesktop/*
+!vesktop/apply_wal_colors.sh
+!vesktop/pywal.theme.css.in
+!vesktop/test/
+!vesktop/themes/
+vesktop/themes/*
+!vesktop/themes/pywal.theme.css
 
 # Plugin lock and LazyVim's own state file, both rewritten by Neovim
 nvim/lazy-lock.json

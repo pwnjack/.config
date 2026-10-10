@@ -1,0 +1,73 @@
+/**
+ * @name Pywal
+ * @description Discord's surfaces from the current wallpaper's pywal palette. Generated from vesktop/pywal.theme.css.in in the dotfiles; edit that file, not this one.
+ * @version 1.0.0
+ */
+
+/*
+ * Surfaces only. Discord keeps its own text colours, so every pairing stays
+ * one Discord designed for its dark theme.
+ *
+ * That only holds while the surfaces stay inside the range Discord's own dark
+ * themes use, and a wallpaper palette promises nothing about lightness. So the
+ * base is clamped in OKLCH, with a small chroma cap that keeps a saturated
+ * colour0 a tint rather than a colour:
+ *
+ *   - at most 0.26, so every surface below stays under the 0.32 of Discord's
+ *     classic dark chat, which the same text is drawn for (background-accent,
+ *     the scrollbar grey, reaches 0.34);
+ *   - at least 0.21, so a near-black palette still gives Discord's layering
+ *     (its dark theme: rail 0.18, chat 0.22) instead of one flat black.
+ *
+ * The rail and channel list paint base-lowest and the chat base-lower, which
+ * is why the ladder is anchored on base-lower. The accent is clamped to
+ * Discord's own brand lightness, which its white button labels are drawn for.
+ *
+ * Dark theme only: the light theme draws dark text, which these surfaces would
+ * swallow.
+ *
+ * !important because Discord sets the same variables on equally specific
+ * selectors, and load order between the two is not guaranteed.
+ */
+
+.visual-refresh.theme-dark,
+.visual-refresh .theme-dark {
+    --pywal-base: oklch(from @color0@ clamp(0.21, l, 0.26) min(c, 0.04) h);
+    --pywal-accent: oklch(from @color4@ clamp(0.45, l, 0.58) min(c, 0.18) h);
+
+    --background-base-lowest: oklch(from var(--pywal-base) calc(l - 0.04) c h) !important;
+    --background-base-lower: var(--pywal-base) !important;
+    --background-base-low: oklch(from var(--pywal-base) calc(l + 0.015) c h) !important;
+    --background-surface-high: oklch(from var(--pywal-base) calc(l + 0.025) c h) !important;
+    --background-surface-higher: oklch(from var(--pywal-base) calc(l + 0.04) c h) !important;
+    --background-surface-highest: oklch(from var(--pywal-base) calc(l + 0.055) c h) !important;
+    --background-accent: oklch(from var(--pywal-base) calc(l + 0.08) c h) !important;
+    --background-secondary-alt: var(--background-base-low) !important;
+    --background-gradient-highest: var(--background-base-low) !important;
+    --bg-surface-raised: var(--background-base-lower) !important;
+
+    --chat-background: var(--background-surface-high) !important;
+    --chat-background-default: var(--background-surface-high) !important;
+    --chat-border: var(--background-base-lowest) !important;
+    --channeltextarea-background: var(--background-base-lower) !important;
+    --input-background-default: var(--background-base-lowest) !important;
+    --background-code: var(--background-base-lower) !important;
+    --modal-background: var(--background-surface-high) !important;
+    --modal-footer-background: var(--background-surface-high) !important;
+    --card-background-default: var(--background-surface-highest) !important;
+
+    --border-subtle: var(--background-surface-high) !important;
+    --border-normal: var(--background-base-lowest) !important;
+    --border-strong: var(--background-base-lower) !important;
+    --border-muted: var(--background-surface-highest) !important;
+
+    --scrollbar-auto-track: var(--background-base-lowest) !important;
+    --scrollbar-auto-thumb: var(--background-accent) !important;
+    --scrollbar-thin-thumb: var(--background-accent) !important;
+    --scrollbar-auto-scrollbar-color-track: var(--background-base-lowest) !important;
+    --scrollbar-auto-scrollbar-color-thumb: var(--background-accent) !important;
+
+    --brand-500: var(--pywal-accent) !important;
+    --brand-560: oklch(from var(--pywal-accent) calc(l - 0.05) c h) !important;
+    --mention-background: oklch(from var(--pywal-accent) l c h / 0.3) !important;
+}
