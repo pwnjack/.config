@@ -25,13 +25,33 @@ with tempfile.TemporaryDirectory() as tmp:
         path.write_text('#!/bin/bash\nset -eu\n' + text)
         path.chmod(0o755)
     executable(bins / 'awww', 'printf ": DP-1: image: %s\\n" "$(cat "$FIXTURE/selected")"\n')
+    # Staging (-i) writes the scheme into PYWAL_CACHE_DIR; publishing
+    # (--theme) renders it into the real cache. Both are logged with times.
     executable(bins / 'wal', '''
+img= theme=
+while [ $# -gt 0 ]; do
+    case "$1" in -i) img=$2; shift ;; --theme) theme=$2; shift ;; esac
+    shift
+done
+stamp() { echo "$1 $(date +%s%N)" >> "$FIXTURE/times"; }
 mkdir "$FIXTURE/busy" || { echo overlap >> "$FIXTURE/events"; exit 1; }
 trap 'rmdir "$FIXTURE/busy"' EXIT
-echo "start $3" >> "$FIXTURE/events"
-sleep 0.2
-[ "${FAIL_WAL:-0}" = 0 ] || exit 1
-echo "end $3" >> "$FIXTURE/events"
+if [ -n "$img" ]; then
+    [ -n "${PYWAL_CACHE_DIR:-}" ] || { echo unstaged >> "$FIXTURE/events"; exit 1; }
+    echo "start $img" >> "$FIXTURE/events"
+    sleep 0.2
+    [ "${FAIL_WAL:-0}" = 0 ] || exit 1
+    mkdir -p "$PYWAL_CACHE_DIR"
+    printf '{"wallpaper": "%s"}\\n' "$img" > "$PYWAL_CACHE_DIR/colors.json"
+    echo "end $img" >> "$FIXTURE/events"
+    stamp staged
+else
+    [ -z "${PYWAL_CACHE_DIR:-}" ] || { echo "publish into stage" >> "$FIXTURE/events"; exit 1; }
+    echo "publish $(sed 's/.*"wallpaper": "\\([^"]*\\)".*/\\1/' "$theme")" >> "$FIXTURE/events"
+    mkdir -p "$XDG_CACHE_HOME/wal"
+    cp "$theme" "$XDG_CACHE_HOME/wal/colors.json"
+    stamp published
+fi
 ''')
     executable(bins / 'notify-send', 'printf "%s\\n" "$*" >> "$FIXTURE/notices"\n')
     driver = config / 'scripts/theming/apply-wal.sh'
@@ -63,9 +83,77 @@ echo "end $3" >> "$FIXTURE/events"
         process.communicate(timeout=10)
         assert process.returncode == 0
     lines = events.read_text().splitlines()
-    assert lines == [f'start {first}', f'end {first}', 'apply', f'start {second}', f'end {second}', 'apply'], lines
+    assert lines == [f'start {first}', f'end {first}', f'publish {first}', 'apply',
+                     f'start {second}', f'end {second}', f'publish {second}', 'apply'], lines
     assert (cache / 'current_wallpaper').resolve() == second
     print('ok: overlapping changes serialize and the latest wallpaper wins')
+    # Waypaper drives a 2 s awww transition: the palette is staged at once and
+    # published 60% of the way through it (1.2 s).
+    (config / 'waypaper').mkdir()
+    ini = config / 'waypaper/config.ini'
+    def waypaper(kind, duration):
+        ini.write_text(f'[Settings]\nbackend = awww\nswww_transition_type = {kind}\n'
+                       f'swww_transition_duration = {duration}\n')
+    def times():
+        return {k: int(v) for k, v in (l.split() for l in (base / 'times').read_text().splitlines())}
+    waypaper('wipe', 2)
+    events.write_text(''); (base / 'times').write_text('')
+    began = time.time_ns()
+    assert run().returncode == 0
+    stamps = times()
+    assert stamps['staged'] - began < 600_000_000, stamps
+    assert 1_150_000_000 <= stamps['published'] - began < 1_900_000_000, stamps
+    assert events.read_text().splitlines()[-2:] == [f'publish {second}', 'apply']
+    print('ok: the palette is staged at once and published part-way through the transition')
+    # A change during the wait is staged in turn, and its own transition is
+    # waited out (Waypaper saves its config as each transition starts).
+    events.write_text(''); (base / 'times').write_text('')
+    selected.write_text(str(first))
+    one = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    deadline = time.monotonic() + 5
+    while 'end' not in events.read_text():
+        assert time.monotonic() < deadline
+        time.sleep(.01)
+    time.sleep(.3)
+    selected.write_text(str(second))
+    waypaper('wipe', 2)
+    changed = time.time_ns()
+    one.communicate(timeout=10)
+    assert one.returncode == 0
+    lines = events.read_text().splitlines()
+    assert lines == [f'start {first}', f'end {first}', f'start {second}', f'end {second}',
+                     f'publish {second}', 'apply'], lines
+    assert times()['published'] - changed >= 1_150_000_000, (times(), changed, lines)
+    print('ok: a wallpaper replaced during the wait is not published; the new one is, on its own schedule')
+    for kind in ('none', 'simple'):
+        waypaper(kind, 2)
+        began = time.time_ns()
+        assert run().returncode == 0
+        assert time.time_ns() - began < 1_000_000_000, kind
+    print('ok: an instant or step-driven transition is not waited for')
+    # A run queued behind one that already published the same wallpaper stages
+    # it, finds it published, and repeats no reload or notification.
+    events.write_text(''); (base / 'notices').write_text('')
+    one = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    deadline = time.monotonic() + 5
+    while 'start' not in events.read_text():
+        assert time.monotonic() < deadline
+        time.sleep(.01)
+    two = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for process in (one, two):
+        process.communicate(timeout=10)
+        assert process.returncode == 0
+    lines = events.read_text().splitlines()
+    assert lines == [f'start {second}', f'end {second}', f'publish {second}', 'apply',
+                     f'start {second}', f'end {second}'], lines
+    assert (base / 'notices').read_text() == ''
+    print('ok: a queued run does not republish what the run before it published')
+    print('ok: a successful change posts no notification')
+    # Selecting the same wallpaper again, unqueued, still re-applies it.
+    events.write_text('')
+    assert run().returncode == 0
+    assert events.read_text().splitlines()[-2:] == [f'publish {second}', 'apply']
+    print('ok: an unqueued run re-applies the current wallpaper')
     assert not (base / 'ui-starts').exists()
     print('ok: wallpaper changes do not start or reload a resident UI')
     # The real driver attempts later components even if an earlier one fails.

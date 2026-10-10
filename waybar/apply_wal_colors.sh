@@ -2,12 +2,13 @@
 #
 # Render the pywal palette as GTK CSS color definitions.
 #
-# waybar/colors.css is a tracked symlink to the file written here, and
-# swaync/style.css imports the same file. pywal also writes it from its built-in
+# waybar/style.css and swaync/style.css both import the file written here. pywal also writes it from its built-in
 # template; rendering it here as well keeps it existing on a fresh checkout
 # where pywal has never run. The content matches pywal's own.
 #
-# Waybar itself is reloaded by wall.sh (scripts/waybar/waybar.sh).
+# Waybar restyles itself when this file changes (reload_style_on_change in
+# waybar/config.jsonc); no reload is sent, because a full one rebuilds the bar
+# and briefly resizes every tiled window.
 #
 
 set -uo pipefail

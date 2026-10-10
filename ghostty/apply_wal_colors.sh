@@ -30,4 +30,13 @@ mkdir -p "$cache_dir"
     for i in "${!wal[@]}"; do
         echo "palette = $i=${wal[$i]}"
     done
-} > "$cache_dir/ghostty-colors"
+} > "$cache_dir/ghostty-colors" || exit 1
+
+# Reload running ghostty so its default palette is the new one. wal already
+# recoloured open terminals live, but only with OSC 4 overrides, and an OSC 104
+# reset falls back to the palette ghostty loaded at launch. ncurses apps send
+# that reset whenever they restart the screen; tty-clock does it on every
+# SIGWINCH, and Waybar's reload resizes windows briefly.
+pkill -USR2 -x ghostty 2>/dev/null
+
+exit 0

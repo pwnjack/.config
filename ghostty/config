@@ -19,3 +19,5 @@ keybind = ctrl+enter=unbind
 
 # pywal colors
 config-file = ?colors
+# Every wallpaper change reloads the config; keep that silent
+app-notifications = no-config-reload
